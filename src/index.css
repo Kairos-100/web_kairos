@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&family=Space+Grotesk:wght@300..700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --kairos-navy: #0F1D42;
+  --kairos-light: #F5F5F5;
+  --kairos-text-dark: #101828;
+}
+
+body {
+  margin: 0;
+  font-family: 'Rubik', sans-serif;
+  background-color: var(--kairos-light);
+  color: var(--kairos-text-dark);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.geometric-bg {
+  background-color: var(--kairos-navy);
+  background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-kairos-navy text-white px-6 py-2 rounded-lg font-medium transition-all hover:opacity-90 active:scale-95;
+  }
+
+  .card {
+    @apply bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow;
+  }
+}
+
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  /* Reset everything for print */
+  * {
+    color: black !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  aside,
+  .no-print,
+  button,
+  header,
+  .animate-pulse,
+  .absolute.blur-3xl {
+    display: none !important;
+  }
+
+  /* Structural containers */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  .ml-64 {
+    margin-left: 0 !important;
+  }
+
+  .max-w-6xl,
+  .max-w-4xl {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* Book sections */
+  .bg-white,
+  .card,
+  .bg-kairos-navy,
+  article {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    margin-bottom: 2cm !important;
+    padding: 1cm !important;
+    display: block !important;
+    page-break-inside: avoid;
+    border-radius: 0 !important;
+  }
+
+  .bg-kairos-navy {
+    border: 3px solid black !important;
+  }
+
+  section {
+    page-break-before: always;
+  }
+
+  .page-break-before {
+    page-break-before: always !important;
+  }
+
+  .page-break-after {
+    page-break-after: always !important;
+  }
+
+  /* Typography */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: bold !important;
+    page-break-after: avoid;
+    color: black !important;
+  }
+
+  p,
+  li,
+  span {
+    orphans: 3;
+    widows: 3;
+    color: black !important;
+  }
+
+  .prose {
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    max-width: none !important;
+  }
+
+  /* Keep category badges visible but simple */
+  .bg-gray-50,
+  .bg-blue-50 {
+    background: #eee !important;
+    border: 1px solid #ccc !important;
+  }
+}
