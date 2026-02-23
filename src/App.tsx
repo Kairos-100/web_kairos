@@ -7,7 +7,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment } from './constants';
-import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Info } from 'lucide-react';
+import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
