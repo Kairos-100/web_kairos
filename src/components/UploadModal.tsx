@@ -26,6 +26,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [contributionType, setContributionType] = useState<ContributionType>('molecula');
     const [points, setPoints] = useState<number>(4);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,12 +47,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
             setPdfFile(file);
             setPdfName(file.name);
 
-            // Build local preview just for UI
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPdfUrl(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            // Optimization: Use URL.createObjectURL instead of FileReader for large PDFs
+            const url = URL.createObjectURL(file);
+            setPdfUrl(url);
+
+            // Cleanup function to avoid memory leaks if we change the file
+            return () => URL.revokeObjectURL(url);
         }
     };
 
@@ -70,7 +71,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                 const fileName = `${Date.now()}-${pdfFile.name}`;
                 const { error: storageError } = await supabase.storage
                     .from('pdfs')
-                    .upload(fileName, pdfFile);
+                    .upload(fileName, pdfFile, {
+                        onUploadProgress: (progress) => {
+                            const percent = (progress.loaded / progress.total) * 100;
+                            setUploadProgress(Math.round(percent));
+                        }
+                    });
 
                 if (storageError) throw storageError;
 
@@ -342,9 +348,17 @@ Explica brevemente de qué trata este documento."
                             <button
                                 type="submit"
                                 disabled={!isFormValid || isUploading}
-                                className={`w-full py-4 text-lg mt-4 flex-shrink-0 transition-all font-bold rounded-2xl ${isFormValid && !isUploading ? 'btn-primary' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`}
+                                className={`w-full py-4 text-lg mt-4 flex-shrink-0 transition-all font-bold rounded-2xl relative overflow-hidden ${isFormValid && !isUploading ? 'btn-primary' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`}
                             >
-                                {isUploading ? 'Subiendo...' : (pdfUrl ? 'Publicar Conocimiento' : 'Adjuntar PDF para Publicar')}
+                                {isUploading && (
+                                    <div
+                                        className="absolute inset-0 bg-blue-600/20 transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                )}
+                                <span className="relative z-10">
+                                    {isUploading ? `Subiendo... ${uploadProgress}%` : (pdfUrl ? 'Publicar Conocimiento' : 'Adjuntar PDF para Publicar')}
+                                </span>
                             </button>
                         </form>
                     )}

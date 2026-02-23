@@ -41,6 +41,18 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
     const moleculasCount = essays.filter(e => e.type === 'molecula').length;
     const librosCount = essays.filter(e => e.type === 'libro').length;
 
+    // 3. Top Contributors
+    const topContributors = essays.reduce((acc: Record<string, number>, essay) => {
+        const name = essay.author.split('@')[0].split('.').map(s => s[0].toUpperCase() + s.slice(1)).join(' ');
+        acc[name] = (acc[name] || 0) + (essay.points || 0);
+        return acc;
+    }, {});
+
+    const rankingData = Object.entries(topContributors)
+        .map(([name, points]) => ({ name, points }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 5);
+
     return (
         <div className="space-y-8 pb-20">
             {/* Header / Total Score */}
@@ -135,7 +147,7 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
                         <TrendingUp size={24} className="text-blue-500" />
                     </div>
 
-                    <div className="h-80 w-full">
+                    <div className="h-48 w-full mb-8">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
                                 <defs>
@@ -172,6 +184,26 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
+
+                    <div className="border-t border-gray-50 pt-8">
+                        <h4 className="text-sm font-bold text-kairos-navy mb-4 uppercase tracking-widest flex items-center">
+                            <Trophy size={16} className="text-yellow-500 mr-2" />
+                            Ranking de Contribuidores
+                        </h4>
+                        <div className="space-y-4">
+                            {rankingData.map((user, index) => (
+                                <div key={user.name} className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-100 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-600'}`}>
+                                            {index + 1}
+                                        </span>
+                                        <span className="text-sm font-bold text-kairos-navy">{user.name}</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-blue-600">{user.points} pts</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </motion.div>
             </div>
 
@@ -188,6 +220,8 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
                             <tr className="text-left border-b border-gray-50">
                                 <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Fecha</th>
                                 <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Título</th>
+                                <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Autor</th>
+                                <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Categoría</th>
                                 <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipo</th>
                                 <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right">Puntos</th>
                             </tr>
@@ -203,9 +237,11 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
                                     <tr key={essay.id} className="group hover:bg-gray-50/50 transition-colors">
                                         <td className="py-4 text-sm font-medium text-gray-400">{essay.date}</td>
                                         <td className="py-4 text-sm font-bold text-kairos-navy">{essay.title}</td>
+                                        <td className="py-4 text-xs font-medium text-gray-500">{essay.author.split('@')[0]}</td>
+                                        <td className="py-4 text-xs font-bold text-blue-600/70">{essay.category}</td>
                                         <td className="py-4">
                                             <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider ${essay.type === 'molecula' ? 'bg-blue-50 text-blue-600' :
-                                                    essay.type === 'libro' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
+                                                essay.type === 'libro' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
                                                 }`}>
                                                 {essay.type || 'N/A'}
                                             </span>
