@@ -410,7 +410,7 @@ Explica brevemente de qué trata este documento."
                                 </span>
                             </button>
                             <div className="flex flex-col items-center mt-2 space-y-1">
-                                <p className="text-[8px] text-gray-300">Versión v2.2.5 - Parche de Estabilidad</p>
+                                <p className="text-[8px] text-gray-300">Versión v2.2.6 - Sincronizada</p>
                                 {connectionStatus === 'fail' && (
                                     <p className="text-[9px] text-red-400 font-bold flex items-center space-x-1">
                                         <AlertCircle size={10} />
