@@ -324,6 +324,13 @@ Explica brevemente de qué trata este documento."
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all resize-none font-mono text-sm"
                                         />
                                     </div>
+
+                                    {error && (
+                                        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center space-x-3 text-red-600">
+                                            <AlertCircle size={20} />
+                                            <p className="text-sm font-medium">{error}</p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-6 min-h-[400px]">
