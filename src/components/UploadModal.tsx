@@ -93,9 +93,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                 const { error: storageError } = await supabase.storage
                     .from('pdfs')
                     .upload(fileName, pdfFile, {
-                        onUploadProgress: (progress: { loaded: number; total: number }) => {
-                            const percent = (progress.loaded / progress.total) * 100;
-                            setUploadProgress(Math.round(percent));
+                        onUploadProgress: (progress: any) => {
+                            console.log('Upload Progress:', progress);
+                            if (progress.total && progress.total > 0) {
+                                const percent = (progress.loaded / progress.total) * 100;
+                                setUploadProgress(Math.min(99, Math.round(percent)));
+                            } else {
+                                // If no total yet, at least show we started
+                                setUploadProgress(1);
+                            }
                         }
                     } as any);
 
@@ -404,7 +410,7 @@ Explica brevemente de qué trata este documento."
                                 </span>
                             </button>
                             <div className="flex flex-col items-center mt-2 space-y-1">
-                                <p className="text-[8px] text-gray-300">Versión v2.2.3 - Diagnóstico Activo</p>
+                                <p className="text-[8px] text-gray-300">Versión v2.2.4 - Diagnóstico Activo</p>
                                 {connectionStatus === 'fail' && (
                                     <p className="text-[9px] text-red-400 font-bold flex items-center space-x-1">
                                         <AlertCircle size={10} />
