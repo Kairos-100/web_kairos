@@ -7,7 +7,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment } from './constants';
-import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2 } from 'lucide-react';
+import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -385,6 +385,12 @@ const App: React.FC = () => {
             <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse">
               <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
               <span className="text-xs uppercase tracking-widest">Sincronizando...</span>
+            </div>
+          )}
+          {!import.meta.env.VITE_SUPABASE_URL && (
+            <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+              <AlertCircle size={14} />
+              <span className="text-[10px] uppercase font-bold tracking-tight">Modo Local (Sin Supabase)</span>
             </div>
           )}
           {activeTab === 'feed' && !selectedEssayId && (
