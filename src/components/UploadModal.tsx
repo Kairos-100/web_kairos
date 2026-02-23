@@ -29,8 +29,21 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+    const [connectionStatus, setConnectionStatus] = useState<'testing' | 'ok' | 'fail'>('testing');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        const testConnection = async () => {
+            try {
+                const { error } = await supabase.from('essays').select('id').limit(1);
+                setConnectionStatus(error ? 'fail' : 'ok');
+            } catch (e) {
+                setConnectionStatus('fail');
+            }
+        };
+        testConnection();
+    }, []);
 
     const handleAuth = (e: React.FormEvent) => {
         e.preventDefault();
@@ -135,9 +148,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
             if (err.storage_error) {
                 userMessage = `Error de Almacenamiento: ${err.storage_error.message}`;
             } else if (err.message?.includes('bucket')) {
-                userMessage = 'Error: El bucket "pdfs" no existe o no tiene permisos. Verifica las políticas en Supabase.';
+                userMessage = 'Error: El bucket "pdfs" no tiene permisos. Verifica las políticas en Supabase.';
             } else if (err.message?.includes('column')) {
                 userMessage = `Error de Base de Datos: Te falta una columna. ${err.message}`;
+            } else if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+                userMessage = 'Error de Red: No se puede conectar con el servidor. Tu WiFi o Firewall podría estar bloqueando Supabase.';
             }
 
             setError(userMessage);
@@ -388,7 +403,15 @@ Explica brevemente de qué trata este documento."
                                     )}
                                 </span>
                             </button>
-                            <p className="text-[8px] text-center text-gray-300 mt-2">Versión v2.2.1 - Optimizada</p>
+                            <div className="flex flex-col items-center mt-2 space-y-1">
+                                <p className="text-[8px] text-gray-300">Versión v2.2.3 - Diagnóstico Activo</p>
+                                {connectionStatus === 'fail' && (
+                                    <p className="text-[9px] text-red-400 font-bold flex items-center space-x-1">
+                                        <AlertCircle size={10} />
+                                        <span>Atención: Conexión con el servidor bloqueada por tu red</span>
+                                    </p>
+                                )}
+                            </div>
                         </form>
                     )}
                 </div>
