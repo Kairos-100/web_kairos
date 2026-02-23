@@ -42,7 +42,7 @@ export const BookView: React.FC<BookViewProps> = ({ essays }) => {
         setIsGenerating(true);
         try {
             const pdfBytes = await generateBookPDF(groupedEssays);
-            const blob = new Blob([pdfBytes as Uint8Array], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
