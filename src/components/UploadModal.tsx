@@ -127,11 +127,17 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
             }
             onClose();
         } catch (err: any) {
-            console.error('Error uploading to Supabase:', err);
-            let userMessage = `Error al subir: ${err.message || 'Error desconocido'}`;
-            if (err.message?.includes('Bucket not found')) {
-                userMessage = 'Error: El bucket "pdfs" no existe en Supabase. Por favor, créalo en la sección Storage.';
+            console.error('Error full object:', err);
+            let userMessage = `Error: ${err.message || 'Error desconocido'}`;
+
+            if (err.storage_error) {
+                userMessage = `Error de Almacenamiento: ${err.storage_error.message}`;
+            } else if (err.message?.includes('bucket')) {
+                userMessage = 'Error: El bucket "pdfs" no existe o no tiene permisos. Verifica las políticas en Supabase.';
+            } else if (err.message?.includes('column')) {
+                userMessage = `Error de Base de Datos: Te falta una columna. ${err.message}`;
             }
+
             setError(userMessage);
         } finally {
             setIsUploading(false);
