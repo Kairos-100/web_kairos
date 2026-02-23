@@ -30,6 +30,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [uploadProgress, setUploadProgress] = useState(0);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
     const [connectionStatus, setConnectionStatus] = useState<'testing' | 'ok' | 'fail'>('testing');
+    const [showIncognitoWarning, setShowIncognitoWarning] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +78,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
 
         setIsUploading(true);
         setError('');
+        setUploadProgress(0);
+        setShowIncognitoWarning(false);
+
+        // Emergency timeout: if after 7s it's still at 0, show incognito warning
+        setTimeout(() => {
+            if (isUploading && uploadProgress === 0) {
+                setShowIncognitoWarning(true);
+            }
+        }, 7000);
 
         try {
             let finalPdfUrl = pdfUrl;
@@ -93,13 +103,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                 const { error: storageError } = await supabase.storage
                     .from('pdfs')
                     .upload(fileName, pdfFile, {
+                        upsert: true,
                         onUploadProgress: (progress: any) => {
-                            console.log('Upload Progress:', progress);
                             if (progress.total && progress.total > 0) {
                                 const percent = (progress.loaded / progress.total) * 100;
                                 setUploadProgress(Math.min(99, Math.round(percent)));
                             } else {
-                                // If no total yet, at least show we started
                                 setUploadProgress(1);
                             }
                         }
@@ -410,7 +419,16 @@ Explica brevemente de qué trata este documento."
                                 </span>
                             </button>
                             <div className="flex flex-col items-center mt-2 space-y-1">
-                                <p className="text-[8px] text-gray-300">Versión v2.2.6 - Sincronizada</p>
+                                <p className="text-[8px] text-gray-300">Versión v2.2.7 - Máxima Estabilidad</p>
+                                {showIncognitoWarning && uploadProgress === 0 && (
+                                    <div className="bg-amber-50 border border-amber-200 p-2 rounded-lg mt-2 flex items-start space-x-2 animate-pulse">
+                                        <AlertCircle className="text-amber-600 flex-shrink-0" size={14} />
+                                        <p className="text-[10px] text-amber-800 leading-tight">
+                                            <strong>Truco:</strong> Tu navegador parece estar bloqueando la subida. <br />
+                                            Prueba en <strong>Modo Incógnito</strong> (Ctrl+Shift+N).
+                                        </p>
+                                    </div>
+                                )}
                                 {connectionStatus === 'fail' && (
                                     <p className="text-[9px] text-red-400 font-bold flex items-center space-x-1">
                                         <AlertCircle size={10} />

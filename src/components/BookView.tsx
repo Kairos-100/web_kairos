@@ -1,13 +1,16 @@
 import React from 'react';
 import type { Essay } from '../constants';
-import { Book, ChevronRight, Hash, ExternalLink, FileDown } from 'lucide-react';
+import { Book, ChevronRight, Hash, ExternalLink, FileDown, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { generateBookPDF } from '../utils/pdfGenerator';
 
 interface BookViewProps {
     essays: Essay[];
 }
 
 export const BookView: React.FC<BookViewProps> = ({ essays }) => {
+    const [isGenerating, setIsGenerating] = React.useState(false);
+
     // Group essays by category
     const groupedEssays = essays.reduce((acc, essay) => {
         if (!acc[essay.category]) {
@@ -35,6 +38,27 @@ export const BookView: React.FC<BookViewProps> = ({ essays }) => {
         .sort(([, a], [, b]) => b - a)
         .slice(0, 3);
 
+    const handleExportBook = async () => {
+        setIsGenerating(true);
+        try {
+            const pdfBytes = await generateBookPDF(groupedEssays);
+            const blob = new Blob([pdfBytes as Uint8Array], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Kairos-Libro-Conocimiento-${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error generating book:', error);
+            alert('Hubo un error al generar el libro. Por favor intenta de nuevo.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto pb-20">
             {/* Book Cover / Header */}
@@ -46,11 +70,16 @@ export const BookView: React.FC<BookViewProps> = ({ essays }) => {
                     <p className="text-blue-200 font-medium max-w-md mb-8">Una compilación curada de todas las tesis y descubrimientos compartidos por el equipo de Kairos.</p>
 
                     <button
-                        onClick={() => window.print()}
-                        className="group flex items-center space-x-3 px-8 py-4 bg-white text-kairos-navy rounded-2xl font-bold hover:bg-blue-50 transition-all shadow-xl active:scale-95 no-print"
+                        onClick={handleExportBook}
+                        disabled={isGenerating || essays.length === 0}
+                        className={`group flex items-center space-x-3 px-8 py-4 bg-white text-kairos-navy rounded-2xl font-bold transition-all shadow-xl active:scale-95 no-print ${isGenerating ? 'opacity-70 cursor-wait' : 'hover:bg-blue-50'}`}
                     >
-                        <FileDown size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
-                        <span>Exportar Todo el Libro (PDF)</span>
+                        {isGenerating ? (
+                            <Loader2 size={20} className="text-blue-600 animate-spin" />
+                        ) : (
+                            <FileDown size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
+                        )}
+                        <span>{isGenerating ? 'Generando Libro...' : 'Exportar Todo el Libro (PDF)'}</span>
                     </button>
 
                     <div className="mt-8 flex space-x-8 text-xs font-bold uppercase tracking-widest text-blue-300">
