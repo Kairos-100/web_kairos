@@ -428,6 +428,10 @@ const App: React.FC = () => {
             onClose={() => setIsUploadOpen(false)}
             onUpload={handleUpload}
             onSuccess={fetchEssays}
+            onIdentify={(email) => {
+              setLoggedInUser(email);
+              localStorage.setItem('kairos_user', email);
+            }}
           />
         )
       }

@@ -69,7 +69,7 @@ export const Layout: React.FC<LayoutProps> = ({
                         <span>Subir Ensayo</span>
                     </button>
 
-                    {user && (
+                    {user ? (
                         <div className="flex items-center justify-between px-2 text-xs text-white/40">
                             <span className="truncate max-w-[140px] italic">{user}</span>
                             <button
@@ -80,6 +80,13 @@ export const Layout: React.FC<LayoutProps> = ({
                                 <LogOut size={16} />
                             </button>
                         </div>
+                    ) : (
+                        <button
+                            onClick={onOpenUpload}
+                            className="w-full bg-white/5 text-white/60 py-2 rounded-lg text-xs font-bold hover:bg-white/10 hover:text-white transition-all border border-white/10"
+                        >
+                            ¿No estás identificado? Haz clic aquí
+                        </button>
                     )}
                 </div>
             </aside>

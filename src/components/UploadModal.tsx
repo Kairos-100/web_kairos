@@ -10,9 +10,10 @@ interface UploadModalProps {
     onClose: () => void;
     onUpload: (essay: Omit<Essay, 'id' | 'date' | 'comments' | 'readingTime'>) => void;
     onSuccess?: () => void;
+    onIdentify?: (email: string) => void;
 }
 
-export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onSuccess }) => {
+export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onSuccess, onIdentify }) => {
     const [email, setEmail] = useState('');
     const [isAuth, setIsAuth] = useState(false);
     const [error, setError] = useState('');
@@ -36,6 +37,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
         if (WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
             setIsAuth(true);
             setError('');
+            if (onIdentify) onIdentify(email);
         } else {
             setError('Lo sentimos, este email no tiene permisos para subir contenido.');
         }
