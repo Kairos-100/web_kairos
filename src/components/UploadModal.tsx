@@ -68,7 +68,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
 
             // Only upload to Supabase if config exists
             if (import.meta.env.VITE_SUPABASE_URL && pdfFile) {
-                const fileName = `${Date.now()}-${pdfFile.name}`;
+                // Sanitize filename: remove special characters and replace spaces with underscores
+                const sanitizedName = pdfFile.name
+                    .replace(/[^\x00-\x7F]/g, "") // Remove non-ASCII
+                    .replace(/[^a-zA-Z0-9.-]/g, "_") // Replace everything else except dots/dashes
+                    .replace(/_{2,}/g, "_"); // Multi-underscores to single
+
+                const fileName = `${Date.now()}-${sanitizedName}`;
                 const { error: storageError } = await supabase.storage
                     .from('pdfs')
                     .upload(fileName, pdfFile, {
