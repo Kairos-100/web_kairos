@@ -72,11 +72,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                 const { error: storageError } = await supabase.storage
                     .from('pdfs')
                     .upload(fileName, pdfFile, {
-                        onUploadProgress: (progress) => {
+                        onUploadProgress: (progress: { loaded: number; total: number }) => {
                             const percent = (progress.loaded / progress.total) * 100;
                             setUploadProgress(Math.round(percent));
                         }
-                    });
+                    } as any);
 
                 if (storageError) throw storageError;
 
