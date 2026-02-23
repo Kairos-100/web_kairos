@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, BarChart3, Library, PlusCircle, LogOut } from 'lucide-react';
+import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -26,6 +26,7 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
     const navItems = [
         { id: 'feed', label: 'Conocimiento', icon: BookOpen },
+        { id: 'score', label: 'Puntuación', icon: Trophy },
         { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
         { id: 'book', label: 'Biblioteca', icon: Library },
     ];

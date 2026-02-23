@@ -4,6 +4,7 @@ import { UploadModal } from './components/UploadModal';
 import { Dashboard } from './components/Dashboard';
 import { CommentSection } from './components/CommentSection';
 import { BookView } from './components/BookView';
+import { ScoresView } from './components/ScoresView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2 } from 'lucide-react';
@@ -173,6 +174,8 @@ const App: React.FC = () => {
         return <Dashboard essays={essays} />;
       case 'book':
         return <BookView essays={essays} />;
+      case 'score':
+        return <ScoresView essays={essays} />;
       default:
         return (
           <AnimatePresence mode="wait">
@@ -368,12 +371,14 @@ const App: React.FC = () => {
           <div>
             <h2 className="text-4xl font-heading font-bold text-kairos-navy mb-2">
               {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Tesis' : 'Explorar Tesis') :
-                activeTab === 'stats' ? 'Visualización de Aprendizaje' : 'Biblioteca Digital'}
+                activeTab === 'stats' ? 'Visualización de Aprendizaje' :
+                  activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
               {activeTab === 'feed'
                 ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.')
-                : activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' : 'Todas las tesis consolidadas en un solo libro digital.'}
+                : activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
+                  activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
             </p>
           </div>
           {isLoading && (
@@ -411,14 +416,16 @@ const App: React.FC = () => {
 
       {renderContent()}
 
-      {isUploadOpen && (
-        <UploadModal
-          onClose={() => setIsUploadOpen(false)}
-          onUpload={handleUpload}
-          onSuccess={fetchEssays}
-        />
-      )}
-    </Layout>
+      {
+        isUploadOpen && (
+          <UploadModal
+            onClose={() => setIsUploadOpen(false)}
+            onUpload={handleUpload}
+            onSuccess={fetchEssays}
+          />
+        )
+      }
+    </Layout >
   );
 };
 

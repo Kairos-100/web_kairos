@@ -28,6 +28,13 @@ export interface Comment {
     date: string;
 }
 
+export type ContributionType = 'molecula' | 'libro';
+
+export const CONTRIBUTION_TYPES = [
+    { id: 'molecula', label: 'Molécula', minPoints: 4, maxPoints: 11 },
+    { id: 'libro', label: 'Libro', minPoints: 1, maxPoints: 3 }
+];
+
 export interface Essay {
     id: string;
     title: string;
@@ -39,4 +46,6 @@ export interface Essay {
     readingTime: number; // in minutes
     comments: Comment[];
     pdfUrl?: string; // Base64 or local blob URL
+    type?: ContributionType;
+    points?: number;
 }

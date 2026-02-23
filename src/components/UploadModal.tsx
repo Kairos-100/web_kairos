@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Search, CheckCircle2, Eye, Edit3, Tag as TagIcon, FileUp, FileText, AlertCircle } from 'lucide-react';
-import { WHITELIST, CATEGORIES } from '../constants';
-import type { Essay } from '../constants';
+import { WHITELIST, CATEGORIES, CONTRIBUTION_TYPES } from '../constants';
+import type { Essay, ContributionType } from '../constants';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
@@ -23,6 +23,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
     const [pdfName, setPdfName] = useState<string | undefined>(undefined);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [contributionType, setContributionType] = useState<ContributionType>('molecula');
+    const [points, setPoints] = useState<number>(4);
     const [isUploading, setIsUploading] = useState(false);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
@@ -90,7 +92,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                         tags: tagArray,
                         pdf_url: finalPdfUrl,
                         date: new Date().toLocaleDateString('es-ES'),
-                        reading_time: Math.max(1, Math.ceil(content.split(/\s+/).length / 200))
+                        reading_time: Math.max(1, Math.ceil(content.split(/\s+/).length / 200)),
+                        type: contributionType,
+                        points: points
                     }]);
 
                 if (dbError) throw dbError;
@@ -104,7 +108,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                     category,
                     content,
                     tags: tagArray,
-                    pdfUrl: finalPdfUrl
+                    pdfUrl: finalPdfUrl,
+                    type: contributionType,
+                    points: points
                 });
             }
             onClose();
@@ -227,6 +233,44 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all pl-10"
                                                 />
                                                 <TagIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                                            </div>
+                                        </div>
+
+                                        <div className="col-span-2 grid grid-cols-2 gap-4 bg-kairos-navy/5 p-4 rounded-2xl border border-kairos-navy/10">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-kairos-navy/60 mb-2 text-[10px]">Tipo de Conocimiento</label>
+                                                <div className="flex bg-white rounded-lg p-1 border border-gray-100 shadow-sm">
+                                                    {CONTRIBUTION_TYPES.map((ct) => (
+                                                        <button
+                                                            key={ct.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setContributionType(ct.id as ContributionType);
+                                                                setPoints(ct.minPoints);
+                                                            }}
+                                                            className={`flex-1 flex items-center justify-center space-x-1 px-3 py-2 rounded-md text-xs font-bold transition-all ${contributionType === ct.id ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                                                        >
+                                                            <span>{ct.label}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-kairos-navy/60 mb-2 text-[10px]">Puntuación ({points} pts)</label>
+                                                <div className="flex items-center space-x-3">
+                                                    <input
+                                                        type="range"
+                                                        min={CONTRIBUTION_TYPES.find(ct => ct.id === contributionType)?.minPoints}
+                                                        max={CONTRIBUTION_TYPES.find(ct => ct.id === contributionType)?.maxPoints}
+                                                        value={points}
+                                                        onChange={(e) => setPoints(parseInt(e.target.value))}
+                                                        className="flex-1 accent-kairos-navy"
+                                                    />
+                                                    <span className="text-sm font-bold text-kairos-navy w-8 text-center">{points}</span>
+                                                </div>
+                                                <p className="text-[9px] text-gray-400 mt-1">
+                                                    Rango para {contributionType}: {CONTRIBUTION_TYPES.find(ct => ct.id === contributionType)?.minPoints}-{CONTRIBUTION_TYPES.find(ct => ct.id === contributionType)?.maxPoints} pts
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
