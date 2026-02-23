@@ -26,8 +26,8 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
     const navItems = [
         { id: 'feed', label: 'Conocimiento', icon: BookOpen },
-        { id: 'score', label: 'Puntuación', icon: Trophy },
         { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
+        { id: 'score', label: 'Puntuación', icon: Trophy },
         { id: 'book', label: 'Biblioteca', icon: Library },
     ];
 
