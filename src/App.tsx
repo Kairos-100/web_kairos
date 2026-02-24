@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Layout } from './components/Layout';
 import { UploadModal } from './components/UploadModal';
 import { MetricsModal } from './components/MetricsModal';
@@ -13,6 +13,7 @@ import type { Essay, Comment, MetricEntry } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { DateRangePicker, type DateRange } from './components/DateRangePicker';
 
 const INITIAL_ESSAYS: Essay[] = [
   {
@@ -45,6 +46,12 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingEssay, setEditingEssay] = useState<Essay | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    return { start, end };
+  });
   const [loggedInUser, setLoggedInUser] = useState<string | null>(() => {
     return localStorage.getItem('kairos_user');
   });
@@ -190,28 +197,51 @@ const App: React.FC = () => {
     localStorage.removeItem('kairos_user');
   };
 
-  const filteredEssays = essays.filter(e =>
-    e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.tags?.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
   const selectedEssay = essays.find(e => e.id === selectedEssayId);
+
+  // Helper to parse DD/MM/YYYY
+  const parseDDMMYYYY = (str: string) => {
+    const [d, m, y] = str.split('/').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  // GLOBAL FILTERING LOGIC
+  const filteredMetrics = useMemo(() => {
+    return metrics.filter(m => {
+      const d = parseDDMMYYYY(m.date);
+      return d >= dateRange.start && d <= dateRange.end;
+    });
+  }, [metrics, dateRange]);
+
+  const filteredByDateEssays = useMemo(() => {
+    return essays.filter(e => {
+      const d = parseDDMMYYYY(e.date);
+      return d >= dateRange.start && d <= dateRange.end;
+    });
+  }, [essays, dateRange]);
+
+  const filteredEssaysList = useMemo(() => {
+    return filteredByDateEssays.filter((e: Essay) =>
+      e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.tags?.some((t: string) => t.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [filteredByDateEssays, searchTerm]);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'stats':
-        return <Dashboard essays={essays} />;
+        return <Dashboard essays={filteredByDateEssays} />;
       case 'commercial':
-        return <MetricsView metrics={metrics} />;
+        return <MetricsView metrics={filteredMetrics} />;
       case 'book':
-        return <BookView essays={essays} />;
+        return <BookView essays={filteredByDateEssays} />;
       case 'score':
-        return <ScoresView essays={essays} />;
+        return <ScoresView essays={filteredByDateEssays} />;
       case 'history':
-        return <ActivityView essays={essays} metrics={metrics} />;
+        return <ActivityView essays={filteredByDateEssays} metrics={filteredMetrics} />;
       default:
         return (
           <AnimatePresence mode="wait">
@@ -223,7 +253,7 @@ const App: React.FC = () => {
                 exit={{ opacity: 0 }}
                 className="grid grid-cols-1 md:grid-cols-2 gap-6"
               >
-                {filteredEssays.map((essay, index) => (
+                {filteredEssaysList.map((essay: Essay, index: number) => (
                   <motion.div
                     layout
                     key={essay.id}
@@ -443,12 +473,15 @@ const App: React.FC = () => {
                       activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
             </p>
           </div>
-          {isLoading && (
-            <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse">
-              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-              <span className="text-xs uppercase tracking-widest">Sincronizando...</span>
-            </div>
-          )}
+          <div className="flex items-center space-x-6">
+            <DateRangePicker range={dateRange} onChange={setDateRange} />
+            {isLoading && (
+              <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse text-right">
+                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <span className="text-[10px] uppercase tracking-widest">Sincronizando...</span>
+              </div>
+            )}
+          </div>
           {!import.meta.env.VITE_SUPABASE_URL && (
             <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
               <AlertCircle size={14} />
@@ -467,7 +500,7 @@ const App: React.FC = () => {
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               </div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider pr-2">Explora entre {essays.length} tesis pubicadas</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider pr-2">Mostrando resultados para el rango seleccionado</p>
             </div>
           )}
           {selectedEssayId && activeTab === 'feed' && (
