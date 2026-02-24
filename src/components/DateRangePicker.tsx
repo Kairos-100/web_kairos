@@ -68,20 +68,27 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onChang
     };
 
     const handleDateClick = (date: Date) => {
-        // Simple toggle logic or multi-click? 
-        // For simplicity: restart if end is already set, or set end if only start exists
-        if (isSameDay(date, range.start) && isSameDay(date, range.end)) {
+        const newDate = new Date(date);
+        newDate.setHours(12, 0, 0, 0); // Use noon to avoid timezone shift issues during selection
+
+        if (isSameDay(newDate, range.start) && isSameDay(newDate, range.end)) {
             // No reset needed
-        } else if (date < range.start) {
-            onChange({ start: date, end: range.end });
+        } else if (newDate < range.start) {
+            const start = new Date(newDate);
+            start.setHours(0, 0, 0, 0);
+            onChange({ start, end: range.end });
         } else {
-            onChange({ start: range.start, end: date });
+            const end = new Date(newDate);
+            end.setHours(23, 59, 59, 999);
+            onChange({ start: range.start, end: end });
         }
     };
 
     const selectPreset = (value: number | string) => {
         const end = new Date();
+        end.setHours(23, 59, 59, 999);
         const start = new Date();
+        start.setHours(0, 0, 0, 0);
 
         if (typeof value === 'number') {
             start.setDate(end.getDate() - value);
@@ -90,7 +97,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onChang
         } else if (value === 'current_year') {
             start.setMonth(0, 1);
         } else if (value === 'all') {
-            start.setFullYear(2020, 0, 1); // Background start
+            start.setFullYear(2020, 0, 1);
         }
 
         onChange({ start, end });
@@ -162,7 +169,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onChang
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         className="absolute right-0 mt-3 p-1 bg-white border border-gray-100 rounded-3xl shadow-2xl z-50 flex overflow-hidden min-w-[600px]"
                     >
-                        {/* Sidebar Presets */}
                         <div className="w-48 bg-gray-50/50 border-r border-gray-100 p-4 space-y-1">
                             <span className="block text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-3 ml-2">Preajustes</span>
                             {PRESETS.map((p) => (
@@ -176,7 +182,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onChang
                             ))}
                         </div>
 
-                        {/* Calendar Area */}
                         <div className="flex-1 p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <button onClick={handlePrevMonth} className="p-2 hover:bg-gray-100 rounded-full transition-colors">

@@ -26,7 +26,7 @@ const INITIAL_ESSAYS: Essay[] = [
     tags: ['IA', 'Productividad', 'Futuro'],
     readingTime: 4,
     comments: [],
-    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' // Added dummy for initial essay to satisfy mandatory rule if we were to upload it
+    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
   }
 ];
 
@@ -48,8 +48,10 @@ const App: React.FC = () => {
   const [editingEssay, setEditingEssay] = useState<Essay | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const end = new Date();
+    end.setHours(23, 59, 59, 999);
     const start = new Date();
     start.setDate(end.getDate() - 30);
+    start.setHours(0, 0, 0, 0);
     return { start, end };
   });
   const [loggedInUser, setLoggedInUser] = useState<string | null>(() => {
@@ -73,7 +75,6 @@ const App: React.FC = () => {
 
       if (error) throw error;
       if (data) {
-        // Map DB fields to interface if necessary (snake_case to camelCase)
         const mappedData = data.map((e: any) => ({
           ...e,
           readingTime: e.reading_time,
@@ -87,7 +88,6 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   };
-
 
   const fetchMetrics = async () => {
     const hasConfig = import.meta.env.VITE_SUPABASE_URL;
@@ -107,37 +107,21 @@ const App: React.FC = () => {
   };
 
   const handleDeleteEssay = async (e: React.MouseEvent, id: string, pdfUrl?: string) => {
-    e.stopPropagation(); // Don't trigger the card click
-
-    if (!window.confirm('¿Estás seguro de que quieres borrar esta tesis? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
+    e.stopPropagation();
+    if (!window.confirm('¿Estás seguro de que quieres borrar esta tesis?')) return;
     setIsLoading(true);
     try {
-      // 1. Delete from Storage if it has a PDF
       if (pdfUrl) {
         const fileName = pdfUrl.split('/').pop();
-        if (fileName) {
-          await supabase.storage.from('pdfs').remove([fileName]);
-        }
+        if (fileName) await supabase.storage.from('pdfs').remove([fileName]);
       }
-
-      // 2. Delete from Database
-      const { error } = await supabase
-        .from('essays')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('essays').delete().eq('id', id);
       if (error) throw error;
-
-      // Update local state
       setEssays(prev => prev.filter(essay => essay.id !== id));
       if (selectedEssayId === id) setSelectedEssayId(null);
-
     } catch (err: any) {
       console.error('Error deleting essay:', err);
-      alert(`Error al borrar: ${err.message}. Asegúrate de tener activas las políticas de DELETE en Supabase.`);
+      alert(`Error al borrar: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -199,13 +183,13 @@ const App: React.FC = () => {
 
   const selectedEssay = essays.find(e => e.id === selectedEssayId);
 
-  // Helper to parse DD/MM/YYYY
   const parseDDMMYYYY = (str: string) => {
     const [d, m, y] = str.split('/').map(Number);
-    return new Date(y, m - 1, d);
+    const date = new Date(y, m - 1, d);
+    date.setHours(0, 0, 0, 0);
+    return date;
   };
 
-  // GLOBAL FILTERING LOGIC
   const filteredMetrics = useMemo(() => {
     return metrics.filter(m => {
       const d = parseDDMMYYYY(m.date);
@@ -235,7 +219,7 @@ const App: React.FC = () => {
       case 'stats':
         return <Dashboard essays={filteredByDateEssays} />;
       case 'commercial':
-        return <MetricsView metrics={filteredMetrics} />;
+        return <MetricsView metrics={filteredMetrics} essays={filteredByDateEssays} />;
       case 'book':
         return <BookView essays={filteredByDateEssays} />;
       case 'score':
@@ -273,167 +257,47 @@ const App: React.FC = () => {
                       <div className="flex items-center space-x-2 text-xs text-gray-400 font-medium">
                         {essay.pdfUrl ? <FileText size={12} className="text-blue-500" /> : <Clock size={12} />}
                         <span>{essay.pdfUrl ? 'PDF Adjunto' : `${essay.readingTime} min`}</span>
-
-                        <button
-                          onClick={(e) => handleEditEssay(e, essay)}
-                          className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
-                          title="Editar Tesis"
-                        >
-                          <Edit3 size={12} />
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteEssay(e, essay.id, essay.pdfUrl)}
-                          className="p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                          title="Borrar Tesis"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        <button onClick={(e) => handleEditEssay(e, essay)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"><Edit3 size={12} /></button>
+                        <button onClick={(e) => handleDeleteEssay(e, essay.id, essay.pdfUrl)} className="p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
                       </div>
                     </div>
-
-                    <h3 className="text-xl font-heading font-bold text-kairos-navy mb-3 group-hover:text-blue-600 transition-colors">
-                      {essay.title}
-                    </h3>
-
-                    <div className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-2 prose prose-sm prose-slate">
-                      <ReactMarkdown>{essay.content}</ReactMarkdown>
-                    </div>
-
+                    <h3 className="text-xl font-heading font-bold text-kairos-navy mb-3 group-hover:text-blue-600 transition-colors">{essay.title}</h3>
+                    <div className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-2 prose prose-sm prose-slate"><ReactMarkdown>{essay.content}</ReactMarkdown></div>
                     <div className="flex flex-wrap gap-2 mb-6">
                       {essay.tags?.map(tag => (
-                        <span key={tag} className="flex items-center space-x-1 px-2 py-0.5 bg-gray-50 text-gray-400 rounded-md text-[9px] font-bold border border-gray-100">
-                          <TagIcon size={8} />
-                          <span>{tag}</span>
-                        </span>
+                        <span key={tag} className="flex items-center space-x-1 px-2 py-0.5 bg-gray-50 text-gray-400 rounded-md text-[9px] font-bold border border-gray-100"><TagIcon size={8} /><span>{tag}</span></span>
                       ))}
                     </div>
-
                     <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <User size={14} className="text-blue-600" />
-                        <span className="text-xs font-bold text-gray-500">
-                          {essay.author.split('@')[0]}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="text-xs text-gray-300 font-bold uppercase">{essay.date}</div>
-                        <ChevronRight size={18} className="text-gray-200 group-hover:text-blue-600 transition-colors" />
-                      </div>
+                      <div className="flex items-center space-x-2"><User size={14} className="text-blue-600" /><span className="text-xs font-bold text-gray-500">{essay.author.split('@')[0]}</span></div>
+                      <div className="flex items-center space-x-3"><div className="text-xs text-gray-300 font-bold uppercase">{essay.date}</div><ChevronRight size={18} className="text-gray-200 group-hover:text-blue-600 transition-colors" /></div>
                     </div>
                   </motion.div>
                 ))}
               </motion.div>
             ) : (
-              <motion.div
-                key="reader"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="max-w-4xl mx-auto"
-              >
+              <motion.div key="reader" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto">
                 <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100 overflow-hidden">
                   <div className="flex justify-between items-center mb-10">
                     <div className="flex space-x-3">
-                      <span className="px-4 py-1 bg-kairos-navy text-white text-xs uppercase font-bold tracking-widest rounded-full">
-                        {selectedEssay?.category}
-                      </span>
-                      <div className="flex items-center space-x-2 text-xs text-gray-400 font-bold px-4 py-1 bg-gray-50 rounded-full">
-                        <Clock size={14} />
-                        <span>{selectedEssay?.pdfUrl ? 'Incluye PDF' : `Lectura de ${selectedEssay?.readingTime} min`}</span>
-                      </div>
+                      <span className="px-4 py-1 bg-kairos-navy text-white text-xs uppercase font-bold tracking-widest rounded-full">{selectedEssay?.category}</span>
+                      <div className="flex items-center space-x-2 text-xs text-gray-400 font-bold px-4 py-1 bg-gray-50 rounded-full"><Clock size={14} /><span>{selectedEssay?.pdfUrl ? 'Incluye PDF' : `Lectura de ${selectedEssay?.readingTime} min`}</span></div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      {selectedEssay?.pdfUrl && (
-                        <button
-                          onClick={() => setShowPdf(!showPdf)}
-                          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${showPdf ? 'bg-kairos-navy text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
-                        >
-                          <FileText size={16} />
-                          <span>{showPdf ? 'Ocultar PDF' : 'Ver PDF Adjunto'}</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => handleEditEssay(e, selectedEssay!)}
-                        className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-blue-600 transition-colors"
-                      >
-                        <Edit3 size={16} />
-                        <span>Editar</span>
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteEssay(e, selectedEssay!.id, selectedEssay!.pdfUrl)}
-                        className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                        <span>Borrar</span>
-                      </button>
-                      <button
-                        onClick={() => window.print()}
-                        className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-kairos-navy transition-colors"
-                      >
-                        <FileDown size={16} />
-                        <span>Imprimir</span>
-                      </button>
+                      {selectedEssay?.pdfUrl && <button onClick={() => setShowPdf(!showPdf)} className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${showPdf ? 'bg-kairos-navy text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}><FileText size={16} /><span>{showPdf ? 'Ocultar PDF' : 'Ver PDF Adjunto'}</span></button>}
+                      <button onClick={(e) => handleEditEssay(e, selectedEssay!)} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-blue-600 transition-colors"><Edit3 size={16} /><span>Editar</span></button>
+                      <button onClick={(e) => handleDeleteEssay(e, selectedEssay!.id, selectedEssay!.pdfUrl)} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /><span>Borrar</span></button>
+                      <button onClick={() => window.print()} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-kairos-navy transition-colors"><FileDown size={16} /><span>Imprimir</span></button>
                     </div>
                   </div>
-
-                  <h1 className="text-5xl font-heading font-bold text-kairos-navy mb-8 leading-tight text-balance">
-                    {selectedEssay?.title}
-                  </h1>
-
-                  <div className="flex items-center space-x-4 mb-12 py-6 border-y border-gray-50">
-                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                      <User size={24} className="text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-kairos-navy">{selectedEssay?.author}</p>
-                      <p className="text-xs text-gray-400 font-medium">Publicado el {selectedEssay?.date}</p>
-                    </div>
-                    {selectedEssay?.pdfUrl && !showPdf && (
-                      <a
-                        href={selectedEssay.pdfUrl}
-                        download={`${selectedEssay.title}.pdf`}
-                        className="flex items-center space-x-2 text-xs font-bold text-blue-600 hover:underline"
-                      >
-                        <ExternalLink size={14} />
-                        <span>Descargar PDF</span>
-                      </a>
-                    )}
-                  </div>
-
+                  <h1 className="text-5xl font-heading font-bold text-kairos-navy mb-8 leading-tight text-balance">{selectedEssay?.title}</h1>
+                  <div className="flex items-center space-x-4 mb-12 py-6 border-y border-gray-50"><div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100"><User size={24} className="text-blue-600" /></div><div className="flex-1"><p className="text-sm font-bold text-kairos-navy">{selectedEssay?.author}</p><p className="text-xs text-gray-400 font-medium">Publicado el {selectedEssay?.date}</p></div></div>
                   <div className="flex flex-col space-y-8">
-                    {showPdf && selectedEssay?.pdfUrl && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 600 }}
-                        className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-inner bg-gray-50"
-                      >
-                        <iframe
-                          src={selectedEssay.pdfUrl}
-                          className="w-full h-full border-none"
-                          title="PDF Tesis"
-                        />
-                      </motion.div>
-                    )}
-
-                    <article className="prose prose-lg prose-slate max-w-none prose-headings:font-heading prose-headings:text-kairos-navy prose-a:text-blue-600">
-                      <ReactMarkdown>{selectedEssay?.content || ''}</ReactMarkdown>
-                    </article>
+                    {showPdf && selectedEssay?.pdfUrl && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 600 }} className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-inner bg-gray-50"><iframe src={selectedEssay.pdfUrl} className="w-full h-full border-none" title="PDF Tesis" /></motion.div>}
+                    <article className="prose prose-lg prose-slate max-w-none prose-headings:font-heading prose-headings:text-kairos-navy prose-a:text-blue-600"><ReactMarkdown>{selectedEssay?.content || ''}</ReactMarkdown></article>
                   </div>
-
-                  <div className="mt-12 pt-8 border-t border-gray-50 flex flex-wrap gap-2">
-                    <TagIcon size={16} className="text-gray-300" />
-                    {selectedEssay?.tags?.map(tag => (
-                      <span key={tag} className="px-3 py-1 bg-gray-50 text-gray-500 rounded-lg text-xs font-bold border border-gray-100">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <CommentSection
-                    comments={selectedEssay?.comments || []}
-                    user={loggedInUser}
-                    onAddComment={(text) => handleAddComment(selectedEssay!.id, text)}
-                  />
+                  <div className="mt-12 pt-8 border-t border-gray-50 flex flex-wrap gap-2"><TagIcon size={16} className="text-gray-300" />{selectedEssay?.tags?.map(tag => <span key={tag} className="px-3 py-1 bg-gray-50 text-gray-500 rounded-lg text-xs font-bold border border-gray-100">#{tag}</span>)}</div>
+                  <CommentSection comments={selectedEssay?.comments || []} user={loggedInUser} onAddComment={(text) => handleAddComment(selectedEssay!.id, text)} />
                 </div>
               </motion.div>
             )}
@@ -445,10 +309,7 @@ const App: React.FC = () => {
   return (
     <Layout
       activeTab={activeTab}
-      setActiveTab={(tab) => {
-        setActiveTab(tab);
-        setSelectedEssayId(null);
-      }}
+      setActiveTab={(tab) => { setActiveTab(tab); setSelectedEssayId(null); }}
       user={loggedInUser}
       onLogout={handleLogout}
       onOpenUpload={() => setIsUploadOpen(true)}
@@ -465,9 +326,8 @@ const App: React.FC = () => {
                       activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
-              {activeTab === 'feed'
-                ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.')
-                : activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
+              {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.') :
+                activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
                   activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
                     activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
                       activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
@@ -475,79 +335,22 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center space-x-6">
             <DateRangePicker range={dateRange} onChange={setDateRange} />
-            {isLoading && (
-              <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse text-right">
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                <span className="text-[10px] uppercase tracking-widest">Sincronizando...</span>
-              </div>
-            )}
+            {isLoading && <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse text-right"><div className="w-2 h-2 bg-blue-600 rounded-full"></div><span className="text-[10px] uppercase tracking-widest">Sincronizando...</span></div>}
           </div>
-          {!import.meta.env.VITE_SUPABASE_URL && (
-            <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-              <AlertCircle size={14} />
-              <span className="text-[10px] uppercase font-bold tracking-tight">Modo Local (Sin Supabase)</span>
-            </div>
-          )}
+          {!import.meta.env.VITE_SUPABASE_URL && <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100"><AlertCircle size={14} /><span className="text-[10px] uppercase font-bold tracking-tight">Modo Local (Sin Supabase)</span></div>}
           {activeTab === 'feed' && !selectedEssayId && (
             <div className="flex flex-col items-end space-y-2">
-              <div className="relative w-72">
-                <input
-                  type="text"
-                  placeholder="Buscar palabras clave, temas..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all shadow-sm"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              </div>
+              <div className="relative w-72"><input type="text" placeholder="Buscar palabras clave, temas..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all shadow-sm" /><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /></div>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider pr-2">Mostrando resultados para el rango seleccionado</p>
             </div>
           )}
-          {selectedEssayId && activeTab === 'feed' && (
-            <button
-              onClick={() => { setSelectedEssayId(null); setShowPdf(false); }}
-              className="flex items-center space-x-2 text-kairos-navy font-bold hover:translate-x-[-4px] transition-transform"
-            >
-              <ChevronRight className="rotate-180" size={20} />
-              <span>Volver al Feed</span>
-            </button>
-          )}
+          {selectedEssayId && activeTab === 'feed' && <button onClick={() => { setSelectedEssayId(null); setShowPdf(false); }} className="flex items-center space-x-2 text-kairos-navy font-bold hover:translate-x-[-4px] transition-transform"><ChevronRight className="rotate-180" size={20} /><span>Volver al Feed</span></button>}
         </div>
       </header>
-
       {renderContent()}
-
-      {
-        (isUploadOpen || isEditOpen) && (
-          <UploadModal
-            onClose={() => {
-              setIsUploadOpen(false);
-              setIsEditOpen(false);
-              setEditingEssay(null);
-            }}
-            onUpload={handleUpload}
-            onSuccess={fetchEssays}
-            onIdentify={(email) => {
-              setLoggedInUser(email);
-              localStorage.setItem('kairos_user', email);
-            }}
-            editEssay={editingEssay || undefined}
-          />
-        )
-      }
-      {
-        isMetricsModalOpen && (
-          <MetricsModal
-            onClose={() => setIsMetricsModalOpen(false)}
-            onSuccess={fetchMetrics}
-            onIdentify={(email) => {
-              setLoggedInUser(email);
-              localStorage.setItem('kairos_user', email);
-            }}
-          />
-        )
-      }
-    </Layout >
+      {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} />}
+      {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} />}
+    </Layout>
   );
 };
 
