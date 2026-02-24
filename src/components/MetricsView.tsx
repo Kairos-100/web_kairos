@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion } from 'framer-motion';
+import { TrendingUp, Users, FileText } from 'lucide-react';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
