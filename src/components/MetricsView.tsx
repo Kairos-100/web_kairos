@@ -47,14 +47,26 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
         const grouped = metrics.reduce((acc: Record<string, any>, m) => {
             const user = m.user_email.split('@')[0];
             if (!acc[user]) {
-                acc[user] = { user, cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, pdf_url: null };
+                acc[user] = {
+                    user,
+                    cv: 0,
+                    cp: 0,
+                    sharing: 0,
+                    revenue: 0,
+                    profit: 0,
+                    cv_pdf_url: null,
+                    sharing_pdf_url: null
+                };
             }
             acc[user].cv += m.cv || 0;
             acc[user].cp += m.cp || 0;
             acc[user].sharing += m.sharing || 0;
             acc[user].revenue += m.revenue || 0;
             acc[user].profit += m.profit || 0;
-            if (m.pdf_url) acc[user].pdf_url = m.pdf_url;
+
+            if (m.cv_pdf_url) acc[user].cv_pdf_url = m.cv_pdf_url;
+            if (m.sharing_pdf_url) acc[user].sharing_pdf_url = m.sharing_pdf_url;
+
             return acc;
         }, {});
 
@@ -164,7 +176,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                 <th className="p-4 text-center">NUMERO SHAR...</th>
                                 <th className="p-4 text-right">FACTU...</th>
                                 <th className="p-4 text-right pr-8">BENEF...</th>
-                                <th className="p-4 text-center">DOC</th>
+                                <th className="p-4 text-center">JUSTIFICANTES</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -205,20 +217,35 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                         {user.profit.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
                                     </td>
 
-                                    {/* PDF Doc */}
+                                    {/* JUSTIFICANTES */}
                                     <td className="p-4 text-center">
-                                        {user.pdf_url ? (
-                                            <a
-                                                href={user.pdf_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                                            >
-                                                <FileText size={16} />
-                                            </a>
-                                        ) : (
-                                            <span className="text-gray-200">-</span>
-                                        )}
+                                        <div className="flex items-center justify-center space-x-2">
+                                            {user.cv_pdf_url ? (
+                                                <a
+                                                    href={user.cv_pdf_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                                    title="Justificante CV"
+                                                >
+                                                    <FileText size={16} />
+                                                </a>
+                                            ) : null}
+                                            {user.sharing_pdf_url ? (
+                                                <a
+                                                    href={user.sharing_pdf_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center justify-center p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                                                    title="Justificante Sharing"
+                                                >
+                                                    <FileText size={16} />
+                                                </a>
+                                            ) : null}
+                                            {!user.cv_pdf_url && !user.sharing_pdf_url && (
+                                                <span className="text-gray-200">-</span>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
