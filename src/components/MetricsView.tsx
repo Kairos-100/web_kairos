@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Calendar, Target } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
