@@ -10,7 +10,6 @@ interface MetricsViewProps {
 
 const COLORS = {
     cv: '#F59E0B', // Yellow/Gold
-    bp: '#3B82F6', // Blue
     cp: '#EF4444', // Red
     sharing: '#8B5CF6', // Purple
     revenue: '#10B981', // Green
@@ -21,22 +20,20 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
     // 1. Summary Stats
     const totals = useMemo(() => metrics.reduce((acc, m) => ({
         cv: acc.cv + (m.cv || 0),
-        bp: acc.bp + (m.bp || 0),
         cp: acc.cp + (m.cp || 0),
         sharing: acc.sharing + (m.sharing || 0),
         revenue: acc.revenue + (m.revenue || 0),
         profit: acc.profit + (m.profit || 0),
-    }), { cv: 0, bp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 }), [metrics]);
+    }), { cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 }), [metrics]);
 
     // 2. Evolution Data (Line Chart)
     const evolutionData = useMemo(() => {
         const grouped = metrics.reduce((acc: Record<string, any>, m) => {
             const date = m.date;
             if (!acc[date]) {
-                acc[date] = { date, cv: 0, bp: 0, cp: 0, sharing: 0 };
+                acc[date] = { date, cv: 0, cp: 0, sharing: 0 };
             }
             acc[date].cv += m.cv || 0;
-            acc[date].bp += m.bp || 0;
             acc[date].cp += m.cp || 0;
             acc[date].sharing += m.sharing || 0;
             return acc;
@@ -50,10 +47,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
         const grouped = metrics.reduce((acc: Record<string, any>, m) => {
             const user = m.user_email.split('@')[0];
             if (!acc[user]) {
-                acc[user] = { user, cv: 0, bp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
+                acc[user] = { user, cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
             }
             acc[user].cv += m.cv || 0;
-            acc[user].bp += m.bp || 0;
             acc[user].cp += m.cp || 0;
             acc[user].sharing += m.sharing || 0;
             acc[user].revenue += m.revenue || 0;
@@ -73,7 +69,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
             {/* Top Score Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {[
-                    { label: 'NUMERO DE BP', value: totals.bp, color: 'text-blue-500' },
                     { label: 'NUMERO CV', value: totals.cv, color: 'text-amber-500' },
                     { label: 'NUMERO DE CP', value: totals.cp, color: 'text-red-500' },
                     { label: 'NUMERO SHARING', value: totals.sharing, color: 'text-purple-500' },
@@ -113,7 +108,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
                                 <Legend iconType="circle" />
-                                <Line type="monotone" dataKey="bp" name="NUMERO DE BP" stroke={COLORS.bp} strokeWidth={2} dot={false} />
                                 <Line type="monotone" dataKey="cv" name="NUMERO CV" stroke={COLORS.cv} strokeWidth={2} dot={false} />
                                 <Line type="monotone" dataKey="cp" name="NUMERO DE CP" stroke={COLORS.cp} strokeWidth={2} dot={false} />
                                 <Line type="monotone" dataKey="sharing" name="NUMERO SHARING" stroke={COLORS.sharing} strokeWidth={2} dot={false} />
@@ -143,7 +137,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                 <Legend iconType="rect" />
                                 <Bar dataKey="sharing" name="NUMERO SHARING" stackId="a" fill={COLORS.sharing} />
                                 <Bar dataKey="cv" name="NUMERO CV" stackId="a" fill={COLORS.cv} />
-                                <Bar dataKey="bp" name="NUMERO DE BP" stackId="a" fill={COLORS.bp} />
                                 <Bar dataKey="cp" name="NUMERO DE CP" stackId="a" fill={COLORS.cp} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -166,7 +159,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                 <th className="p-4 pl-8">#</th>
                                 <th className="p-4">Dirección de co...</th>
                                 <th className="p-4 text-center">NUMERO CV</th>
-                                <th className="p-4 text-center">NUMERO DE BP</th>
                                 <th className="p-4 text-center">NUMERO DE CP</th>
                                 <th className="p-4 text-center">NUMERO SHAR...</th>
                                 <th className="p-4 text-right">FACTU...</th>
@@ -189,15 +181,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                         </div>
                                     </td>
 
-                                    {/* BP */}
-                                    <td className="p-0">
-                                        <div
-                                            className="h-full flex items-center justify-center font-bold text-xs py-4 transition-all"
-                                            style={{ backgroundColor: `rgba(245, 158, 11, ${Math.min(0.9, user.bp / 100)})`, color: user.bp > 50 ? 'white' : '#0F1D42' }}
-                                        >
-                                            {user.bp || 'null'}
-                                        </div>
-                                    </td>
 
                                     {/* CP */}
                                     <td className="p-0">

@@ -55,7 +55,6 @@ export interface MetricEntry {
     user_email: string;
     date: string;
     cv: number;
-    bp: number;
     cp: number;
     sharing: number;
     revenue: number;

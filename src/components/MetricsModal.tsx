@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Search, Users, Presentation, Target, Share2, DollarSign, Wallet, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, Search, Users, Target, Share2, DollarSign, Wallet, AlertCircle } from 'lucide-react';
 import { WHITELIST } from '../constants';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -19,7 +19,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     // Form states
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [cv, setCv] = useState(0);
-    const [bp, setBp] = useState(0);
     const [cp, setCp] = useState(0);
     const [sharing, setSharing] = useState(0);
     const [revenue, setRevenue] = useState(0);
@@ -48,7 +47,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     user_email: email,
                     date,
                     cv,
-                    bp,
                     cp,
                     sharing,
                     revenue,
@@ -142,20 +140,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                     />
                                 </div>
 
-                                {/* BP */}
-                                <div>
-                                    <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                        <Presentation size={14} className="text-orange-500" />
-                                        <span>Business Proposals (BP)</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={bp}
-                                        onChange={(e) => setBp(parseInt(e.target.value) || 0)}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
-                                        min="0"
-                                    />
-                                </div>
 
                                 {/* CP */}
                                 <div>
