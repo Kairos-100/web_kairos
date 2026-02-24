@@ -26,13 +26,23 @@ export const Layout: React.FC<LayoutProps> = ({
     onOpenUpload,
     onOpenMetrics
 }) => {
-    const navItems = [
-        { id: 'feed', label: 'Conocimiento', icon: BookOpen },
-        { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
-        { id: 'commercial', label: 'Kairos Métricas', icon: TrendingUp },
-        { id: 'score', label: 'Puntuación', icon: Trophy },
-        { id: 'history', label: 'Historial', icon: History },
-        { id: 'book', label: 'Biblioteca', icon: Library },
+    const navGroups = [
+        {
+            title: 'Conocimiento',
+            items: [
+                { id: 'feed', label: 'Explorar', icon: BookOpen },
+                { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
+                { id: 'book', label: 'Biblioteca', icon: Library },
+            ]
+        },
+        {
+            title: 'Actividad y Métricas',
+            items: [
+                { id: 'commercial', label: 'Kairos Métricas', icon: TrendingUp },
+                { id: 'score', label: 'Puntuación', icon: Trophy },
+                { id: 'history', label: 'Historial', icon: History },
+            ]
+        }
     ];
 
     return (
@@ -40,27 +50,34 @@ export const Layout: React.FC<LayoutProps> = ({
             {/* Sidebar */}
             <aside className="w-64 geometric-bg text-white flex flex-col fixed h-full z-20">
                 <div className="p-8">
-                    <h1 className="text-2xl font-heading font-bold tracking-tight">
+                    <h1 className="text-2xl font-heading font-bold tracking-tight text-white">
                         KAIROS <span className="opacity-50">KNOWLEDGE</span>
                     </h1>
                     <p className="text-xs opacity-50 mt-1 uppercase tracking-widest">Knowledge Platform</p>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={cn(
-                                "w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all",
-                                activeTab === item.id
-                                    ? "bg-white/10 text-white shadow-lg"
-                                    : "text-white/60 hover:text-white hover:bg-white/5"
-                            )}
-                        >
-                            <item.icon size={20} />
-                            <span className="font-medium">{item.label}</span>
-                        </button>
+                <nav className="flex-1 px-4 space-y-8 overflow-y-auto">
+                    {navGroups.map((group) => (
+                        <div key={group.title} className="space-y-2">
+                            <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">
+                                {group.title}
+                            </h3>
+                            {group.items.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={cn(
+                                        "w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all",
+                                        activeTab === item.id
+                                            ? "bg-white/10 text-white shadow-lg ring-1 ring-white/20"
+                                            : "text-white/60 hover:text-white hover:bg-white/5"
+                                    )}
+                                >
+                                    <item.icon size={18} />
+                                    <span className="font-bold text-sm">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     ))}
                 </nav>
 
