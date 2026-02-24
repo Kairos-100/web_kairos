@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { UploadModal } from './components/UploadModal';
+import { MetricsModal } from './components/MetricsModal';
 import { Dashboard } from './components/Dashboard';
+import { MetricsView } from './components/MetricsView';
 import { CommentSection } from './components/CommentSection';
 import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { supabase } from './lib/supabase';
-import type { Essay, Comment } from './constants';
-import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3 } from 'lucide-react';
+import type { Essay, Comment, MetricEntry } from './constants';
+import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -34,6 +36,8 @@ const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState('feed');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
+  const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEssayId, setSelectedEssayId] = useState<string | null>(null);
   const [showPdf, setShowPdf] = useState(false);
@@ -46,6 +50,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchEssays();
+    fetchMetrics();
   }, []);
 
   const fetchEssays = async () => {
@@ -72,6 +77,24 @@ const App: React.FC = () => {
       console.error('Error fetching essays from Supabase:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+
+  const fetchMetrics = async () => {
+    const hasConfig = import.meta.env.VITE_SUPABASE_URL;
+    if (!hasConfig) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('metrics')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      if (data) setMetrics(data);
+    } catch (err) {
+      console.error('Error fetching metrics from Supabase:', err);
     }
   };
 
@@ -180,6 +203,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'stats':
         return <Dashboard essays={essays} />;
+      case 'commercial':
+        return <MetricsView metrics={metrics} />;
       case 'book':
         return <BookView essays={essays} />;
       case 'score':
@@ -394,6 +419,7 @@ const App: React.FC = () => {
       user={loggedInUser}
       onLogout={handleLogout}
       onOpenUpload={() => setIsUploadOpen(true)}
+      onOpenMetrics={() => setIsMetricsModalOpen(true)}
     >
       <header className="mb-12">
         <div className="flex justify-between items-end mb-8">
@@ -401,13 +427,15 @@ const App: React.FC = () => {
             <h2 className="text-4xl font-heading font-bold text-kairos-navy mb-2">
               {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Tesis' : 'Explorar Tesis') :
                 activeTab === 'stats' ? 'Visualización de Aprendizaje' :
-                  activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
+                  activeTab === 'commercial' ? 'Métricas Comerciales' :
+                    activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
               {activeTab === 'feed'
                 ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.')
                 : activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
-                  activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
+                  activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
+                    activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
             </p>
           </div>
           {isLoading && (
@@ -466,6 +494,18 @@ const App: React.FC = () => {
               localStorage.setItem('kairos_user', email);
             }}
             editEssay={editingEssay || undefined}
+          />
+        )
+      }
+      {
+        isMetricsModalOpen && (
+          <MetricsModal
+            onClose={() => setIsMetricsModalOpen(false)}
+            onSuccess={fetchMetrics}
+            onIdentify={(email) => {
+              setLoggedInUser(email);
+              localStorage.setItem('kairos_user', email);
+            }}
           />
         )
       }

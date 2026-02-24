@@ -49,3 +49,15 @@ export interface Essay {
     type?: ContributionType;
     points?: number;
 }
+export interface MetricEntry {
+    id: string;
+    created_at: string;
+    user_email: string;
+    date: string;
+    cv: number;
+    bp: number;
+    cp: number;
+    sharing: number;
+    revenue: number;
+    profit: number;
+}

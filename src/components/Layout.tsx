@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy } from 'lucide-react';
+import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -14,6 +14,7 @@ interface LayoutProps {
     user: string | null;
     onLogout: () => void;
     onOpenUpload: () => void;
+    onOpenMetrics: () => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -22,11 +23,13 @@ export const Layout: React.FC<LayoutProps> = ({
     setActiveTab,
     user,
     onLogout,
-    onOpenUpload
+    onOpenUpload,
+    onOpenMetrics
 }) => {
     const navItems = [
         { id: 'feed', label: 'Conocimiento', icon: BookOpen },
         { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
+        { id: 'commercial', label: 'Comercial', icon: TrendingUp },
         { id: 'score', label: 'Puntuación', icon: Trophy },
         { id: 'book', label: 'Biblioteca', icon: Library },
     ];
@@ -42,7 +45,7 @@ export const Layout: React.FC<LayoutProps> = ({
                     <p className="text-xs opacity-50 mt-1 uppercase tracking-widest">Knowledge Platform</p>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-2">
+                <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
                     {navItems.map((item) => (
                         <button
                             key={item.id}
@@ -60,7 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-white/10 space-y-4">
+                <div className="p-4 border-t border-white/10 space-y-2">
                     <button
                         onClick={onOpenUpload}
                         className="w-full bg-white text-kairos-navy py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-transform active:scale-95 shadow-xl"
@@ -69,8 +72,16 @@ export const Layout: React.FC<LayoutProps> = ({
                         <span>Subir Ensayo</span>
                     </button>
 
+                    <button
+                        onClick={onOpenMetrics}
+                        className="w-full bg-kairos-navy text-white border border-white/20 py-2 rounded-xl font-bold flex items-center justify-center space-x-2 transition-transform active:scale-95 hover:bg-white/10"
+                    >
+                        <TrendingUp size={16} />
+                        <span className="text-sm">Actualizar Métricas</span>
+                    </button>
+
                     {user ? (
-                        <div className="flex items-center justify-between px-2 text-xs text-white/40">
+                        <div className="flex items-center justify-between px-2 text-[10px] text-white/40 pt-2">
                             <span className="truncate max-w-[140px] italic">{user}</span>
                             <button
                                 onClick={onLogout}
@@ -83,9 +94,9 @@ export const Layout: React.FC<LayoutProps> = ({
                     ) : (
                         <button
                             onClick={onOpenUpload}
-                            className="w-full bg-white/5 text-white/60 py-2 rounded-lg text-xs font-bold hover:bg-white/10 hover:text-white transition-all border border-white/10"
+                            className="w-full bg-white/5 text-white/60 py-2 rounded-lg text-[10px] font-bold hover:bg-white/10 hover:text-white transition-all border border-white/10"
                         >
-                            ¿No estás identificado? Haz clic aquí
+                            ¿No estás identificado?
                         </button>
                     )}
                 </div>
