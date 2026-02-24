@@ -184,8 +184,16 @@ const App: React.FC = () => {
   const selectedEssay = essays.find(e => e.id === selectedEssayId);
 
   const parseDDMMYYYY = (str: string) => {
-    const [d, m, y] = str.split('/').map(Number);
-    const date = new Date(y, m - 1, d);
+    if (!str) return new Date(0);
+    let date: Date;
+    if (str.includes('-')) {
+      // ISO format YYYY-MM-DD
+      date = new Date(str);
+    } else {
+      // Standard format DD/MM/YYYY
+      const [d, m, y] = str.split('/').map(Number);
+      date = new Date(y, m - 1, d);
+    }
     date.setHours(0, 0, 0, 0);
     return date;
   };

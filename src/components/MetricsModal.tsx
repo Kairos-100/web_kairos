@@ -118,7 +118,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 .from('metrics')
                 .insert([{
                     user_email: email,
-                    date,
+                    date: date.includes('-') ? date.split('-').reverse().join('/') : date,
                     cv,
                     cp,
                     sharing,
