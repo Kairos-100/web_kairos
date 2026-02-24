@@ -80,7 +80,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
         metrics.forEach(m => {
             const user = m.user_email.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null, cp_pdf_url: null };
             }
             if (!logs[user]) logs[user] = [];
 
@@ -91,6 +91,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
             grouped[user].profit += m.profit || 0;
             if (m.cv_pdf_url) grouped[user].cv_pdf_url = m.cv_pdf_url;
             if (m.sharing_pdf_url) grouped[user].sharing_pdf_url = m.sharing_pdf_url;
+            if (m.cp_pdf_url) grouped[user].cp_pdf_url = m.cp_pdf_url;
 
             logs[user].push(m);
         });
@@ -98,7 +99,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
         essays.forEach(e => {
             const user = e.author.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null, cp_pdf_url: null };
             }
             grouped[user].lp += e.points || 0;
         });
@@ -345,7 +346,12 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                                     <FileText size={18} />
                                                 </a>
                                             )}
-                                            {!user.cv_pdf_url && !user.sharing_pdf_url && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
+                                            {user.cp_pdf_url && (
+                                                <a href={user.cp_pdf_url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-110 transition-all border border-red-100" title="Ver Justificante CP">
+                                                    <FileText size={18} />
+                                                </a>
+                                            )}
+                                            {!user.cv_pdf_url && !user.sharing_pdf_url && !user.cp_pdf_url && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
                                         </div>
                                     </td>
                                 </tr>
@@ -459,7 +465,12 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                                                         </td>
                                                                         <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cp}</td>
                                                                         <td className="p-4 text-right pr-6">
-                                                                            <span className="text-gray-200 text-[10px]">Valor Directo</span>
+                                                                            {entry.cp_pdf_url ? (
+                                                                                <a href={entry.cp_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                    <span>VER PDF</span>
+                                                                                    <ExternalLink size={10} />
+                                                                                </a>
+                                                                            ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
                                                                         </td>
                                                                     </tr>
                                                                 )}

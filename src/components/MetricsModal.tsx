@@ -34,12 +34,18 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [sharingPdfName, setSharingPdfName] = useState<string | undefined>(undefined);
     const [sharingPdfUrl, setSharingPdfUrl] = useState<string | undefined>(undefined);
 
+    // CP PDF states
+    const [cpPdfFile, setCpPdfFile] = useState<File | null>(null);
+    const [cpPdfName, setCpPdfName] = useState<string | undefined>(undefined);
+    const [cpPdfUrl, setCpPdfUrl] = useState<string | undefined>(undefined);
+
     const [uploadProgress, setUploadProgress] = useState(0);
 
     const cvInputRef = useRef<HTMLInputElement>(null);
     const sharingInputRef = useRef<HTMLInputElement>(null);
+    const cpInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cv' | 'sharing') => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cv' | 'sharing' | 'cp') => {
         const file = e.target.files?.[0];
         if (file && file.type === 'application/pdf') {
             const url = URL.createObjectURL(file);
@@ -47,10 +53,14 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 setCvPdfFile(file);
                 setCvPdfName(file.name);
                 setCvPdfUrl(url);
-            } else {
+            } else if (type === 'sharing') {
                 setSharingPdfFile(file);
                 setSharingPdfName(file.name);
                 setSharingPdfUrl(url);
+            } else {
+                setCpPdfFile(file);
+                setCpPdfName(file.name);
+                setCpPdfUrl(url);
             }
             return () => URL.revokeObjectURL(url);
         }
@@ -104,6 +114,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
         try {
             let finalCvUrl = undefined;
             let finalSharingUrl = undefined;
+            let finalCpUrl = undefined;
 
             if (import.meta.env.VITE_SUPABASE_URL) {
                 if (cvPdfFile) {
@@ -111,6 +122,9 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 }
                 if (sharingPdfFile) {
                     finalSharingUrl = await uploadToSupabase(sharingPdfFile, 'sharing');
+                }
+                if (cpPdfFile) {
+                    finalCpUrl = await uploadToSupabase(cpPdfFile, 'cp');
                 }
             }
 
@@ -125,7 +139,8 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     revenue,
                     profit,
                     cv_pdf_url: finalCvUrl,
-                    sharing_pdf_url: finalSharingUrl
+                    sharing_pdf_url: finalSharingUrl,
+                    cp_pdf_url: finalCpUrl
                 }]);
 
             if (dbError) throw dbError;
@@ -326,6 +341,31 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                     >
                                         <FileUp size={20} className={sharingPdfUrl ? 'text-green-500' : 'text-purple-500'} />
                                         <span className={`text-[10px] font-bold ${sharingPdfUrl ? 'text-green-700' : 'text-purple-700'}`}>{sharingPdfUrl ? 'Cambiar Justificante' : 'Subir Justificante Sharing'}</span>
+                                    </button>
+                                </div>
+
+                                {/* CP PDF Upload */}
+                                <div className={`p-4 rounded-2xl border border-dashed transition-all col-span-2 ${cpPdfUrl ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest text-red-600">
+                                            <span>PDF Community Points (CP)</span>
+                                        </label>
+                                        {cpPdfName && <span className="text-[10px] text-green-600 font-bold flex items-center space-x-1 max-w-[100px] truncate"><CheckCircle2 size={10} /> <span>{cpPdfName}</span></span>}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        accept=".pdf"
+                                        onChange={(e) => handleFileChange(e, 'cp')}
+                                        ref={cpInputRef}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => cpInputRef.current?.click()}
+                                        className={`w-full py-3 flex flex-col items-center justify-center space-y-1 hover:bg-white transition-colors rounded-xl border ${cpPdfUrl ? 'border-green-200' : 'border-red-200'}`}
+                                    >
+                                        <FileUp size={20} className={cpPdfUrl ? 'text-green-500' : 'text-red-500'} />
+                                        <span className={`text-[10px] font-bold ${cpPdfUrl ? 'text-green-700' : 'text-red-700'}`}>{cpPdfUrl ? 'Cambiar Justificante' : 'Subir Justificante CP'}</span>
                                     </button>
                                 </div>
                             </div>
