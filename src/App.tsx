@@ -9,8 +9,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { ActivityView } from './components/ActivityView';
 import { supabase } from './lib/supabase';
-import type { Essay, Comment, MetricEntry } from './constants';
-import { motion, AnimatePresence } from 'framer-motion';
+import type { Essay, Comment, MetricEntry } from './constants'; import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { DateRangePicker, type DateRange } from './components/DateRangePicker';
 
