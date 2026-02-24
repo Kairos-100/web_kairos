@@ -7,7 +7,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment } from './constants';
-import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle } from 'lucide-react';
+import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -38,6 +38,8 @@ const App: React.FC = () => {
   const [selectedEssayId, setSelectedEssayId] = useState<string | null>(null);
   const [showPdf, setShowPdf] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingEssay, setEditingEssay] = useState<Essay | null>(null);
   const [loggedInUser, setLoggedInUser] = useState<string | null>(() => {
     return localStorage.getItem('kairos_user');
   });
@@ -108,6 +110,12 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEditEssay = (e: React.MouseEvent, essay: Essay) => {
+    e.stopPropagation();
+    setEditingEssay(essay);
+    setIsEditOpen(true);
   };
 
   useEffect(() => {
@@ -209,8 +217,15 @@ const App: React.FC = () => {
                         <span>{essay.pdfUrl ? 'PDF Adjunto' : `${essay.readingTime} min`}</span>
 
                         <button
+                          onClick={(e) => handleEditEssay(e, essay)}
+                          className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Editar Tesis"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                        <button
                           onClick={(e) => handleDeleteEssay(e, essay.id, essay.pdfUrl)}
-                          className="ml-2 p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                           title="Borrar Tesis"
                         >
                           <Trash2 size={12} />
@@ -279,6 +294,20 @@ const App: React.FC = () => {
                           <span>{showPdf ? 'Ocultar PDF' : 'Ver PDF Adjunto'}</span>
                         </button>
                       )}
+                      <button
+                        onClick={(e) => handleEditEssay(e, selectedEssay!)}
+                        className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <Edit3 size={16} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteEssay(e, selectedEssay!.id, selectedEssay!.pdfUrl)}
+                        className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                        <span>Borrar</span>
+                      </button>
                       <button
                         onClick={() => window.print()}
                         className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-kairos-navy transition-colors"
@@ -423,15 +452,20 @@ const App: React.FC = () => {
       {renderContent()}
 
       {
-        isUploadOpen && (
+        (isUploadOpen || isEditOpen) && (
           <UploadModal
-            onClose={() => setIsUploadOpen(false)}
+            onClose={() => {
+              setIsUploadOpen(false);
+              setIsEditOpen(false);
+              setEditingEssay(null);
+            }}
             onUpload={handleUpload}
             onSuccess={fetchEssays}
             onIdentify={(email) => {
               setLoggedInUser(email);
               localStorage.setItem('kairos_user', email);
             }}
+            editEssay={editingEssay || undefined}
           />
         )
       }

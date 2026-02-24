@@ -11,21 +11,22 @@ interface UploadModalProps {
     onUpload: (essay: Omit<Essay, 'id' | 'date' | 'comments' | 'readingTime'>) => void;
     onSuccess?: () => void;
     onIdentify?: (email: string) => void;
+    editEssay?: Essay;
 }
 
-export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onSuccess, onIdentify }) => {
-    const [email, setEmail] = useState('');
-    const [isAuth, setIsAuth] = useState(false);
+export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onSuccess, onIdentify, editEssay }) => {
+    const [email, setEmail] = useState(editEssay?.author || '');
+    const [isAuth, setIsAuth] = useState(!!editEssay);
     const [error, setError] = useState('');
-    const [title, setTitle] = useState('');
-    const [category, setCategory] = useState(CATEGORIES[0]);
-    const [content, setContent] = useState('');
-    const [tags, setTags] = useState('');
-    const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
-    const [pdfName, setPdfName] = useState<string | undefined>(undefined);
+    const [title, setTitle] = useState(editEssay?.title || '');
+    const [category, setCategory] = useState(editEssay?.category || CATEGORIES[0]);
+    const [content, setContent] = useState(editEssay?.content || '');
+    const [tags, setTags] = useState(editEssay?.tags?.join(', ') || '');
+    const [pdfUrl, setPdfUrl] = useState<string | undefined>(editEssay?.pdfUrl);
+    const [pdfName, setPdfName] = useState<string | undefined>(editEssay?.pdfUrl ? 'PDF Actual' : undefined);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
-    const [contributionType, setContributionType] = useState<ContributionType>('molecula');
-    const [points, setPoints] = useState<number>(4);
+    const [contributionType, setContributionType] = useState<ContributionType>(editEssay?.type || 'molecula');
+    const [points, setPoints] = useState<number>(editEssay?.points || 4);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
@@ -74,7 +75,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!pdfFile) return;
+        if (!pdfFile && !editEssay) return;
 
         setIsUploading(true);
         setError('');
@@ -121,25 +122,37 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                     .getPublicUrl(fileName);
 
                 finalPdfUrl = publicUrl;
+            }
 
-                // Insert into DB
+            if (import.meta.env.VITE_SUPABASE_URL) {
+                // Insert or Update DB
                 const tagArray = tags.split(',').map(t => t.trim()).filter(t => t !== '');
-                const { error: dbError } = await supabase
-                    .from('essays')
-                    .insert([{
-                        title,
-                        author: email,
-                        category,
-                        content,
-                        tags: tagArray,
-                        pdf_url: finalPdfUrl,
-                        date: new Date().toLocaleDateString('es-ES'),
-                        reading_time: Math.max(1, Math.ceil(content.split(/\s+/).length / 200)),
-                        type: contributionType,
-                        points: points
-                    }]);
+                const essayPayload = {
+                    title,
+                    author: email,
+                    category,
+                    content,
+                    tags: tagArray,
+                    pdf_url: finalPdfUrl,
+                    date: editEssay?.date || new Date().toLocaleDateString('es-ES'),
+                    reading_time: Math.max(1, Math.ceil(content.split(/\s+/).length / 200)),
+                    type: contributionType,
+                    points: points
+                };
 
-                if (dbError) throw dbError;
+                if (editEssay) {
+                    const { error: dbError } = await supabase
+                        .from('essays')
+                        .update(essayPayload)
+                        .eq('id', editEssay.id);
+                    if (dbError) throw dbError;
+                } else {
+                    const { error: dbError } = await supabase
+                        .from('essays')
+                        .insert([essayPayload]);
+                    if (dbError) throw dbError;
+                }
+
                 if (onSuccess) onSuccess();
             } else {
                 // Fallback to local upload (old behavior)
@@ -187,7 +200,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
             >
                 <div className="flex justify-between items-center p-6 border-b border-gray-100 flex-shrink-0">
                     <h2 className="text-xl font-heading font-bold text-kairos-navy">
-                        {isAuth ? 'Publicar Nueva Tesis' : 'Identificación Requerida'}
+                        {editEssay ? 'Editar Tesis' : (isAuth ? 'Publicar Nueva Tesis' : 'Identificación Requerida')}
                     </h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <X size={24} className="text-gray-400" />
@@ -362,7 +375,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                             value={content}
                                             onChange={(e) => setContent(e.target.value)}
                                             placeholder="# Resumen Ejecutivo...
-                      
+                       
 Explica brevemente de qué trata este documento."
                                             rows={6}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all resize-none font-mono text-sm"
@@ -414,12 +427,12 @@ Explica brevemente de qué trata este documento."
                                             {uploadProgress === 100 && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                                         </>
                                     ) : (
-                                        <span>{pdfUrl ? 'Publicar Conocimiento' : 'Adjuntar PDF para Publicar'}</span>
+                                        <span>{editEssay ? 'Guardar Cambios' : (pdfUrl ? 'Publicar Conocimiento' : 'Adjuntar PDF para Publicar')}</span>
                                     )}
                                 </span>
                             </button>
                             <div className="flex flex-col items-center mt-2 space-y-1">
-                                <p className="text-[8px] text-gray-300">Versión v2.2.7 - Máxima Estabilidad</p>
+                                <p className="text-[8px] text-gray-300">Versión v2.2.8 - Máxima Estabilidad</p>
                                 {showIncognitoWarning && uploadProgress === 0 && (
                                     <div className="bg-amber-50 border border-amber-200 p-2 rounded-lg mt-2 flex items-start space-x-2 animate-pulse">
                                         <AlertCircle className="text-amber-600 flex-shrink-0" size={14} />
