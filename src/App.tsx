@@ -7,6 +7,7 @@ import { MetricsView } from './components/MetricsView';
 import { CommentSection } from './components/CommentSection';
 import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
+import { ActivityView } from './components/ActivityView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment, MetricEntry } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3 } from 'lucide-react';
@@ -209,6 +210,8 @@ const App: React.FC = () => {
         return <BookView essays={essays} />;
       case 'score':
         return <ScoresView essays={essays} />;
+      case 'history':
+        return <ActivityView essays={essays} metrics={metrics} />;
       default:
         return (
           <AnimatePresence mode="wait">
@@ -428,14 +431,16 @@ const App: React.FC = () => {
               {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Tesis' : 'Explorar Tesis') :
                 activeTab === 'stats' ? 'Visualización de Aprendizaje' :
                   activeTab === 'commercial' ? 'Kairos Métricas' :
-                    activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
+                    activeTab === 'history' ? 'Historial de Actividad' :
+                      activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
               {activeTab === 'feed'
                 ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.')
                 : activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
                   activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
-                    activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
+                    activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
+                      activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
             </p>
           </div>
           {isLoading && (

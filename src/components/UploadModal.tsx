@@ -30,6 +30,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+    const [date, setDate] = useState(editEssay?.date ?
+        (editEssay.date.includes('/') ? editEssay.date.split('/').reverse().join('-') : editEssay.date) :
+        new Date().toISOString().split('T')[0]
+    );
     const [connectionStatus, setConnectionStatus] = useState<'testing' | 'ok' | 'fail'>('testing');
     const [showIncognitoWarning, setShowIncognitoWarning] = useState(false);
 
@@ -134,7 +138,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                     content,
                     tags: tagArray,
                     pdf_url: finalPdfUrl,
-                    date: editEssay?.date || new Date().toLocaleDateString('es-ES'),
+                    date: date.includes('-') ? date.split('-').reverse().join('/') : date,
                     reading_time: Math.max(1, Math.ceil(content.split(/\s+/).length / 200)),
                     type: contributionType,
                     points: points
@@ -241,23 +245,32 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                     <CheckCircle2 size={18} />
                                     <span className="text-xs font-bold uppercase tracking-tight">Acceso Autorizado: {email}</span>
                                 </div>
-                                <div className="flex bg-white rounded-lg p-1 border border-green-100 shadow-sm">
-                                    <button
-                                        type="button"
-                                        onClick={() => setViewMode('edit')}
-                                        className={`flex items-center space-x-1 px-3 py-1 rounded-md text-xs font-bold transition-all ${viewMode === 'edit' ? 'bg-kairos-navy text-white' : 'text-gray-400 hover:text-kairos-navy'}`}
-                                    >
-                                        <Edit3 size={14} />
-                                        <span>Editar</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setViewMode('preview')}
-                                        className={`flex items-center space-x-1 px-3 py-1 rounded-md text-xs font-bold transition-all ${viewMode === 'preview' ? 'bg-kairos-navy text-white' : 'text-gray-400 hover:text-kairos-navy'}`}
-                                    >
-                                        <Eye size={14} />
-                                        <span>Vista Previa</span>
-                                    </button>
+                                <div className="flex items-center space-x-3">
+                                    <div className="flex bg-white rounded-lg p-1 border border-green-100 shadow-sm">
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewMode('edit')}
+                                            className={`flex items-center space-x-1 px-3 py-1 rounded-md text-xs font-bold transition-all ${viewMode === 'edit' ? 'bg-kairos-navy text-white' : 'text-gray-400 hover:text-kairos-navy'}`}
+                                        >
+                                            <Edit3 size={14} />
+                                            <span>Editar</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewMode('preview')}
+                                            className={`flex items-center space-x-1 px-3 py-1 rounded-md text-xs font-bold transition-all ${viewMode === 'preview' ? 'bg-kairos-navy text-white' : 'text-gray-400 hover:text-kairos-navy'}`}
+                                        >
+                                            <Eye size={14} />
+                                            <span>Vista Previa</span>
+                                        </button>
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="bg-white border border-green-100 rounded-lg px-2 py-1 text-xs font-bold text-kairos-navy shadow-sm outline-none focus:ring-1 focus:ring-green-400"
+                                        required
+                                    />
                                 </div>
                             </div>
 
