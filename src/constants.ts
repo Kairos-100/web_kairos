@@ -59,4 +59,5 @@ export interface MetricEntry {
     sharing: number;
     revenue: number;
     profit: number;
+    pdf_url?: string;
 }

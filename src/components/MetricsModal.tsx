@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, CheckCircle2, Search, Users, Target, Share2, DollarSign, Wallet, AlertCircle } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, CheckCircle2, Search, Users, Target, Share2, DollarSign, Wallet, AlertCircle, FileUp, FileText } from 'lucide-react';
 import { WHITELIST } from '../constants';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -23,6 +23,23 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [sharing, setSharing] = useState(0);
     const [revenue, setRevenue] = useState(0);
     const [profit, setProfit] = useState(0);
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
+    const [pdfName, setPdfName] = useState<string | undefined>(undefined);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type === 'application/pdf') {
+            setPdfFile(file);
+            setPdfName(file.name);
+            const url = URL.createObjectURL(file);
+            setPdfUrl(url);
+            return () => URL.revokeObjectURL(url);
+        }
+    };
 
     const handleAuth = (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,8 +56,39 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
         e.preventDefault();
         setIsUploading(true);
         setError('');
+        setUploadProgress(0);
 
         try {
+            let finalPdfUrl = undefined;
+
+            if (import.meta.env.VITE_SUPABASE_URL && pdfFile) {
+                const sanitizedName = pdfFile.name
+                    .replace(/[^\x00-\x7F]/g, "")
+                    .replace(/[^a-zA-Z0-9.-]/g, "_")
+                    .replace(/_{2,}/g, "_");
+
+                const fileName = `metrics/${Date.now()}-${sanitizedName}`;
+                const { error: storageError } = await supabase.storage
+                    .from('pdfs')
+                    .upload(fileName, pdfFile, {
+                        upsert: true,
+                        onUploadProgress: (progress: any) => {
+                            if (progress.total && progress.total > 0) {
+                                const percent = (progress.loaded / progress.total) * 100;
+                                setUploadProgress(Math.min(99, Math.round(percent)));
+                            }
+                        }
+                    } as any);
+
+                if (storageError) throw storageError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('pdfs')
+                    .getPublicUrl(fileName);
+
+                finalPdfUrl = publicUrl;
+            }
+
             const { error: dbError } = await supabase
                 .from('metrics')
                 .insert([{
@@ -50,7 +98,8 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     cp,
                     sharing,
                     revenue,
-                    profit
+                    profit,
+                    pdf_url: finalPdfUrl
                 }]);
 
             if (dbError) throw dbError;
@@ -140,7 +189,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                     />
                                 </div>
 
-
                                 {/* CP */}
                                 <div>
                                     <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
@@ -204,6 +252,30 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 </div>
                             </div>
 
+                            <div className={`p-6 rounded-2xl border border-dashed transition-all ${pdfUrl ? 'bg-green-50/50 border-green-200' : 'bg-blue-50/50 border-blue-200'}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-[10px] text-blue-600">
+                                        <span>Adjuntar PDF Justificante (Opcional)</span>
+                                    </label>
+                                    {pdfName && <span className="text-[10px] text-green-600 font-bold flex items-center space-x-1"><CheckCircle2 size={12} /> <span>{pdfName}</span></span>}
+                                </div>
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handleFileChange}
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`w-full py-4 flex flex-col items-center justify-center space-y-2 hover:bg-white transition-colors rounded-xl border ${pdfUrl ? 'border-green-200' : 'border-blue-200'}`}
+                                >
+                                    <FileUp size={24} className={pdfUrl ? 'text-green-500' : 'text-blue-500'} />
+                                    <span className={`text-xs font-bold ${pdfUrl ? 'text-green-700' : 'text-blue-700'}`}>{pdfUrl ? 'Cambiar archivo PDF' : 'Seleccionar archivo PDF'}</span>
+                                </button>
+                            </div>
+
                             {error && (
                                 <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center space-x-3 text-red-600">
                                     <AlertCircle size={20} />
@@ -214,9 +286,17 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                             <button
                                 type="submit"
                                 disabled={isUploading}
-                                className={`w-full py-4 text-lg mt-4 font-bold rounded-2xl transition-all ${!isUploading ? 'btn-primary' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`}
+                                className={`w-full py-4 text-lg mt-4 font-bold rounded-2xl transition-all relative overflow-hidden ${!isUploading ? 'btn-primary' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`}
                             >
-                                {isUploading ? 'Guardando...' : 'Registrar Métricas'}
+                                {isUploading && (
+                                    <div
+                                        className="absolute inset-0 bg-blue-600/20 transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                )}
+                                <span className="relative z-10">
+                                    {isUploading ? (uploadProgress < 100 ? `Subiendo... ${uploadProgress}%` : 'Guardando...') : 'Registrar Métricas'}
+                                </span>
                             </button>
                         </form>
                     )}

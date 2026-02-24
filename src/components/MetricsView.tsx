@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { MetricEntry } from '../constants';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users } from 'lucide-react';
+import { TrendingUp, Users, FileText } from 'lucide-react';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
@@ -42,22 +42,23 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
         return Object.values(grouped).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [metrics]);
 
-    // 3. User Contribution Data (Bar Chart)
+    // 3. User Contribution Data (Bar Chart & Table)
     const userData = useMemo(() => {
         const grouped = metrics.reduce((acc: Record<string, any>, m) => {
             const user = m.user_email.split('@')[0];
             if (!acc[user]) {
-                acc[user] = { user, cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
+                acc[user] = { user, cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, pdf_url: null };
             }
             acc[user].cv += m.cv || 0;
             acc[user].cp += m.cp || 0;
             acc[user].sharing += m.sharing || 0;
             acc[user].revenue += m.revenue || 0;
             acc[user].profit += m.profit || 0;
+            if (m.pdf_url) acc[user].pdf_url = m.pdf_url;
             return acc;
         }, {});
 
-        return Object.values(grouped).sort((a: any, b: any) => b.cv - a.cv); // Sort by CV descending
+        return Object.values(grouped).sort((a: any, b: any) => b.cv - a.cv);
     }, [metrics]);
 
     const formatCurrency = (val: number) => {
@@ -162,7 +163,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                 <th className="p-4 text-center">NUMERO DE CP</th>
                                 <th className="p-4 text-center">NUMERO SHAR...</th>
                                 <th className="p-4 text-right">FACTU...</th>
-                                <th className="p-4 text-right pr-8">BENEFI...</th>
+                                <th className="p-4 text-right pr-8">BENEF...</th>
+                                <th className="p-4 text-center">DOC</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -175,12 +177,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                     <td className="p-0">
                                         <div
                                             className="h-full flex items-center justify-center font-bold text-xs py-4 transition-all"
-                                            style={{ backgroundColor: `rgba(16, 185, 129, ${Math.min(0.9, user.cv / 150)})`, color: user.cv > 70 ? 'white' : '#0F1D42' }}
+                                            style={{ backgroundColor: `rgba(245, 158, 11, ${Math.min(0.9, user.cv / 150)})`, color: user.cv > 70 ? 'white' : '#0F1D42' }}
                                         >
                                             {user.cv || 'null'}
                                         </div>
                                     </td>
-
 
                                     {/* CP */}
                                     <td className="p-0">
@@ -200,8 +201,24 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics }) => {
                                     <td className="p-4 text-right text-xs font-bold text-kairos-navy">
                                         {formatCurrency(user.revenue)}
                                     </td>
-                                    <td className="p-4 text-right pr-8 text-xs font-bold text-kairos-navy">
-                                        {formatCurrency(user.profit)}
+                                    <td className="p-4 text-right font-mono text-xs font-bold text-emerald-600 pr-8">
+                                        {user.profit.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                                    </td>
+
+                                    {/* PDF Doc */}
+                                    <td className="p-4 text-center">
+                                        {user.pdf_url ? (
+                                            <a
+                                                href={user.pdf_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                            >
+                                                <FileText size={16} />
+                                            </a>
+                                        ) : (
+                                            <span className="text-gray-200">-</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
