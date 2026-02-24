@@ -9,7 +9,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment, MetricEntry } from './constants';
-import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3, TrendingUp } from 'lucide-react';
+import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, ExternalLink, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -427,7 +427,7 @@ const App: React.FC = () => {
             <h2 className="text-4xl font-heading font-bold text-kairos-navy mb-2">
               {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Tesis' : 'Explorar Tesis') :
                 activeTab === 'stats' ? 'Visualización de Aprendizaje' :
-                  activeTab === 'commercial' ? 'Métricas Comerciales' :
+                  activeTab === 'commercial' ? 'Kairos Métricas' :
                     activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
