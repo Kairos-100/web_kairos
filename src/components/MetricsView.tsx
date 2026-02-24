@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Legend, BarChart, Bar
+    ResponsiveContainer, Legend, BarChart, Bar,
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
-import { motion } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Calendar, Target } from 'lucide-react';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
@@ -22,6 +22,8 @@ const COLORS = {
 };
 
 export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => {
+    const [expandedUser, setExpandedUser] = useState<string | null>(null);
+
     // 1. Summary Stats
     const totals = useMemo(() => {
         const metricTotals = metrics.reduce((acc, m) => ({
@@ -61,7 +63,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
             const [d2, m2, y2] = b.date.split('/').map(Number);
             return new Date(y1, m1 - 1, d1).getTime() - new Date(y2, m2 - 1, d2).getTime();
         }).map((item: any) => {
-            // Format date for chart: "24 Feb"
             const [d, m, y] = item.date.split('/').map(Number);
             const dateObj = new Date(y, m - 1, d);
             return {
@@ -71,15 +72,18 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
         });
     }, [metrics, essays]);
 
-    // 3. User Contribution Data
-    const userData = useMemo(() => {
+    // 3. User Aggregated Data & Audit Log
+    const { userData, auditLog } = useMemo(() => {
         const grouped: Record<string, any> = {};
+        const logs: Record<string, MetricEntry[]> = {};
 
         metrics.forEach(m => {
             const user = m.user_email.split('@')[0];
             if (!grouped[user]) {
                 grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null };
             }
+            if (!logs[user]) logs[user] = [];
+
             grouped[user].cv += m.cv || 0;
             grouped[user].cp += m.cp || 0;
             grouped[user].sharing += m.sharing || 0;
@@ -87,6 +91,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
             grouped[user].profit += m.profit || 0;
             if (m.cv_pdf_url) grouped[user].cv_pdf_url = m.cv_pdf_url;
             if (m.sharing_pdf_url) grouped[user].sharing_pdf_url = m.sharing_pdf_url;
+
+            logs[user].push(m);
         });
 
         essays.forEach(e => {
@@ -97,7 +103,18 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
             grouped[user].lp += e.points || 0;
         });
 
-        return Object.values(grouped).sort((a: any, b: any) => (b.lp + b.cp + b.cv) - (a.lp + a.cp + a.cv));
+        const sortedUsers = Object.values(grouped).sort((a: any, b: any) => (b.lp + b.cp + b.cv) - (a.lp + a.cp + a.cv));
+
+        // Sort each user's log by date descending
+        Object.keys(logs).forEach(u => {
+            logs[u].sort((a, b) => {
+                const [d1, m1, y1] = a.date.split('/').map(Number);
+                const [d2, m2, y2] = b.date.split('/').map(Number);
+                return new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime();
+            });
+        });
+
+        return { userData: sortedUsers, auditLog: logs };
     }, [metrics, essays]);
 
     const formatCurrency = (val: number) => {
@@ -299,17 +316,14 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                         </div>
                                     </td>
 
-                                    {/* CV */}
                                     <td className="p-6 text-center">
                                         <span className="text-lg font-black text-amber-600">{user.cv || '0'}</span>
                                     </td>
 
-                                    {/* LP */}
                                     <td className="p-6 text-center">
                                         <span className="text-lg font-black text-blue-600">{user.lp || '0'}</span>
                                     </td>
 
-                                    {/* CP */}
                                     <td className="p-6 text-center">
                                         <span className="text-lg font-black text-red-500">{user.cp || '0'}</span>
                                     </td>
@@ -340,6 +354,135 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                     </table>
                 </div>
             </motion.div>
+
+            {/* 5. Detailed Audit Log (Grouping by User) */}
+            <div className="mt-12 space-y-6">
+                <div className="flex items-center space-x-3 px-2">
+                    <FileText className="text-kairos-navy" size={24} />
+                    <h3 className="text-2xl font-heading font-black text-kairos-navy">Log Detallado de Justificantes</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                    {userData.map((user) => (
+                        <div key={`log-${user.user}`} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                            <button
+                                onClick={() => setExpandedUser(expandedUser === user.user ? null : user.user)}
+                                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
+                            >
+                                <div className="flex items-center space-x-4">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-kairos-navy font-black">
+                                        {user.user[0].toUpperCase()}
+                                    </div>
+                                    <div className="text-left">
+                                        <h4 className="font-black text-kairos-navy">{user.user}</h4>
+                                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">
+                                            {(auditLog[user.user]?.length || 0)} Registros Realizados
+                                        </p>
+                                    </div>
+                                </div>
+                                {expandedUser === user.user ? <ChevronUp size={20} className="text-gray-300" /> : <ChevronDown size={20} className="text-gray-300" />}
+                            </button>
+
+                            <AnimatePresence>
+                                {expandedUser === user.user && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="border-t border-gray-50"
+                                    >
+                                        <div className="bg-gray-50/50 p-6">
+                                            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                            <th className="p-4 pl-6">Fecha</th>
+                                                            <th className="p-4">Categoría</th>
+                                                            <th className="p-4 text-center">Valor</th>
+                                                            <th className="p-4 text-right pr-6">Documento</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {(auditLog[user.user] || []).map((entry) => (
+                                                            <React.Fragment key={entry.id}>
+                                                                {/* CV Row */}
+                                                                {entry.cv > 0 && (
+                                                                    <tr className="hover:bg-amber-50/30 transition-colors">
+                                                                        <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                        <td className="p-4">
+                                                                            <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-amber-600">
+                                                                                <Target size={12} />
+                                                                                <span>Customer Visit (CV)</span>
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cv}</td>
+                                                                        <td className="p-4 text-right pr-6">
+                                                                            {entry.cv_pdf_url ? (
+                                                                                <a href={entry.cv_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                    <span>VER PDF</span>
+                                                                                    <ExternalLink size={10} />
+                                                                                </a>
+                                                                            ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                                {/* Sharing Row */}
+                                                                {entry.sharing > 0 && (
+                                                                    <tr className="hover:bg-purple-50/30 transition-colors">
+                                                                        <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                        <td className="p-4">
+                                                                            <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-purple-600">
+                                                                                <Users size={12} />
+                                                                                <span>Sharing</span>
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.sharing}</td>
+                                                                        <td className="p-4 text-right pr-6">
+                                                                            {entry.sharing_pdf_url ? (
+                                                                                <a href={entry.sharing_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                    <span>VER PDF</span>
+                                                                                    <ExternalLink size={10} />
+                                                                                </a>
+                                                                            ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                                {/* CP Row */}
+                                                                {entry.cp > 0 && (
+                                                                    <tr className="hover:bg-red-50/30 transition-colors">
+                                                                        <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                        <td className="p-4">
+                                                                            <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-red-500">
+                                                                                <Award size={12} />
+                                                                                <span>Comunity Points (CP)</span>
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cp}</td>
+                                                                        <td className="p-4 text-right pr-6">
+                                                                            <span className="text-gray-200 text-[10px]">Valor Directo</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </React.Fragment>
+                                                        ))}
+                                                        {auditLog[user.user]?.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan={4} className="p-10 text-center text-gray-300 italic text-sm">
+                                                                    No hay registros detallados para este usuario.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
