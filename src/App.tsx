@@ -394,7 +394,7 @@ const App: React.FC = () => {
         {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} />}
         {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} />}
       </Layout>
-      <KairosAI />
+      <KairosAI essays={filteredByDateEssays} metrics={filteredMetrics} />
     </>
   );
 };

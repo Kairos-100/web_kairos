@@ -1,15 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, User, Sparkles, Key, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateAiResponse } from '../lib/ai';
+import { generateAiResponse, generateDashboardSummary } from '../lib/ai';
 import ReactMarkdown from 'react-markdown';
+import type { Essay, MetricEntry } from '../constants';
 
 interface Message {
     role: 'user' | 'ai';
     content: string;
 }
 
-export const KairosAI: React.FC = () => {
+interface KairosAIProps {
+    essays: Essay[];
+    metrics: MetricEntry[];
+}
+
+export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -52,7 +58,8 @@ export const KairosAI: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await generateAiResponse(userMessage, apiKey);
+            const summary = generateDashboardSummary(essays, metrics);
+            const response = await generateAiResponse(userMessage, apiKey, summary);
             setMessages(prev => [...prev, { role: 'ai', content: response }]);
         } catch (error: any) {
             console.error('AI Error:', error);

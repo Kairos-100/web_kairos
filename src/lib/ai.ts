@@ -1,6 +1,7 @@
 import * as pdfjs from 'pdfjs-dist';
 import { supabase } from './supabase';
 import OpenAI from 'openai';
+import type { Essay, MetricEntry } from '../constants';
 
 // Configure the worker for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -157,25 +158,34 @@ export async function getRelevantContext(query: string, apiKey: string): Promise
 }
 
 /**
- * Generation: Chat with OpenAI using RAG context.
+ * Generation: Chat with OpenAI using RAG context and Dashboard Metadata.
  */
-export async function generateAiResponse(query: string, apiKey: string): Promise<string> {
+export async function generateAiResponse(
+    query: string,
+    apiKey: string,
+    dashboardSummary?: string
+): Promise<string> {
     const context = await getRelevantContext(query, apiKey);
 
     const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
     const prompt = `
 Eres Kairos AI, un asistente experto en el conocimiento compartido de la organización Kairos. 
-Tu objetivo es responder preguntas basándote ÚNICAMENTE en el contexto proporcionado abajo.
-Si el contexto no contiene la información necesaria, dilo amablemente, pero no inventes nada.
+Tu objetivo es responder preguntas basándote en el CONTEXTO DE DOCUMENTOS y en el ESTADO DEL DASHBOARD.
 
-CONTEXTO DE LOS DOCUMENTOS DE KAIROS:
+${dashboardSummary || ''}
+
+CONTEXTO DE LOS DOCUMENTOS DE KAIROS (RAG):
 ${context}
 
 PREGUNTA DEL USUARIO:
 ${query}
 
-Responde de forma profesional, clara y en español. Cita los documentos si es posible.
+INSTRUCCIONES:
+1. Prioriza los documentos para preguntas de conocimiento profundo/técnico.
+2. Usa el "ESTADO DEL DASHBOARD" para preguntas sobre métricas, rankings, actividad total o resultados.
+3. Responde de forma profesional, clara y en español. Cita documentos si es posible.
+4. Si la información no está en ninguna de las fuentes, dilo amablemente.
 `;
 
     try {
@@ -192,6 +202,45 @@ Responde de forma profesional, clara y en español. Cita los documentos si es po
         console.error('Error final in generateAiResponse:', err);
         throw new Error(`Error en la generación de OpenAI: ${err.message || 'Error desconocido'}`);
     }
+}
+
+/**
+ * Generates a text summary of the dashboard data for AI context injection.
+ */
+export function generateDashboardSummary(essays: Essay[], metrics: MetricEntry[]): string {
+    const totalEssays = essays.length;
+    const totalPoints = essays.reduce((acc, e) => acc + (e.points || 0), 0);
+    const moleculas = essays.filter(e => e.type === 'molecula').length;
+    const libros = essays.filter(e => e.type === 'libro').length;
+
+    const revenues = metrics.reduce((acc, m) => acc + (Number(m.revenue) || 0), 0);
+    const profits = metrics.reduce((acc, m) => acc + (Number(m.profit) || 0), 0);
+
+    const authors = essays.reduce((acc: Record<string, number>, e) => {
+        acc[e.author] = (acc[e.author] || 0) + (e.points || 0);
+        return acc;
+    }, {});
+
+    const topContributor = Object.entries(authors)
+        .sort((a, b) => b[1] - a[1])[0];
+
+    const categories = essays.reduce((acc: Record<string, number>, e) => {
+        acc[e.category] = (acc[e.category] || 0) + 1;
+        return acc;
+    }, {});
+
+    const topCategory = Object.entries(categories)
+        .sort((a, b) => b[1] - a[1])[0];
+
+    return `
+ESTADO ACTUAL DEL DASHBOARD (RESUMEN EN TIEMPO REAL):
+- Actividad: ${totalEssays} aportaciones totales (${moleculas} Moléculas, ${libros} Libros).
+- Desempeño: ${totalPoints} puntos acumulados por el equipo.
+- Financiero: ${revenues.toLocaleString('es-ES')}€ de Ingresos / ${profits.toLocaleString('es-ES')}€ de Beneficio.
+- Liderazgo: El top contributor es ${topContributor ? topContributor[0] : 'N/A'} con ${topContributor ? topContributor[1] : 0} puntos.
+- Temas: La categoría más explorada es "${topCategory ? topCategory[0] : 'N/A'}".
+- Registros: Hay ${metrics.length} entradas en el historial de métricas.
+`;
 }
 
 /**
