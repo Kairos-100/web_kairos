@@ -249,8 +249,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                         if (doc.type === 'tesis' && onDeleteEssay) {
                             onDeleteEssay(doc.id, doc.pdfUrl);
                         } else if (onDeleteMetric) {
-                            const originalId = doc.id.split('-')[1] || doc.id;
-                            onDeleteMetric(originalId);
+                            onDeleteMetric(doc.id);
                         }
                     }}
                     onEdit={(doc) => {
@@ -258,8 +257,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                             const essay = essays.find(e => e.id === doc.id);
                             if (essay) onEditEssay(essay);
                         } else if (onEditMetric) {
-                            const originalId = doc.id.split('-')[1] || doc.id;
-                            const metric = metrics.find(m => m.id === originalId);
+                            const metric = metrics.find(m => m.id === doc.id);
                             if (metric) onEditMetric(metric);
                         }
                     }}
