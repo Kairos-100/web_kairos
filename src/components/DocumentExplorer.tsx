@@ -87,41 +87,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                 rawContent: e.content,
                 tags: e.tags,
                 isMetric: false
-            })),
-            ...metrics.flatMap(m => {
-                const docs: UnifiedDocument[] = [];
-                // Se ocultan las CV de "Explorar" por petición del usuario
-                // El resto de métricas (Sharing y CP) siguen apareciendo
-                if (m.sharing_pdf_url || m.sharing > 0) {
-                    docs.push({
-                        id: `sh-${m.id}`,
-                        title: m.sharing_title || 'Justificante Sharing',
-                        description: m.sharing_description,
-                        author: m.user_email,
-                        date: m.date,
-                        category: 'Comunidad',
-                        pdfUrl: m.sharing_pdf_url || '',
-                        type: 'sharing' as const,
-                        isMetric: true,
-                        points: `+${m.sharing} SH`
-                    });
-                }
-                if (m.cp_pdf_url || m.cp > 0) {
-                    docs.push({
-                        id: `cp-${m.id}`,
-                        title: m.cp_title || 'Justificante CP',
-                        description: m.cp_description,
-                        author: m.user_email,
-                        date: m.date,
-                        category: 'Iniciativa',
-                        pdfUrl: m.cp_pdf_url || '',
-                        type: 'cp' as const,
-                        isMetric: true,
-                        points: `+${m.cp} CP`
-                    });
-                }
-                return docs;
-            })
+            }))
         ];
 
         return unified.filter(doc =>
