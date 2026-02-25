@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Calendar, Target } from 'lucide-react';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
@@ -23,6 +23,7 @@ const COLORS = {
 
 export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => {
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
+    const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -124,6 +125,193 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
 
     const topPerformers = useMemo(() => userData.slice(0, 3), [userData]);
 
+    // 4. Selected User Detail Data
+    const selectedUserDetail = useMemo(() => {
+        if (!selectedProfile) return null;
+
+        const profileName = selectedProfile;
+        const userMetrics = metrics.filter(m => m.user_email.split('@')[0] === profileName);
+        const userEssays = essays.filter(e => e.author.split('@')[0] === profileName);
+
+        // Agregate personal totals
+        const stats = {
+            cv: userMetrics.reduce((acc, m) => acc + (m.cv || 0), 0),
+            cp: userMetrics.reduce((acc, m) => acc + (m.cp || 0), 0),
+            lp: userEssays.reduce((acc, e) => acc + (e.points || 0), 0),
+            sharing: userMetrics.reduce((acc, m) => acc + (m.sharing || 0), 0),
+            revenue: userMetrics.reduce((acc, m) => acc + (m.revenue || 0), 0),
+            profit: userMetrics.reduce((acc, m) => acc + (m.profit || 0), 0),
+        };
+
+        // Merged Timeline
+        const timeline = [
+            ...userMetrics.map(m => ({
+                id: m.id,
+                date: m.date,
+                type: 'metric' as const,
+                cv: m.cv,
+                cp: m.cp,
+                sharing: m.sharing,
+                cv_pdf: m.cv_pdf_url,
+                cp_pdf: m.cp_pdf_url,
+                sharing_pdf: m.sharing_pdf_url,
+                rawDate: m.date
+            })),
+            ...userEssays.map(e => ({
+                id: e.id,
+                date: e.date,
+                type: 'essay' as const,
+                title: e.title,
+                points: e.points,
+                pdf: e.pdfUrl,
+                category: e.category,
+                contributionType: e.type,
+                rawDate: e.date
+            }))
+        ].sort((a, b) => {
+            const [d1, m1, y1] = a.rawDate.split('/').map(Number);
+            const [d2, m2, y2] = b.rawDate.split('/').map(Number);
+            return new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime();
+        });
+
+        return { name: profileName, stats, timeline };
+    }, [selectedProfile, metrics, essays]);
+
+    if (selectedProfile && selectedUserDetail) {
+        return (
+            <div className="space-y-8 pb-20">
+                {/* Profile Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-center space-x-6">
+                        <button
+                            onClick={() => setSelectedProfile(null)}
+                            className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-kairos-navy hover:bg-gray-100 transition-colors shadow-sm"
+                        >
+                            <ChevronDown className="rotate-90" size={24} />
+                        </button>
+                        <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-kairos-navy to-blue-600 flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                                {selectedUserDetail.name[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <h2 className="text-3xl font-heading font-black text-kairos-navy leading-none mb-1">{selectedUserDetail.name}</h2>
+                                <p className="text-sm text-gray-400 font-bold uppercase tracking-widest opacity-60">Ficha Personal Kairense</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Personal Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                        { label: 'VISITAS (CV)', value: selectedUserDetail.stats.cv, color: 'text-amber-500', bg: 'bg-amber-50' },
+                        { label: 'LEARNING (LP)', value: selectedUserDetail.stats.lp, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'COMUNIDAD (CP)', value: selectedUserDetail.stats.cp, color: 'text-red-500', bg: 'bg-red-50' },
+                        { label: 'SHARING', value: selectedUserDetail.stats.sharing, color: 'text-purple-500', bg: 'bg-purple-50' },
+                    ].map((stat, i) => (
+                        <motion.div
+                            key={stat.label}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className={`card p-6 border-none shadow-sm ${stat.bg} flex flex-col items-center text-center justify-center`}
+                        >
+                            <p className={`text-4xl font-heading font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
+                            <p className="text-[10px] uppercase tracking-widest font-black text-gray-500 mt-2 opacity-60">{stat.label}</p>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Combined Timeline */}
+                <div className="bg-white rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden">
+                    <div className="p-8 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <Calendar className="text-kairos-navy" size={24} />
+                            <h3 className="text-2xl font-heading font-black text-kairos-navy">Timeline de Actividad</h3>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50/30 text-gray-400 text-[10px] uppercase font-black tracking-widest">
+                                    <th className="p-6 pl-10 border-b border-gray-100">Fecha</th>
+                                    <th className="p-6 border-b border-gray-100">Actividad / Título</th>
+                                    <th className="p-6 text-center border-b border-gray-100">Puntos / Valor</th>
+                                    <th className="p-6 text-right pr-10 border-b border-gray-100">Documentación</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {selectedUserDetail.timeline.map((item, idx) => (
+                                    <tr key={`${item.id}-${idx}`} className="hover:bg-blue-50/20 transition-all">
+                                        <td className="p-6 pl-10">
+                                            <span className="text-xs font-black text-gray-300">{item.date}</span>
+                                        </td>
+                                        <td className="p-6">
+                                            {item.type === 'essay' ? (
+                                                <div className="space-y-1">
+                                                    <span className="text-[9px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                                                        {item.contributionType === 'libro' ? 'Libro' : 'Molécula'}
+                                                    </span>
+                                                    <p className="text-sm font-black text-kairos-navy">{item.title}</p>
+                                                    <p className="text-[10px] text-gray-400 font-bold">{item.category}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col space-y-1">
+                                                    {item.cv > 0 && (
+                                                        <div className="flex items-center space-x-2">
+                                                            <div className="w-2 h-2 rounded-full bg-amber-400" />
+                                                            <span className="text-xs font-black text-kairos-navy">Customer Visit (CV)</span>
+                                                        </div>
+                                                    )}
+                                                    {item.sharing > 0 && (
+                                                        <div className="flex items-center space-x-2">
+                                                            <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                                            <span className="text-xs font-black text-kairos-navy">Sharing</span>
+                                                        </div>
+                                                    )}
+                                                    {item.cp > 0 && (
+                                                        <div className="flex items-center space-x-2">
+                                                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                                                            <span className="text-xs font-black text-kairos-navy">Community Point (CP)</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="p-6 text-center">
+                                            {item.type === 'essay' ? (
+                                                <span className="text-lg font-black text-blue-600">{item.points} LP</span>
+                                            ) : (
+                                                <div className="flex flex-col items-center">
+                                                    {item.cv > 0 && <span className="text-xs font-black text-amber-600">+{item.cv} CV</span>}
+                                                    {item.sharing > 0 && <span className="text-xs font-black text-purple-600">+{item.sharing} SH</span>}
+                                                    {item.cp > 0 && <span className="text-xs font-black text-red-600">+{item.cp} CP</span>}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="p-6 text-right pr-10">
+                                            <div className="flex items-center justify-end space-x-2">
+                                                {item.type === 'essay' ? (
+                                                    item.pdf && <a href={item.pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors shadow-sm"><FileText size={16} /></a>
+                                                ) : (
+                                                    <>
+                                                        {item.cv_pdf && <a href={item.cv_pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors shadow-sm" title="CV PDF"><FileText size={16} /></a>}
+                                                        {item.sharing_pdf && <a href={item.sharing_pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Sharing PDF"><FileText size={16} /></a>}
+                                                        {item.cp_pdf && <a href={item.cp_pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors shadow-sm" title="CP PDF"><FileText size={16} /></a>}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-8 pb-20">
             {/* 1. Summary Cards */}
@@ -154,10 +342,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                 {topPerformers.map((user, i) => (
                     <motion.div
                         key={user.user}
+                        onClick={() => setSelectedProfile(user.user)}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 + (i * 0.1) }}
-                        className="bg-white rounded-3xl p-6 shadow-xl border-t-4 border-kairos-navy flex items-center space-x-6 relative overflow-hidden group"
+                        className="bg-white rounded-3xl p-6 shadow-xl border-t-4 border-kairos-navy flex items-center space-x-6 relative overflow-hidden group cursor-pointer hover:shadow-2xl transition-all"
                     >
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform">
                             {i === 0 ? <Trophy size={100} /> : <Award size={100} />}
@@ -306,12 +495,15 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                         </div>
                                     </td>
                                     <td className="p-6">
-                                        <div className="flex items-center space-x-4">
+                                        <div
+                                            className="flex items-center space-x-4 cursor-pointer group/name"
+                                            onClick={() => setSelectedProfile(user.user)}
+                                        >
                                             <div className="w-10 h-10 rounded-2xl bg-kairos-navy text-white flex items-center justify-center font-black text-xs shadow-md group-hover:scale-110 transition-transform">
                                                 {user.user[0].toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-black text-kairos-navy leading-none mb-1 group-hover:translate-x-1 transition-transform">{user.user}</p>
+                                                <p className="text-sm font-black text-kairos-navy leading-none mb-1 group-hover/name:text-blue-600 transition-colors">{user.user}</p>
                                                 <p className="text-[10px] text-gray-400 leading-none">@{user.user}.alumni...</p>
                                             </div>
                                         </div>
