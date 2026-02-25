@@ -54,9 +54,13 @@ export const KairosAI: React.FC = () => {
         try {
             const response = await generateAiResponse(userMessage, apiKey);
             setMessages(prev => [...prev, { role: 'ai', content: response }]);
-        } catch (error) {
+        } catch (error: any) {
             console.error('AI Error:', error);
-            setMessages(prev => [...prev, { role: 'ai', content: 'Lo siento, ha ocurrido un error al procesar tu pregunta. Asegúrate de que tu API Key sea válida y de que hayas configurado el conocimiento base.' }]);
+            const errorMsg = error.message || 'Error desconocido';
+            setMessages(prev => [...prev, {
+                role: 'ai',
+                content: `Lo siento, ha ocurrido un error: **${errorMsg}**. \n\nPor favor, verifica que tu API Key sea correcta y que hayas pulsado el botón "Indexar Conocimiento" arriba.`
+            }]);
         } finally {
             setIsLoading(false);
         }
