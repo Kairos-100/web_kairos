@@ -9,6 +9,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { ActivityView } from './components/ActivityView';
 import { TeamView } from './components/TeamView';
+import { DocumentExplorer } from './components/DocumentExplorer';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment, MetricEntry } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
@@ -213,15 +214,6 @@ const App: React.FC = () => {
     });
   }, [essays, dateRange]);
 
-  const filteredEssaysList = useMemo(() => {
-    return filteredByDateEssays.filter((e: Essay) =>
-      e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.tags?.some((t: string) => t.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [filteredByDateEssays, searchTerm]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -241,51 +233,12 @@ const App: React.FC = () => {
         return (
           <AnimatePresence mode="wait">
             {!selectedEssayId ? (
-              <motion.div
-                key="feed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
-              >
-                {filteredEssaysList.map((essay: Essay, index: number) => (
-                  <motion.div
-                    layout
-                    key={essay.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => {
-                      setSelectedEssayId(essay.id);
-                      if (essay.pdfUrl) setShowPdf(true);
-                    }}
-                    className="card flex flex-col group cursor-pointer border-transparent hover:border-blue-100 relative overflow-hidden"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="px-3 py-1 bg-kairos-navy text-white text-[10px] uppercase font-bold tracking-widest rounded-full">
-                        {essay.category}
-                      </span>
-                      <div className="flex items-center space-x-2 text-xs text-gray-400 font-medium">
-                        {essay.pdfUrl ? <FileText size={12} className="text-blue-500" /> : <Clock size={12} />}
-                        <span>{essay.pdfUrl ? 'PDF Adjunto' : `${essay.readingTime} min`}</span>
-                        <button onClick={(e) => handleEditEssay(e, essay)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"><Edit3 size={12} /></button>
-                        <button onClick={(e) => handleDeleteEssay(e, essay.id, essay.pdfUrl)} className="p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-heading font-bold text-kairos-navy mb-3 group-hover:text-blue-600 transition-colors">{essay.title}</h3>
-                    <div className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-2 prose prose-sm prose-slate"><ReactMarkdown>{essay.content}</ReactMarkdown></div>
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {essay.tags?.map(tag => (
-                        <span key={tag} className="flex items-center space-x-1 px-2 py-0.5 bg-gray-50 text-gray-400 rounded-md text-[9px] font-bold border border-gray-100"><TagIcon size={8} /><span>{tag}</span></span>
-                      ))}
-                    </div>
-                    <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
-                      <div className="flex items-center space-x-2"><User size={14} className="text-blue-600" /><span className="text-xs font-bold text-gray-500">{essay.author.split('@')[0]}</span></div>
-                      <div className="flex items-center space-x-3"><div className="text-xs text-gray-300 font-bold uppercase">{essay.date}</div><ChevronRight size={18} className="text-gray-200 group-hover:text-blue-600 transition-colors" /></div>
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
+              <DocumentExplorer
+                essays={filteredByDateEssays}
+                metrics={filteredMetrics}
+                searchTerm={searchTerm}
+                onSelectEssay={setSelectedEssayId}
+              />
             ) : (
               <motion.div key="reader" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto">
                 <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100 overflow-hidden">
@@ -330,7 +283,7 @@ const App: React.FC = () => {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h2 className="text-4xl font-heading font-bold text-kairos-navy mb-2">
-              {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Tesis' : 'Explorar Tesis') :
+              {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Documento' : 'Explorador de Documentos') :
                 activeTab === 'stats' ? 'Visualización de Aprendizaje' :
                   activeTab === 'commercial' ? 'Kairos Métricas' :
                     activeTab === 'history' ? 'Historial de Actividad' :
@@ -338,7 +291,7 @@ const App: React.FC = () => {
                         activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
-              {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.') :
+              {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'Todo el conocimiento y documentos de Kairos en un solo lugar.') :
                 activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
                   activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
                     activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
