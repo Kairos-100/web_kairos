@@ -30,7 +30,7 @@ export async function extractTextFromPDF(source: string | Blob): Promise<string>
             fullText += pageText + ' ';
         }
 
-        return fullText.trim();
+        return fullText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
     } catch (error) {
         console.error('Error extracting text from PDF:', error);
         throw new Error('No se pudo extraer el texto del PDF.');
