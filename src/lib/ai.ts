@@ -6,6 +6,15 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 /**
+ * Robust text sanitation to prevent Unicode and control character errors.
+ */
+function sanitizeText(text: string): string {
+    if (!text) return '';
+    // Removes non-printable characters and invalid Unicode control codes
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
+}
+
+/**
  * Extracts all text from a PDF file (Blob or URL).
  */
 export async function extractTextFromPDF(source: string | Blob): Promise<string> {
@@ -30,7 +39,7 @@ export async function extractTextFromPDF(source: string | Blob): Promise<string>
             fullText += pageText + ' ';
         }
 
-        return fullText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
+        return sanitizeText(fullText);
     } catch (error) {
         console.error('Error extracting text from PDF:', error);
         throw new Error('No se pudo extraer el texto del PDF.');
@@ -60,10 +69,11 @@ export async function getEmbedding(text: string, apiKey: string): Promise<number
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
 
-    // We request 768 dimensions to stay under the HNSW index limit (2000) in Supabase.
-    // Casting to any because current SDK types might not include outputDimensionality yet.
+    const sanitizedText = sanitizeText(text);
+    if (!sanitizedText) throw new Error('El texto para el embedding está vacío después de la limpieza.');
+
     const result = await model.embedContent({
-        content: { role: 'user', parts: [{ text }] },
+        content: { role: 'user', parts: [{ text: sanitizedText }] },
         outputDimensionality: 768
     } as any);
 
@@ -169,8 +179,15 @@ ${query}
 Responde de forma profesional, clara y en español. Cita los documentos si es posible.
 `;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    try {
+        const result = await model.generateContent(prompt);
+        const textResponse = result.response.text();
+        if (!textResponse) throw new Error('La IA devolvió una respuesta vacía.');
+        return textResponse;
+    } catch (err: any) {
+        console.error('Error final in generateAiResponse:', err);
+        throw new Error(`Error en la generación de IA: ${err.message || 'Error desconocido'}`);
+    }
 }
 
 /**
