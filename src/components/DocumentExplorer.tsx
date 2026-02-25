@@ -14,16 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Essay, MetricEntry } from '../constants';
 import ReactMarkdown from 'react-markdown';
 
-interface DocumentExplorerProps {
-    essays: Essay[];
-    metrics: MetricEntry[];
-    searchTerm: string;
-    onSelectEssay: (id: string) => void;
-}
-
-type ViewMode = 'grid' | 'list' | 'pdf';
-
-interface UnifiedDocument {
+export interface UnifiedDocument {
     id: string;
     title: string;
     author: string;
@@ -34,17 +25,40 @@ interface UnifiedDocument {
     rawContent?: string;
     tags?: string[];
     isMetric?: boolean;
+    points?: string;
+}
+
+interface DocumentExplorerProps {
+    essays?: Essay[];
+    metrics?: MetricEntry[];
+    initialDocuments?: UnifiedDocument[];
+    searchTerm?: string;
+    onSelectEssay?: (id: string) => void;
+    hideSearch?: boolean;
+    title?: string;
 }
 
 export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
-    essays,
-    metrics,
-    searchTerm,
-    onSelectEssay
+    essays = [],
+    metrics = [],
+    initialDocuments,
+    searchTerm = '',
+    onSelectEssay,
+    hideSearch = false,
+    title
 }) => {
-    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'pdf'>('grid');
 
     const allDocuments = useMemo(() => {
+        if (initialDocuments) {
+            return initialDocuments.filter(doc =>
+                doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                doc.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                doc.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (doc.rawContent && doc.rawContent.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
+
         const unified: UnifiedDocument[] = [
             ...essays.map(e => ({
                 id: e.id,
@@ -110,7 +124,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
             const [d2, m2, y2] = b.date.split('/').map(Number);
             return new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime();
         });
-    }, [essays, metrics, searchTerm]);
+    }, [essays, metrics, initialDocuments, searchTerm]);
 
     const renderGridView = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -120,13 +134,13 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => doc.type === 'tesis' ? onSelectEssay(doc.id) : window.open(doc.pdfUrl, '_blank')}
+                    onClick={() => doc.type === 'tesis' && onSelectEssay ? onSelectEssay(doc.id) : window.open(doc.pdfUrl, '_blank')}
                     className="card group cursor-pointer border-transparent hover:border-blue-100 relative overflow-hidden flex flex-col h-full bg-white transition-all shadow-sm hover:shadow-xl"
                 >
                     <div className="flex justify-between items-start mb-4">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${doc.type === 'tesis' ? 'bg-kairos-navy text-white' :
-                            doc.type === 'cv' ? 'bg-amber-100 text-amber-600' :
-                                doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' : 'bg-red-100 text-red-600'
+                                doc.type === 'cv' ? 'bg-amber-100 text-amber-600' :
+                                    doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' : 'bg-red-100 text-red-600'
                             }`}>
                             {doc.category}
                         </span>
@@ -152,7 +166,10 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                             </div>
                             <span className="text-[10px] font-bold text-gray-500">{doc.author.split('@')[0]}</span>
                         </div>
-                        <span className="text-[10px] text-gray-300 font-bold uppercase">{doc.date}</span>
+                        <div className="flex flex-col items-end">
+                            {doc.points && <span className="text-[10px] font-black text-blue-600 mb-0.5">{doc.points}</span>}
+                            <span className="text-[10px] text-gray-300 font-bold uppercase">{doc.date}</span>
+                        </div>
                     </div>
                 </motion.div>
             ))}
@@ -176,12 +193,12 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                         <tr
                             key={doc.id}
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
-                            onClick={() => doc.type === 'tesis' ? onSelectEssay(doc.id) : window.open(doc.pdfUrl, '_blank')}
+                            onClick={() => doc.type === 'tesis' && onSelectEssay ? onSelectEssay(doc.id) : window.open(doc.pdfUrl, '_blank')}
                         >
                             <td className="p-6 pl-10">
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${doc.type === 'tesis' ? 'bg-blue-50 text-blue-600' :
-                                    doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
-                                        doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
+                                        doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
+                                            doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
                                     }`}>
                                     {doc.type === 'tesis' ? <BookOpen size={16} /> : <TrendingUp size={16} />}
                                 </div>
@@ -193,7 +210,12 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                 </div>
                             </td>
                             <td className="p-6 text-xs font-bold text-gray-500">{doc.author.split('@')[0]}</td>
-                            <td className="p-6 text-xs text-gray-300 font-black">{doc.date}</td>
+                            <td className="p-6">
+                                <div className="flex flex-col">
+                                    <span className="text-xs text-gray-300 font-black">{doc.date}</span>
+                                    {doc.points && <span className="text-[9px] font-black text-blue-500">{doc.points}</span>}
+                                </div>
+                            </td>
                             <td className="p-6 text-right pr-10">
                                 <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                     <ExternalLink size={16} />
@@ -228,7 +250,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
-                                onClick={() => doc.type === 'tesis' ? onSelectEssay(doc.id) : window.open(doc.pdfUrl, '_blank')}
+                                onClick={() => doc.type === 'tesis' && onSelectEssay ? onSelectEssay(doc.id) : window.open(doc.pdfUrl, '_blank')}
                                 className="p-2 bg-white text-blue-600 rounded-lg shadow-sm hover:scale-110 transition-transform"
                             >
                                 <Eye size={14} />
@@ -244,12 +266,18 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                         </div>
                     </div>
                     <div className="flex-1 bg-gray-200 relative">
-                        <iframe
-                            src={doc.pdfUrl}
-                            className="w-full h-full border-none"
-                            title={doc.title}
-                        />
-                        {/* Overlay to allow clicking the card without interfering with iframe interaction if desired, but here we want to see it */}
+                        {doc.pdfUrl ? (
+                            <iframe
+                                src={doc.pdfUrl}
+                                className="w-full h-full border-none"
+                                title={doc.title}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 text-gray-300 p-10 text-center">
+                                <FileText size={48} className="mb-4 opacity-20" />
+                                <p className="text-sm font-bold uppercase tracking-widest">Sin documento adjunto</p>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             ))}
@@ -258,30 +286,68 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
 
     return (
         <div className="space-y-8 pb-20">
-            {/* View Mode Toggle */}
-            <div className="flex justify-between items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-100 max-w-fit mx-auto lg:mx-0">
-                <button
-                    onClick={() => setViewMode('grid')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
-                >
-                    <LayoutGrid size={16} />
-                    <span>Mosaico</span>
-                </button>
-                <button
-                    onClick={() => setViewMode('list')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
-                >
-                    <List size={16} />
-                    <span>Lista</span>
-                </button>
-                <button
-                    onClick={() => setViewMode('pdf')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'pdf' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
-                >
-                    <FileText size={16} />
-                    <span>Vista PDF</span>
-                </button>
-            </div>
+            {/* Header / Title if provided */}
+            {(title || !hideSearch) && (
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {title && (
+                        <div className="flex items-center space-x-3">
+                            <FileText className="text-kairos-navy" size={24} />
+                            <h3 className="text-2xl font-heading font-black text-kairos-navy">{title}</h3>
+                        </div>
+                    )}
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-100 w-fit">
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                        >
+                            <LayoutGrid size={16} />
+                            <span className="hidden sm:inline">Mosaico</span>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                        >
+                            <List size={16} />
+                            <span className="hidden sm:inline">Lista</span>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('pdf')}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'pdf' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                        >
+                            <FileText size={16} />
+                            <span className="hidden sm:inline">Vista PDF</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {!title && hideSearch && (
+                <div className="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-100 w-fit mx-auto lg:mx-0">
+                    <button
+                        onClick={() => setViewMode('grid')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                    >
+                        <LayoutGrid size={16} />
+                        <span className="hidden sm:inline">Mosaico</span>
+                    </button>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                    >
+                        <List size={16} />
+                        <span className="hidden sm:inline">Lista</span>
+                    </button>
+                    <button
+                        onClick={() => setViewMode('pdf')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'pdf' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}
+                    >
+                        <FileText size={16} />
+                        <span className="hidden sm:inline">Vista PDF</span>
+                    </button>
+                </div>
+            )}
 
             <AnimatePresence mode="wait">
                 <motion.div

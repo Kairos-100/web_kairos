@@ -5,7 +5,8 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Calendar, Target } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
+import { DocumentExplorer } from './DocumentExplorer';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
@@ -223,91 +224,31 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                 </div>
 
                 {/* Combined Timeline */}
-                <div className="bg-white rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden">
-                    <div className="p-8 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <Calendar className="text-kairos-navy" size={24} />
-                            <h3 className="text-2xl font-heading font-black text-kairos-navy">Timeline de Actividad</h3>
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50/30 text-gray-400 text-[10px] uppercase font-black tracking-widest">
-                                    <th className="p-6 pl-10 border-b border-gray-100">Fecha</th>
-                                    <th className="p-6 border-b border-gray-100">Actividad / Título</th>
-                                    <th className="p-6 text-center border-b border-gray-100">Puntos / Valor</th>
-                                    <th className="p-6 text-right pr-10 border-b border-gray-100">Documentación</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {selectedUserDetail.timeline.map((item, idx) => (
-                                    <tr key={`${item.id}-${idx}`} className="hover:bg-blue-50/20 transition-all">
-                                        <td className="p-6 pl-10">
-                                            <span className="text-xs font-black text-gray-300">{item.date}</span>
-                                        </td>
-                                        <td className="p-6">
-                                            {item.type === 'essay' ? (
-                                                <div className="space-y-1">
-                                                    <span className="text-[9px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
-                                                        {item.contributionType === 'libro' ? 'Libro' : 'Molécula'}
-                                                    </span>
-                                                    <p className="text-sm font-black text-kairos-navy">{item.title}</p>
-                                                    <p className="text-[10px] text-gray-400 font-bold">{item.category}</p>
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col space-y-1">
-                                                    {item.cv > 0 && (
-                                                        <div className="flex items-center space-x-2">
-                                                            <div className="w-2 h-2 rounded-full bg-amber-400" />
-                                                            <span className="text-xs font-black text-kairos-navy">Customer Visit (CV)</span>
-                                                        </div>
-                                                    )}
-                                                    {item.sharing > 0 && (
-                                                        <div className="flex items-center space-x-2">
-                                                            <div className="w-2 h-2 rounded-full bg-purple-500" />
-                                                            <span className="text-xs font-black text-kairos-navy">Sharing</span>
-                                                        </div>
-                                                    )}
-                                                    {item.cp > 0 && (
-                                                        <div className="flex items-center space-x-2">
-                                                            <div className="w-2 h-2 rounded-full bg-red-500" />
-                                                            <span className="text-xs font-black text-kairos-navy">Community Point (CP)</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="p-6 text-center">
-                                            {item.type === 'essay' ? (
-                                                <span className="text-lg font-black text-blue-600">{item.points} LP</span>
-                                            ) : (
-                                                <div className="flex flex-col items-center">
-                                                    {item.cv > 0 && <span className="text-xs font-black text-amber-600">+{item.cv} CV</span>}
-                                                    {item.sharing > 0 && <span className="text-xs font-black text-purple-600">+{item.sharing} SH</span>}
-                                                    {item.cp > 0 && <span className="text-xs font-black text-red-600">+{item.cp} CP</span>}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="p-6 text-right pr-10">
-                                            <div className="flex items-center justify-end space-x-2">
-                                                {item.type === 'essay' ? (
-                                                    item.pdf && <a href={item.pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors shadow-sm"><FileText size={16} /></a>
-                                                ) : (
-                                                    <>
-                                                        {item.cv_pdf && <a href={item.cv_pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors shadow-sm" title="CV PDF"><FileText size={16} /></a>}
-                                                        {item.sharing_pdf && <a href={item.sharing_pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Sharing PDF"><FileText size={16} /></a>}
-                                                        {item.cp_pdf && <a href={item.cp_pdf} target="_blank" rel="noopener noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors shadow-sm" title="CP PDF"><FileText size={16} /></a>}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <DocumentExplorer
+                    title="Timeline de Actividad"
+                    hideSearch={true}
+                    initialDocuments={selectedUserDetail.timeline.map(item => ({
+                        id: item.id,
+                        title: item.type === 'essay' ? (item as any).title :
+                            ((item as any).cv > 0 ? 'Visit: ' + ((item as any).cv_title || 'CV') :
+                                (item as any).sharing > 0 ? 'Sharing: ' + ((item as any).sharing_title || 'SH') :
+                                    'Iniciativa: ' + ((item as any).cp_title || 'CP')),
+                        author: selectedUserDetail.name,
+                        date: item.date,
+                        category: item.type === 'essay' ? (item as any).category :
+                            ((item as any).cv > 0 ? 'Comercial' :
+                                (item as any).sharing > 0 ? 'Comunidad' : 'Iniciativa'),
+                        pdfUrl: item.type === 'essay' ? (item as any).pdf :
+                            ((item as any).cv_pdf || (item as any).sharing_pdf || (item as any).cp_pdf || ''),
+                        type: item.type === 'essay' ? 'tesis' :
+                            ((item as any).cv > 0 ? 'cv' :
+                                (item as any).sharing > 0 ? 'sharing' : 'cp'),
+                        points: item.type === 'essay' ? `${(item as any).points} LP` :
+                            ((item as any).cv > 0 ? `+${(item as any).cv} CV` :
+                                (item as any).sharing > 0 ? `+${(item as any).sharing} SH` : `+${(item as any).cp} CP`),
+                        isMetric: item.type !== 'essay'
+                    }))}
+                />
             </div>
         );
     }
