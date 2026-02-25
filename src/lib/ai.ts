@@ -166,7 +166,7 @@ Responde de forma profesional, clara y en español. Cita los documentos si es po
 export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
     const key = localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
     if (!key) {
-        if (onProgress) onProgress('Error: No se encontró Gemini API Key.');
+        if (onProgress) onProgress('Error: No se encontró Gemini API Key. Por favor, introdúcela en el chat de IA primero.');
         return;
     }
 
