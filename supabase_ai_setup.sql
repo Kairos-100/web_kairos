@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.document_sections (
     source_id UUID NOT NULL,
     source_type TEXT NOT NULL CHECK (source_type IN ('essay', 'metric')),
     content TEXT NOT NULL,
-    embedding VECTOR(3072), -- Default size for gemini-embedding-001
+    embedding VECTOR(768), -- Optimized size for HNSW index compatibility
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
