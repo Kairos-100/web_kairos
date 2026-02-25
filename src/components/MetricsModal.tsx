@@ -248,24 +248,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
                                         min="0"
                                     />
-                                    {cv > 0 && (
-                                        <div className="mt-3 space-y-2">
-                                            <input
-                                                type="text"
-                                                value={cvTitle}
-                                                onChange={(e) => setCvTitle(e.target.value)}
-                                                placeholder="Título de la visita"
-                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-400"
-                                            />
-                                            <textarea
-                                                value={cvDescription}
-                                                onChange={(e) => setCvDescription(e.target.value)}
-                                                placeholder="Breve descripción..."
-                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-400 resize-none"
-                                                rows={2}
-                                            />
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* CP */}
@@ -281,24 +263,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
                                         min="0"
                                     />
-                                    {cp > 0 && (
-                                        <div className="mt-3 space-y-2">
-                                            <input
-                                                type="text"
-                                                value={cpTitle}
-                                                onChange={(e) => setCpTitle(e.target.value)}
-                                                placeholder="Título de la iniciativa"
-                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-red-400"
-                                            />
-                                            <textarea
-                                                value={cpDescription}
-                                                onChange={(e) => setCpDescription(e.target.value)}
-                                                placeholder="Breve descripción..."
-                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-red-400 resize-none"
-                                                rows={2}
-                                            />
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Sharing */}
@@ -314,24 +278,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
                                         min="0"
                                     />
-                                    {sharing > 0 && (
-                                        <div className="mt-3 space-y-2">
-                                            <input
-                                                type="text"
-                                                value={sharingTitle}
-                                                onChange={(e) => setSharingTitle(e.target.value)}
-                                                placeholder="Título de la sesión"
-                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-purple-400"
-                                            />
-                                            <textarea
-                                                value={sharingDescription}
-                                                onChange={(e) => setSharingDescription(e.target.value)}
-                                                placeholder="Breve descripción..."
-                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-purple-400 resize-none"
-                                                rows={2}
-                                            />
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Revenue */}
@@ -376,6 +322,26 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         </label>
                                         {cvPdfName && <span className="text-[10px] text-green-600 font-bold flex items-center space-x-1 max-w-[100px] truncate"><CheckCircle2 size={10} /> <span>{cvPdfName}</span></span>}
                                     </div>
+
+                                    {(cv > 0 || cvPdfFile) && (
+                                        <div className="mb-3 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={cvTitle}
+                                                onChange={(e) => setCvTitle(e.target.value)}
+                                                placeholder="Título de la visita (Ej: Cliente X)"
+                                                className="w-full px-3 py-2 bg-white border border-blue-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
+                                            />
+                                            <textarea
+                                                value={cvDescription}
+                                                onChange={(e) => setCvDescription(e.target.value)}
+                                                placeholder="Resumen de la visita..."
+                                                className="w-full px-3 py-2 bg-white border border-blue-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400 resize-none shadow-sm"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    )}
+
                                     <input
                                         type="file"
                                         accept=".pdf"
@@ -401,6 +367,26 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         </label>
                                         {sharingPdfName && <span className="text-[10px] text-green-600 font-bold flex items-center space-x-1 max-w-[100px] truncate"><CheckCircle2 size={10} /> <span>{sharingPdfName}</span></span>}
                                     </div>
+
+                                    {(sharing > 0 || sharingPdfFile) && (
+                                        <div className="mb-3 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={sharingTitle}
+                                                onChange={(e) => setSharingTitle(e.target.value)}
+                                                placeholder="Título del sharing"
+                                                className="w-full px-3 py-2 bg-white border border-purple-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-purple-400 shadow-sm"
+                                            />
+                                            <textarea
+                                                value={sharingDescription}
+                                                onChange={(e) => setSharingDescription(e.target.value)}
+                                                placeholder="Resumen del contenido..."
+                                                className="w-full px-3 py-2 bg-white border border-purple-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-purple-400 resize-none shadow-sm"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    )}
+
                                     <input
                                         type="file"
                                         accept=".pdf"
@@ -426,6 +412,26 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         </label>
                                         {cpPdfName && <span className="text-[10px] text-green-600 font-bold flex items-center space-x-1 max-w-[100px] truncate"><CheckCircle2 size={10} /> <span>{cpPdfName}</span></span>}
                                     </div>
+
+                                    {(cp > 0 || cpPdfFile) && (
+                                        <div className="mb-3 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={cpTitle}
+                                                onChange={(e) => setCpTitle(e.target.value)}
+                                                placeholder="Título de la iniciativa"
+                                                className="w-full px-3 py-2 bg-white border border-red-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-400 shadow-sm"
+                                            />
+                                            <textarea
+                                                value={cpDescription}
+                                                onChange={(e) => setCpDescription(e.target.value)}
+                                                placeholder="Resumen de la aportación..."
+                                                className="w-full px-3 py-2 bg-white border border-red-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-400 resize-none shadow-sm"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    )}
+
                                     <input
                                         type="file"
                                         accept=".pdf"
