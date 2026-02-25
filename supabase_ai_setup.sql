@@ -1,5 +1,4 @@
 -- RUN THIS IN SUPABASE SQL EDITOR
-
 -- 1. Enable the pgvector extension to work with embeddings
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -14,24 +13,24 @@ CREATE TABLE IF NOT EXISTS public.document_sections (
 );
 
 -- 3. Create an HNSW index for fast similarity searches
--- Note: 'vector_cosine_ops' is usually best for LLM embeddings
-CREATE INDEX ON public.document_sections USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS document_sections_embedding_idx ON public.document_sections USING hnsw (embedding vector_cosine_ops);
 
 -- 4. Enable Row Level Security (RLS)
 ALTER TABLE public.document_sections ENABLE ROW LEVEL SECURITY;
 
--- 5. Define Read Policy (Viewable by authenticated users)
-CREATE POLICY "Authenticated users can read sections" ON public.document_sections
-FOR SELECT TO authenticated USING (true);
+-- 5. Define Policies (IMPORTANT: Public access for frontend indexing)
+DROP POLICY IF EXISTS "Public read access" ON public.document_sections;
+CREATE POLICY "Public read access" ON public.document_sections FOR SELECT USING (true);
 
--- 6. Define Insert Policy (Service role or authorized logic handles this)
--- For now, allowing all for testing, but ideally restricted to the update logic
-CREATE POLICY "Authenticated users can insert sections" ON public.document_sections
-FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Public insert access" ON public.document_sections;
+CREATE POLICY "Public insert access" ON public.document_sections FOR INSERT WITH CHECK (true);
 
--- 7. Create a function to search for document segments
+DROP POLICY IF EXISTS "Public delete access" ON public.document_sections;
+CREATE POLICY "Public delete access" ON public.document_sections FOR DELETE USING (true);
+
+-- 6. Create a function to search for document segments
 CREATE OR REPLACE FUNCTION match_document_sections (
-  query_embedding VECTOR(3072),
+  query_embedding VECTOR(768),
   match_threshold FLOAT,
   match_count INT
 )
