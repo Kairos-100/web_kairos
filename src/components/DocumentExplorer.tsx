@@ -5,8 +5,6 @@ import {
     FileText,
     Search,
     User,
-    Calendar,
-    Tag as TagIcon,
     ExternalLink,
     Eye,
     BookOpen,
@@ -127,8 +125,8 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                 >
                     <div className="flex justify-between items-start mb-4">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${doc.type === 'tesis' ? 'bg-kairos-navy text-white' :
-                                doc.type === 'cv' ? 'bg-amber-100 text-amber-600' :
-                                    doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' : 'bg-red-100 text-red-600'
+                            doc.type === 'cv' ? 'bg-amber-100 text-amber-600' :
+                                doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' : 'bg-red-100 text-red-600'
                             }`}>
                             {doc.category}
                         </span>
@@ -182,8 +180,8 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                         >
                             <td className="p-6 pl-10">
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${doc.type === 'tesis' ? 'bg-blue-50 text-blue-600' :
-                                        doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
-                                            doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
+                                    doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
+                                        doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
                                     }`}>
                                     {doc.type === 'tesis' ? <BookOpen size={16} /> : <TrendingUp size={16} />}
                                 </div>
