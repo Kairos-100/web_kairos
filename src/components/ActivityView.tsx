@@ -5,6 +5,11 @@ import { DocumentExplorer } from './DocumentExplorer';
 interface ActivityViewProps {
     essays: Essay[];
     metrics: MetricEntry[];
+    currentUserEmail?: string | null;
+    onEditEssay?: (essay: Essay) => void;
+    onDeleteEssay?: (id: string, pdfUrl?: string) => void;
+    onEditMetric?: (metric: MetricEntry) => void;
+    onDeleteMetric?: (id: string) => void;
 }
 
 interface ActivityItem {
@@ -17,7 +22,15 @@ interface ActivityItem {
     data: any;
 }
 
-export const ActivityView: React.FC<ActivityViewProps> = ({ essays, metrics }) => {
+export const ActivityView: React.FC<ActivityViewProps> = ({
+    essays,
+    metrics,
+    currentUserEmail,
+    onEditEssay,
+    onDeleteEssay,
+    onEditMetric,
+    onDeleteMetric
+}) => {
     const activityFeed = useMemo(() => {
         const feed: ActivityItem[] = [
             ...essays.map(e => ({
@@ -48,9 +61,37 @@ export const ActivityView: React.FC<ActivityViewProps> = ({ essays, metrics }) =
             <DocumentExplorer
                 title="Log de Actividad"
                 hideSearch={true}
+                currentUserEmail={currentUserEmail}
+                onSelectEssay={(id) => {
+                    const originalId = id.replace('essay-', '');
+                    const essay = essays.find(e => e.id === originalId);
+                    if (essay && onEditEssay) onEditEssay(essay);
+                }}
+                onDelete={(doc) => {
+                    if (doc.type === 'tesis' && onDeleteEssay) {
+                        const originalId = doc.id.replace('essay-', '');
+                        onDeleteEssay(originalId, doc.pdfUrl);
+                    } else if (onDeleteMetric) {
+                        const originalId = doc.id.replace('metric-', '');
+                        onDeleteMetric(originalId);
+                    }
+                }}
+                onEdit={(doc) => {
+                    if (doc.type === 'tesis' && onEditEssay) {
+                        const originalId = doc.id.replace('essay-', '');
+                        const essay = essays.find(e => e.id === originalId);
+                        if (essay) onEditEssay(essay);
+                    } else if (onEditMetric) {
+                        const originalId = doc.id.replace('metric-', '');
+                        const metric = metrics.find(m => m.id === originalId);
+                        if (metric) onEditMetric(metric);
+                    }
+                }}
                 initialDocuments={activityFeed.map(item => ({
                     id: item.id,
                     title: item.title,
+                    description: item.type === 'tesis' ? (item.data as any).category :
+                        ((item.data as any).cv_title || (item.data as any).sharing_title || (item.data as any).cp_title),
                     author: item.author,
                     date: item.refDate,
                     category: item.type === 'tesis' ? (item.data as any).category : 'Actividad',

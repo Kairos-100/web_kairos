@@ -108,8 +108,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteEssay = async (e: React.MouseEvent, id: string, pdfUrl?: string) => {
-    e.stopPropagation();
+  const handleDeleteEssay = async (id: string, pdfUrl?: string) => {
     if (!window.confirm('¿Estás seguro de que quieres borrar esta tesis?')) return;
     setIsLoading(true);
     try {
@@ -129,8 +128,22 @@ const App: React.FC = () => {
     }
   };
 
-  const handleEditEssay = (e: React.MouseEvent, essay: Essay) => {
-    e.stopPropagation();
+  const handleDeleteMetric = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de que quieres borrar este registro de métricas?')) return;
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('metrics').delete().eq('id', id);
+      if (error) throw error;
+      setMetrics(prev => prev.filter(m => m.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting metric:', err);
+      alert(`Error al borrar: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditEssay = (essay: Essay) => {
     setEditingEssay(essay);
     setIsEditOpen(true);
   };
@@ -220,15 +233,42 @@ const App: React.FC = () => {
       case 'stats':
         return <Dashboard essays={filteredByDateEssays} />;
       case 'commercial':
-        return <MetricsView metrics={filteredMetrics} essays={filteredByDateEssays} />;
+        return (
+          <MetricsView
+            metrics={filteredMetrics}
+            essays={filteredByDateEssays}
+            currentUserEmail={loggedInUser}
+            onEditEssay={handleEditEssay}
+            onDeleteEssay={handleDeleteEssay}
+            onDeleteMetric={handleDeleteMetric}
+          />
+        );
       case 'book':
         return <BookView essays={filteredByDateEssays} />;
       case 'score':
         return <ScoresView essays={filteredByDateEssays} />;
       case 'history':
-        return <ActivityView essays={filteredByDateEssays} metrics={filteredMetrics} />;
+        return (
+          <ActivityView
+            essays={filteredByDateEssays}
+            metrics={filteredMetrics}
+            currentUserEmail={loggedInUser}
+            onEditEssay={handleEditEssay}
+            onDeleteEssay={handleDeleteEssay}
+            onDeleteMetric={handleDeleteMetric}
+          />
+        );
       case 'team':
-        return <TeamView essays={filteredByDateEssays} metrics={filteredMetrics} />;
+        return (
+          <TeamView
+            essays={filteredByDateEssays}
+            metrics={filteredMetrics}
+            currentUserEmail={loggedInUser}
+            onEditEssay={handleEditEssay}
+            onDeleteEssay={handleDeleteEssay}
+            onDeleteMetric={handleDeleteMetric}
+          />
+        );
       default:
         return (
           <AnimatePresence mode="wait">
@@ -238,6 +278,10 @@ const App: React.FC = () => {
                 metrics={filteredMetrics}
                 searchTerm={searchTerm}
                 onSelectEssay={setSelectedEssayId}
+                currentUserEmail={loggedInUser}
+                onEditEssay={handleEditEssay}
+                onDeleteEssay={handleDeleteEssay}
+                onDeleteMetric={handleDeleteMetric}
               />
             ) : (
               <motion.div key="reader" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto">
@@ -249,8 +293,8 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-4">
                       {selectedEssay?.pdfUrl && <button onClick={() => setShowPdf(!showPdf)} className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${showPdf ? 'bg-kairos-navy text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}><FileText size={16} /><span>{showPdf ? 'Ocultar PDF' : 'Ver PDF Adjunto'}</span></button>}
-                      <button onClick={(e) => handleEditEssay(e, selectedEssay!)} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-blue-600 transition-colors"><Edit3 size={16} /><span>Editar</span></button>
-                      <button onClick={(e) => handleDeleteEssay(e, selectedEssay!.id, selectedEssay!.pdfUrl)} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /><span>Borrar</span></button>
+                      <button onClick={() => handleEditEssay(selectedEssay!)} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-blue-600 transition-colors"><Edit3 size={16} /><span>Editar</span></button>
+                      <button onClick={() => handleDeleteEssay(selectedEssay!.id, selectedEssay!.pdfUrl)} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /><span>Borrar</span></button>
                       <button onClick={() => window.print()} className="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-kairos-navy transition-colors"><FileDown size={16} /><span>Imprimir</span></button>
                     </div>
                   </div>

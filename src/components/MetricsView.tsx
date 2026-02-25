@@ -11,6 +11,11 @@ import { DocumentExplorer } from './DocumentExplorer';
 interface MetricsViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
+    currentUserEmail?: string | null;
+    onEditEssay?: (essay: Essay) => void;
+    onDeleteEssay?: (id: string, pdfUrl?: string) => void;
+    onEditMetric?: (metric: MetricEntry) => void;
+    onDeleteMetric?: (id: string) => void;
 }
 
 const COLORS = {
@@ -22,7 +27,15 @@ const COLORS = {
     profit: '#059669',
 };
 
-export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => {
+export const MetricsView: React.FC<MetricsViewProps> = ({
+    metrics,
+    essays,
+    currentUserEmail,
+    onEditEssay,
+    onDeleteEssay,
+    onEditMetric,
+    onDeleteMetric
+}) => {
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
     const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
@@ -227,13 +240,39 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                 <DocumentExplorer
                     title="Timeline de Actividad"
                     hideSearch={true}
+                    currentUserEmail={currentUserEmail}
+                    onSelectEssay={(id) => {
+                        const essay = essays.find(e => e.id === id);
+                        if (essay && onEditEssay) onEditEssay(essay);
+                    }}
+                    onDelete={(doc) => {
+                        if (doc.type === 'tesis' && onDeleteEssay) {
+                            onDeleteEssay(doc.id, doc.pdfUrl);
+                        } else if (onDeleteMetric) {
+                            const originalId = doc.id.split('-')[1] || doc.id;
+                            onDeleteMetric(originalId);
+                        }
+                    }}
+                    onEdit={(doc) => {
+                        if (doc.type === 'tesis' && onEditEssay) {
+                            const essay = essays.find(e => e.id === doc.id);
+                            if (essay) onEditEssay(essay);
+                        } else if (onEditMetric) {
+                            const originalId = doc.id.split('-')[1] || doc.id;
+                            const metric = metrics.find(m => m.id === originalId);
+                            if (metric) onEditMetric(metric);
+                        }
+                    }}
                     initialDocuments={selectedUserDetail.timeline.map(item => ({
                         id: item.id,
                         title: item.type === 'essay' ? (item as any).title :
-                            ((item as any).cv > 0 ? 'Visit: ' + ((item as any).cv_title || 'CV') :
-                                (item as any).sharing > 0 ? 'Sharing: ' + ((item as any).sharing_title || 'SH') :
-                                    'Iniciativa: ' + ((item as any).cp_title || 'CP')),
-                        author: selectedUserDetail.name,
+                            ((item as any).cv > 0 ? (item as any).cv_title || 'Customer Visit' :
+                                (item as any).sharing > 0 ? (item as any).sharing_title || 'Sharing' :
+                                    (item as any).cp_title || 'Community Point'),
+                        description: item.type === 'essay' ? (item as any).category :
+                            ((item as any).cv > 0 ? (item as any).cv_desc :
+                                (item as any).sharing > 0 ? (item as any).sharing_desc : (item as any).cp_desc),
+                        author: selectedUserDetail.name + '@alumni.mondragon.edu', // Standard format
                         date: item.date,
                         category: item.type === 'essay' ? (item as any).category :
                             ((item as any).cv > 0 ? 'Comercial' :
