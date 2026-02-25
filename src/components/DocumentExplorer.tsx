@@ -90,20 +90,8 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
             })),
             ...metrics.flatMap(m => {
                 const docs: UnifiedDocument[] = [];
-                if (m.cv_pdf_url || m.cv > 0) {
-                    docs.push({
-                        id: `cv-${m.id}`,
-                        title: m.cv_title || 'Justificante CV',
-                        description: m.cv_description,
-                        author: m.user_email,
-                        date: m.date,
-                        category: 'Comercial',
-                        pdfUrl: m.cv_pdf_url || '',
-                        type: 'cv' as const,
-                        isMetric: true,
-                        points: `+${m.cv} CV`
-                    });
-                }
+                // Se ocultan las CV de "Explorar" por petición del usuario
+                // El resto de métricas (Sharing y CP) siguen apareciendo
                 if (m.sharing_pdf_url || m.sharing > 0) {
                     docs.push({
                         id: `sh-${m.id}`,
