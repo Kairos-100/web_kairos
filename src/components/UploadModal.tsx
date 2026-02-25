@@ -5,6 +5,7 @@ import type { Essay, ContributionType } from '../constants';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
+import { ingestDocument } from '../lib/ai';
 
 interface UploadModalProps {
     onClose: () => void;
@@ -150,11 +151,22 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                         .update(essayPayload)
                         .eq('id', editEssay.id);
                     if (dbError) throw dbError;
+
+                    // Trigger AI Ingestion in background
+                    if (finalPdfUrl) {
+                        ingestDocument(editEssay.id, 'essay', finalPdfUrl).catch(console.error);
+                    }
                 } else {
-                    const { error: dbError } = await supabase
+                    const { data: newData, error: dbError } = await supabase
                         .from('essays')
-                        .insert([essayPayload]);
+                        .insert([essayPayload])
+                        .select();
                     if (dbError) throw dbError;
+
+                    // Trigger AI Ingestion in background
+                    if (newData && newData[0] && finalPdfUrl) {
+                        ingestDocument(newData[0].id, 'essay', finalPdfUrl).catch(console.error);
+                    }
                 }
 
                 if (onSuccess) onSuccess();

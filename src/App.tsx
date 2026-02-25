@@ -16,6 +16,7 @@ import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, 
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { DateRangePicker, type DateRange } from './components/DateRangePicker';
+import { runLegacyIngestion } from './lib/ai';
 
 const INITIAL_ESSAYS: Essay[] = [
   {
@@ -59,6 +60,7 @@ const App: React.FC = () => {
   const [loggedInUser, setLoggedInUser] = useState<string | null>(() => {
     return localStorage.getItem('kairos_user');
   });
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEssays();
@@ -146,6 +148,18 @@ const App: React.FC = () => {
   const handleEditEssay = (essay: Essay) => {
     setEditingEssay(essay);
     setIsEditOpen(true);
+  };
+
+  const handleRunAiIngestion = async () => {
+    if (!window.confirm('¿Quieres indexar todo el conocimiento existente en Explorar? Esto puede tardar un momento.')) return;
+    try {
+      setAiStatus('Indexando conocimiento...');
+      await runLegacyIngestion((msg) => setAiStatus(msg));
+      setTimeout(() => setAiStatus(null), 5000);
+    } catch (err) {
+      alert('Error al indexar conocimiento.');
+      setAiStatus(null);
+    }
   };
 
   useEffect(() => {
@@ -344,6 +358,22 @@ const App: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center space-x-6">
+            {aiStatus && (
+              <div className="flex items-center space-x-2 text-kairos-navy bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 animate-pulse">
+                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
+                <span className="text-[10px] font-bold uppercase tracking-tight">{aiStatus}</span>
+              </div>
+            )}
+            {!aiStatus && (
+              <button
+                onClick={handleRunAiIngestion}
+                className="flex items-center space-x-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-kairos-navy/60 hover:text-kairos-navy bg-white border border-gray-100 rounded-xl transition-all shadow-sm hover:shadow-md"
+                title="Sincronizar todo el conocimiento previo con la IA"
+              >
+                <Clock size={14} />
+                <span>Indexar Conocimiento</span>
+              </button>
+            )}
             <DateRangePicker range={dateRange} onChange={setDateRange} />
             {isLoading && <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse text-right"><div className="w-2 h-2 bg-blue-600 rounded-full"></div><span className="text-[10px] uppercase tracking-widest">Sincronizando...</span></div>}
           </div>

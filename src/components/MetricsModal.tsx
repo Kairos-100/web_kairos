@@ -3,6 +3,7 @@ import { X, CheckCircle2, Search, Users, Target, Share2, DollarSign, Wallet, Ale
 import { WHITELIST } from '../constants';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { ingestDocument } from '../lib/ai';
 
 interface MetricsModalProps {
     onClose: () => void;
@@ -136,7 +137,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 }
             }
 
-            const { error: dbError } = await supabase
+            const { data: newData, error: dbError } = await supabase
                 .from('metrics')
                 .insert([{
                     user_email: email,
@@ -155,9 +156,18 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     sharing_description: sharingDescription,
                     cp_title: cpTitle,
                     cp_description: cpDescription
-                }]);
+                }])
+                .select();
 
             if (dbError) throw dbError;
+
+            // Trigger AI Ingestion for each PDF in background
+            if (newData && newData[0]) {
+                const metricId = newData[0].id;
+                if (finalCvUrl) ingestDocument(metricId, 'metric', finalCvUrl).catch(console.error);
+                if (finalSharingUrl) ingestDocument(metricId, 'metric', finalSharingUrl).catch(console.error);
+                if (finalCpUrl) ingestDocument(metricId, 'metric', finalCpUrl).catch(console.error);
+            }
 
             if (onSuccess) onSuccess();
             onClose();
