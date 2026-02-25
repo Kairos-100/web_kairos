@@ -10,6 +10,7 @@ import { ScoresView } from './components/ScoresView';
 import { ActivityView } from './components/ActivityView';
 import { TeamView } from './components/TeamView';
 import { DocumentExplorer } from './components/DocumentExplorer';
+import { KairosAI } from './components/KairosAI';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment, MetricEntry } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
@@ -329,68 +330,71 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout
-      activeTab={activeTab}
-      setActiveTab={(tab) => { setActiveTab(tab); setSelectedEssayId(null); }}
-      user={loggedInUser}
-      onLogout={handleLogout}
-      onOpenUpload={() => setIsUploadOpen(true)}
-      onOpenMetrics={() => setIsMetricsModalOpen(true)}
-    >
-      <header className="mb-12">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h2 className="text-4xl font-heading font-bold text-kairos-navy mb-2">
-              {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Documento' : 'Explorador de Documentos') :
-                activeTab === 'stats' ? 'Visualización de Aprendizaje' :
-                  activeTab === 'commercial' ? 'Kairos Métricas' :
-                    activeTab === 'history' ? 'Historial de Actividad' :
-                      activeTab === 'team' ? 'Miembros del Equipo' :
-                        activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
-            </h2>
-            <p className="text-gray-500 font-medium">
-              {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'Todo el conocimiento y documentos de Kairos en un solo lugar.') :
-                activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
-                  activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
-                    activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
-                      activeTab === 'team' ? 'Actividad detallada de cada integrante de Kairos.' :
-                        activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
-            </p>
-          </div>
-          <div className="flex items-center space-x-6">
-            {aiStatus && (
-              <div className="flex items-center space-x-2 text-kairos-navy bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 animate-pulse">
-                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
-                <span className="text-[10px] font-bold uppercase tracking-tight">{aiStatus}</span>
+    <>
+      <Layout
+        activeTab={activeTab}
+        setActiveTab={(tab) => { setActiveTab(tab); setSelectedEssayId(null); }}
+        user={loggedInUser}
+        onLogout={handleLogout}
+        onOpenUpload={() => setIsUploadOpen(true)}
+        onOpenMetrics={() => setIsMetricsModalOpen(true)}
+      >
+        <header className="mb-12">
+          <div className="flex justify-between items-end mb-8">
+            <div>
+              <h2 className="text-4xl font-heading font-bold text-kairos-navy mb-2">
+                {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Documento' : 'Explorador de Documentos') :
+                  activeTab === 'stats' ? 'Visualización de Aprendizaje' :
+                    activeTab === 'commercial' ? 'Kairos Métricas' :
+                      activeTab === 'history' ? 'Historial de Actividad' :
+                        activeTab === 'team' ? 'Miembros del Equipo' :
+                          activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
+              </h2>
+              <p className="text-gray-500 font-medium">
+                {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'Todo el conocimiento y documentos de Kairos en un solo lugar.') :
+                  activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
+                    activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
+                      activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
+                        activeTab === 'team' ? 'Actividad detallada de cada integrante de Kairos.' :
+                          activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
+              </p>
+            </div>
+            <div className="flex items-center space-x-6">
+              {aiStatus && (
+                <div className="flex items-center space-x-2 text-kairos-navy bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 animate-pulse">
+                  <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
+                  <span className="text-[10px] font-bold uppercase tracking-tight">{aiStatus}</span>
+                </div>
+              )}
+              {!aiStatus && (
+                <button
+                  onClick={handleRunAiIngestion}
+                  className="flex items-center space-x-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-kairos-navy/60 hover:text-kairos-navy bg-white border border-gray-100 rounded-xl transition-all shadow-sm hover:shadow-md"
+                  title="Sincronizar todo el conocimiento previo con la IA"
+                >
+                  <Clock size={14} />
+                  <span>Indexar Conocimiento</span>
+                </button>
+              )}
+              <DateRangePicker range={dateRange} onChange={setDateRange} />
+              {isLoading && <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse text-right"><div className="w-2 h-2 bg-blue-600 rounded-full"></div><span className="text-[10px] uppercase tracking-widest">Sincronizando...</span></div>}
+            </div>
+            {!import.meta.env.VITE_SUPABASE_URL && <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100"><AlertCircle size={14} /><span className="text-[10px] uppercase font-bold tracking-tight">Modo Local (Sin Supabase)</span></div>}
+            {activeTab === 'feed' && !selectedEssayId && (
+              <div className="flex flex-col items-end space-y-2">
+                <div className="relative w-72"><input type="text" placeholder="Buscar palabras clave, temas..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all shadow-sm" /><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /></div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider pr-2">Mostrando resultados para el rango seleccionado</p>
               </div>
             )}
-            {!aiStatus && (
-              <button
-                onClick={handleRunAiIngestion}
-                className="flex items-center space-x-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-kairos-navy/60 hover:text-kairos-navy bg-white border border-gray-100 rounded-xl transition-all shadow-sm hover:shadow-md"
-                title="Sincronizar todo el conocimiento previo con la IA"
-              >
-                <Clock size={14} />
-                <span>Indexar Conocimiento</span>
-              </button>
-            )}
-            <DateRangePicker range={dateRange} onChange={setDateRange} />
-            {isLoading && <div className="flex items-center space-x-2 text-blue-600 font-bold animate-pulse text-right"><div className="w-2 h-2 bg-blue-600 rounded-full"></div><span className="text-[10px] uppercase tracking-widest">Sincronizando...</span></div>}
+            {selectedEssayId && activeTab === 'feed' && <button onClick={() => { setSelectedEssayId(null); setShowPdf(false); }} className="flex items-center space-x-2 text-kairos-navy font-bold hover:translate-x-[-4px] transition-transform"><ChevronRight className="rotate-180" size={20} /><span>Volver al Feed</span></button>}
           </div>
-          {!import.meta.env.VITE_SUPABASE_URL && <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100"><AlertCircle size={14} /><span className="text-[10px] uppercase font-bold tracking-tight">Modo Local (Sin Supabase)</span></div>}
-          {activeTab === 'feed' && !selectedEssayId && (
-            <div className="flex flex-col items-end space-y-2">
-              <div className="relative w-72"><input type="text" placeholder="Buscar palabras clave, temas..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all shadow-sm" /><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /></div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider pr-2">Mostrando resultados para el rango seleccionado</p>
-            </div>
-          )}
-          {selectedEssayId && activeTab === 'feed' && <button onClick={() => { setSelectedEssayId(null); setShowPdf(false); }} className="flex items-center space-x-2 text-kairos-navy font-bold hover:translate-x-[-4px] transition-transform"><ChevronRight className="rotate-180" size={20} /><span>Volver al Feed</span></button>}
-        </div>
-      </header>
-      {renderContent()}
-      {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} />}
-      {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} />}
-    </Layout>
+        </header>
+        {renderContent()}
+        {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} />}
+        {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} />}
+      </Layout>
+      <KairosAI />
+    </>
   );
 };
 

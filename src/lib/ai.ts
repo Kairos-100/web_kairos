@@ -1,5 +1,6 @@
 import * as pdfjs from 'pdfjs-dist';
 import { supabase } from './supabase';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Configure the worker for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -53,6 +54,16 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
 }
 
 /**
+ * Gets embeddings for a text string using Gemini.
+ */
+export async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+    const result = await model.embedContent(text);
+    return result.embedding.values;
+}
+
+/**
  * Ingests a single document (Essay or Metric) into the AI knowledge base.
  */
 export async function ingestDocument(
@@ -61,20 +72,23 @@ export async function ingestDocument(
     pdfUrl: string,
     apiKey?: string
 ) {
+    // If no apiKey, we can't do real embeddings, but we'll try to find one
+    const key = apiKey || localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) {
+        console.warn('No se encontró API Key para generar embeddings reales. Saltando ingesta.');
+        return;
+    }
+
     try {
         console.log(`Iniciando ingesta para ${sourceType}: ${sourceId}`);
 
         const text = await extractTextFromPDF(pdfUrl);
-        if (!text) {
-            console.warn('Documento vacío o sin texto extraíble.');
-            return;
-        }
+        if (!text) return;
 
         const chunks = chunkText(text);
 
         for (const chunk of chunks) {
-            // MOCK VECTOR - Replace with real Embedding API call later
-            const embedding = new Array(1536).fill(0).map(() => Math.random());
+            const embedding = await getEmbedding(chunk, key);
 
             const { error } = await supabase
                 .from('document_sections')
@@ -89,8 +103,6 @@ export async function ingestDocument(
         }
 
         console.log(`Ingesta completada!`);
-        // @ts-ignore
-        const _k = apiKey;
     } catch (err) {
         console.error('Error in ingestDocument:', err);
         throw err;
@@ -98,9 +110,66 @@ export async function ingestDocument(
 }
 
 /**
+ * Retrieval: Find relevant chunks for a question.
+ */
+export async function getRelevantContext(query: string, apiKey: string): Promise<string> {
+    try {
+        const queryEmbedding = await getEmbedding(query, apiKey);
+
+        const { data: sections, error } = await supabase.rpc('match_document_sections', {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.5,
+            match_count: 5
+        });
+
+        if (error) throw error;
+
+        return sections
+            .map((s: any) => `[Origen: ${s.source_type} ${s.source_id}]\n${s.content}`)
+            .join('\n\n---\n\n');
+    } catch (err) {
+        console.error('Error getting context:', err);
+        return '';
+    }
+}
+
+/**
+ * Generation: Chat with Gemini using RAG context.
+ */
+export async function generateAiResponse(query: string, apiKey: string): Promise<string> {
+    const context = await getRelevantContext(query, apiKey);
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+Eres Kairos AI, un asistente experto en el conocimiento compartido de la organización Kairos. 
+Tu objetivo es responder preguntas basándote ÚNICAMENTE en el contexto proporcionado abajo.
+Si el contexto no contiene la información necesaria, dilo amablemente, pero no inventes nada.
+
+CONTEXTO DE LOS DOCUMENTOS DE KAIROS:
+${context}
+
+PREGUNTA DEL USUARIO:
+${query}
+
+Responde de forma profesional, clara y en español. Cita los documentos si es posible.
+`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+}
+
+/**
  * Runs a full batch ingestion of all existing documents in Supabase.
  */
 export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
+    const key = localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) {
+        if (onProgress) onProgress('Error: No se encontró Gemini API Key.');
+        return;
+    }
+
     try {
         if (onProgress) onProgress('Buscando documentos existentes...');
 
@@ -122,22 +191,22 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
         for (const essay of essays || []) {
             if (essay.pdf_url) {
                 if (onProgress) onProgress(`Indexando Tesis: ${essay.id}...`);
-                await ingestDocument(essay.id, 'essay', essay.pdf_url);
+                await ingestDocument(essay.id, 'essay', essay.pdf_url, key);
             }
         }
 
         for (const metric of metrics || []) {
             if (metric.cv_pdf_url) {
                 if (onProgress) onProgress(`Indexando CV: ${metric.id}...`);
-                await ingestDocument(metric.id, 'metric', metric.cv_pdf_url);
+                await ingestDocument(metric.id, 'metric', metric.cv_pdf_url, key);
             }
             if (metric.sharing_pdf_url) {
                 if (onProgress) onProgress(`Indexando Sharing: ${metric.id}...`);
-                await ingestDocument(metric.id, 'metric', metric.sharing_pdf_url);
+                await ingestDocument(metric.id, 'metric', metric.sharing_pdf_url, key);
             }
             if (metric.cp_pdf_url) {
                 if (onProgress) onProgress(`Indexando CP: ${metric.id}...`);
-                await ingestDocument(metric.id, 'metric', metric.cp_pdf_url);
+                await ingestDocument(metric.id, 'metric', metric.cp_pdf_url, key);
             }
         }
 

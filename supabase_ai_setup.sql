@@ -28,3 +28,33 @@ FOR SELECT TO authenticated USING (true);
 -- For now, allowing all for testing, but ideally restricted to the update logic
 CREATE POLICY "Authenticated users can insert sections" ON public.document_sections
 FOR INSERT TO authenticated WITH CHECK (true);
+
+-- 7. Create a function to search for document segments
+CREATE OR REPLACE FUNCTION match_document_sections (
+  query_embedding VECTOR(1536),
+  match_threshold FLOAT,
+  match_count INT
+)
+RETURNS TABLE (
+  id UUID,
+  source_id UUID,
+  source_type TEXT,
+  content TEXT,
+  similarity FLOAT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ds.id,
+    ds.source_id,
+    ds.source_type,
+    ds.content,
+    1 - (ds.embedding <=> query_embedding) AS similarity
+  FROM document_sections ds
+  WHERE 1 - (ds.embedding <=> query_embedding) > match_threshold
+  ORDER BY ds.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
