@@ -163,7 +163,8 @@ export async function generateAiResponse(query: string, apiKey: string): Promise
     const context = await getRelevantContext(query, apiKey);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // Usamos gemini-1.5-flash-8b que tiene límites de cuota mucho más amplios en el free tier
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
 
     const prompt = `
 Eres Kairos AI, un asistente experto en el conocimiento compartido de la organización Kairos. 
