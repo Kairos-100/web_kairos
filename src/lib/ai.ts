@@ -60,11 +60,7 @@ export async function getEmbedding(text: string, apiKey: string): Promise<number
     const genAI = new GoogleGenerativeAI(apiKey);
     // Use the latest 2026 model: gemini-embedding-001
     const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
-    const result = await model.embedContent({
-        content: { role: 'user', parts: [{ text }] },
-        // Match the 768 dimensions in our Supabase SQL
-        outputDimensionality: 768
-    });
+    const result = await model.embedContent(text);
     return result.embedding.values;
 }
 

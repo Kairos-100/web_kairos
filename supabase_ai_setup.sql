@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.document_sections (
     source_id UUID NOT NULL,
     source_type TEXT NOT NULL CHECK (source_type IN ('essay', 'metric')),
     content TEXT NOT NULL,
-    embedding VECTOR(768), -- Standard size for embedding-001
+    embedding VECTOR(3072), -- Default size for gemini-embedding-001
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -31,7 +31,7 @@ FOR INSERT TO authenticated WITH CHECK (true);
 
 -- 7. Create a function to search for document segments
 CREATE OR REPLACE FUNCTION match_document_sections (
-  query_embedding VECTOR(1536),
+  query_embedding VECTOR(3072),
   match_threshold FLOAT,
   match_count INT
 )
