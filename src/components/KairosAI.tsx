@@ -14,8 +14,13 @@ export const KairosAI: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [apiKey, setApiKey] = useState(() => localStorage.getItem('kairos_gemini_key') || '');
-    const [showKeyInput, setShowKeyInput] = useState(!apiKey);
+    const [apiKey, setApiKey] = useState(() => {
+        return localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+    });
+    const [showKeyInput, setShowKeyInput] = useState(() => {
+        const key = localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+        return !key;
+    });
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -148,8 +153,8 @@ export const KairosAI: React.FC = () => {
                                             className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                         >
                                             <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${m.role === 'user'
-                                                    ? 'bg-kairos-navy text-white rounded-br-none'
-                                                    : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
+                                                ? 'bg-kairos-navy text-white rounded-br-none'
+                                                : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
                                                 }`}>
                                                 <div className="flex items-center space-x-2 mb-1.5">
                                                     {m.role === 'user' ? <User size={12} className="opacity-60" /> : <Bot size={12} className="text-blue-500" />}
@@ -224,8 +229,8 @@ export const KairosAI: React.FC = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-16 h-16 rounded-[1.5rem] shadow-2xl flex items-center justify-center transition-all ${isOpen
-                        ? 'bg-white text-kairos-navy ring-4 ring-kairos-navy/5 rotate-0'
-                        : 'bg-kairos-navy text-white hover:bg-blue-900'
+                    ? 'bg-white text-kairos-navy ring-4 ring-kairos-navy/5 rotate-0'
+                    : 'bg-kairos-navy text-white hover:bg-blue-900'
                     }`}
             >
                 {isOpen ? <X size={28} /> : (
