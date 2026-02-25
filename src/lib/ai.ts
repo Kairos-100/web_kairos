@@ -163,8 +163,8 @@ export async function generateAiResponse(query: string, apiKey: string): Promise
     const context = await getRelevantContext(query, apiKey);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Usamos gemini-3-flash-preview, el identificador correcto para el modelo v3 de 2026
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    // Usamos gemini-1.5-flash-latest por su alta disponibilidad y estabilidad (evita errores 503 de sobrecarga)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
     const prompt = `
 Eres Kairos AI, un asistente experto en el conocimiento compartido de la organización Kairos. 
