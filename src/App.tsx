@@ -157,8 +157,9 @@ const App: React.FC = () => {
       setAiStatus('Indexando conocimiento...');
       await runLegacyIngestion((msg) => setAiStatus(msg));
       setTimeout(() => setAiStatus(null), 5000);
-    } catch (err) {
-      alert('Error al indexar conocimiento.');
+    } catch (err: any) {
+      console.error('Indexing error:', err);
+      alert(`Error al indexar conocimiento: ${err.message || 'Error desconocido'}`);
       setAiStatus(null);
     }
   };
