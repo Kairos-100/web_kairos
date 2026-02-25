@@ -63,4 +63,10 @@ export interface MetricEntry {
     cv_pdf_url?: string;
     sharing_pdf_url?: string;
     cp_pdf_url?: string;
+    cv_title?: string;
+    cv_description?: string;
+    sharing_title?: string;
+    sharing_description?: string;
+    cp_title?: string;
+    cp_description?: string;
 }

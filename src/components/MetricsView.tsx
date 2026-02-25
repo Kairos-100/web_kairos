@@ -608,10 +608,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                                                     <tr className="hover:bg-amber-50/30 transition-colors">
                                                                         <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
                                                                         <td className="p-4">
-                                                                            <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-amber-600">
-                                                                                <Target size={12} />
-                                                                                <span>Customer Visit (CV)</span>
-                                                                            </span>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-amber-600">
+                                                                                    <Target size={12} />
+                                                                                    <span>Customer Visit (CV)</span>
+                                                                                </span>
+                                                                                {entry.cv_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.cv_title}</span>}
+                                                                            </div>
                                                                         </td>
                                                                         <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cv}</td>
                                                                         <td className="p-4 text-right pr-6">
@@ -629,10 +632,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                                                     <tr className="hover:bg-purple-50/30 transition-colors">
                                                                         <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
                                                                         <td className="p-4">
-                                                                            <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-purple-600">
-                                                                                <Users size={12} />
-                                                                                <span>Sharing</span>
-                                                                            </span>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-purple-600">
+                                                                                    <Users size={12} />
+                                                                                    <span>Sharing</span>
+                                                                                </span>
+                                                                                {entry.sharing_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.sharing_title}</span>}
+                                                                            </div>
                                                                         </td>
                                                                         <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.sharing}</td>
                                                                         <td className="p-4 text-right pr-6">
@@ -650,10 +656,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ metrics, essays }) => 
                                                                     <tr className="hover:bg-red-50/30 transition-colors">
                                                                         <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
                                                                         <td className="p-4">
-                                                                            <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-red-500">
-                                                                                <Award size={12} />
-                                                                                <span>Comunity Points (CP)</span>
-                                                                            </span>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-red-500">
+                                                                                    <Award size={12} />
+                                                                                    <span>Community Points (CP)</span>
+                                                                                </span>
+                                                                                {entry.cp_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.cp_title}</span>}
+                                                                            </div>
                                                                         </td>
                                                                         <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cp}</td>
                                                                         <td className="p-4 text-right pr-6">

@@ -8,6 +8,7 @@ import { CommentSection } from './components/CommentSection';
 import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { ActivityView } from './components/ActivityView';
+import { TeamView } from './components/TeamView';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment, MetricEntry } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
@@ -234,6 +235,8 @@ const App: React.FC = () => {
         return <ScoresView essays={filteredByDateEssays} />;
       case 'history':
         return <ActivityView essays={filteredByDateEssays} metrics={filteredMetrics} />;
+      case 'team':
+        return <TeamView essays={filteredByDateEssays} metrics={filteredMetrics} />;
       default:
         return (
           <AnimatePresence mode="wait">
@@ -331,14 +334,16 @@ const App: React.FC = () => {
                 activeTab === 'stats' ? 'Visualización de Aprendizaje' :
                   activeTab === 'commercial' ? 'Kairos Métricas' :
                     activeTab === 'history' ? 'Historial de Actividad' :
-                      activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
+                      activeTab === 'team' ? 'Miembros del Equipo' :
+                        activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
             </h2>
             <p className="text-gray-500 font-medium">
               {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'El conocimiento colectivo de Kairos Company en un solo lugar.') :
                 activeTab === 'stats' ? 'Evolución y tendencias del conocimiento en el equipo.' :
                   activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
                     activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
-                      activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
+                      activeTab === 'team' ? 'Actividad detallada de cada integrante de Kairos.' :
+                        activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
             </p>
           </div>
           <div className="flex items-center space-x-6">

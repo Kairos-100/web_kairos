@@ -24,6 +24,14 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [revenue, setRevenue] = useState(0);
     const [profit, setProfit] = useState(0);
 
+    // Metadata states
+    const [cvTitle, setCvTitle] = useState('');
+    const [cvDescription, setCvDescription] = useState('');
+    const [sharingTitle, setSharingTitle] = useState('');
+    const [sharingDescription, setSharingDescription] = useState('');
+    const [cpTitle, setCpTitle] = useState('');
+    const [cpDescription, setCpDescription] = useState('');
+
     // CV PDF states
     const [cvPdfFile, setCvPdfFile] = useState<File | null>(null);
     const [cvPdfName, setCvPdfName] = useState<string | undefined>(undefined);
@@ -140,7 +148,13 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     profit,
                     cv_pdf_url: finalCvUrl,
                     sharing_pdf_url: finalSharingUrl,
-                    cp_pdf_url: finalCpUrl
+                    cp_pdf_url: finalCpUrl,
+                    cv_title: cvTitle,
+                    cv_description: cvDescription,
+                    sharing_title: sharingTitle,
+                    sharing_description: sharingDescription,
+                    cp_title: cpTitle,
+                    cp_description: cpDescription
                 }]);
 
             if (dbError) throw dbError;
@@ -149,7 +163,13 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
             onClose();
         } catch (err: any) {
             console.error('Error uploading metrics:', err);
-            setError(`Error al guardar: ${err.message}`);
+            let userMessage = `Error al guardar: ${err.message}`;
+
+            if (err.message?.includes('maximum allowed size')) {
+                userMessage = 'Error: El PDF es demasiado grande. Debes ampliar el "Maximum File Size" en la configuración de Storage en tu panel de Supabase (recomiendo 50MB).';
+            }
+
+            setError(userMessage);
         } finally {
             setIsUploading(false);
         }
@@ -228,6 +248,24 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
                                         min="0"
                                     />
+                                    {cv > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={cvTitle}
+                                                onChange={(e) => setCvTitle(e.target.value)}
+                                                placeholder="Título de la visita"
+                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-400"
+                                            />
+                                            <textarea
+                                                value={cvDescription}
+                                                onChange={(e) => setCvDescription(e.target.value)}
+                                                placeholder="Breve descripción..."
+                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* CP */}
@@ -243,6 +281,24 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
                                         min="0"
                                     />
+                                    {cp > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={cpTitle}
+                                                onChange={(e) => setCpTitle(e.target.value)}
+                                                placeholder="Título de la iniciativa"
+                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-red-400"
+                                            />
+                                            <textarea
+                                                value={cpDescription}
+                                                onChange={(e) => setCpDescription(e.target.value)}
+                                                placeholder="Breve descripción..."
+                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-red-400 resize-none"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Sharing */}
@@ -258,6 +314,24 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none"
                                         min="0"
                                     />
+                                    {sharing > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={sharingTitle}
+                                                onChange={(e) => setSharingTitle(e.target.value)}
+                                                placeholder="Título de la sesión"
+                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-purple-400"
+                                            />
+                                            <textarea
+                                                value={sharingDescription}
+                                                onChange={(e) => setSharingDescription(e.target.value)}
+                                                placeholder="Breve descripción..."
+                                                className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-purple-400 resize-none"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Revenue */}

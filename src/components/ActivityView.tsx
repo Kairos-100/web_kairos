@@ -109,9 +109,18 @@ export const ActivityView: React.FC<ActivityViewProps> = ({ essays, metrics }) =
                                     <td className="py-4">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-kairos-navy line-clamp-1">{item.title}</span>
-                                            <span className="text-[10px] text-gray-400 font-medium tracking-tight">
-                                                {item.type === 'tesis' ? 'Nuevo conocimiento compartido' : 'Registro de actividad comercial'}
-                                            </span>
+                                            <div className="flex flex-col space-y-0.5">
+                                                <span className="text-[10px] text-gray-400 font-medium tracking-tight">
+                                                    {item.type === 'tesis' ? 'Nuevo conocimiento compartido' : 'Registro de actividad comercial'}
+                                                </span>
+                                                {item.type === 'metrica' && (
+                                                    <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                                                        {item.data.cv > 0 && <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">CV{item.data.cv_title ? `: ${item.data.cv_title}` : ''}</span>}
+                                                        {item.data.sharing > 0 && <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md">SH{item.data.sharing_title ? `: ${item.data.sharing_title}` : ''}</span>}
+                                                        {item.data.cp > 0 && <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md">CP{item.data.cp_title ? `: ${item.data.cp_title}` : ''}</span>}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="py-4">

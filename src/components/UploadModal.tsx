@@ -183,6 +183,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                 userMessage = 'Error: El bucket "pdfs" no tiene permisos. Verifica las políticas en Supabase.';
             } else if (err.message?.includes('column')) {
                 userMessage = `Error de Base de Datos: Te falta una columna. ${err.message}`;
+            } else if (err.message?.includes('maximum allowed size')) {
+                userMessage = 'Error: El PDF excede el tamaño permitido por Supabase. Debes ampliar el "Maximum File Size" en Storage > Configuration en tu dashboard de Supabase.';
             } else if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
                 userMessage = 'Error de Red: No se puede conectar con el servidor. Tu WiFi o Firewall podría estar bloqueando Supabase.';
             }
