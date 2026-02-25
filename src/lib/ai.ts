@@ -1,6 +1,6 @@
 import * as pdfjs from 'pdfjs-dist';
 import { supabase } from './supabase';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 // Configure the worker for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -63,21 +63,21 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
 }
 
 /**
- * Gets embeddings for a text string using Gemini.
+ * Gets embeddings for a text string using OpenAI.
  */
 export async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
+    const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
     const sanitizedText = sanitizeText(text);
     if (!sanitizedText) throw new Error('El texto para el embedding está vacío después de la limpieza.');
 
-    const result = await model.embedContent({
-        content: { role: 'user', parts: [{ text: sanitizedText }] },
-        outputDimensionality: 768
-    } as any);
+    const response = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: sanitizedText,
+        dimensions: 768 // Mantenemos 768 para compatibilidad con el índice HNSW de Supabase
+    });
 
-    return result.embedding.values;
+    return response.data[0].embedding;
 }
 
 /**
@@ -90,9 +90,9 @@ export async function ingestDocument(
     apiKey?: string
 ) {
     // If no apiKey, we can't do real embeddings, but we'll try to find one
-    const key = apiKey || localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
+    const key = apiKey || localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY;
     if (!key) {
-        console.warn('No se encontró API Key para generar embeddings reales. Saltando ingesta.');
+        console.warn('No se encontró API Key de OpenAI para generar embeddings reales. Saltando ingesta.');
         return;
     }
 
@@ -157,14 +157,12 @@ export async function getRelevantContext(query: string, apiKey: string): Promise
 }
 
 /**
- * Generation: Chat with Gemini using RAG context.
+ * Generation: Chat with OpenAI using RAG context.
  */
 export async function generateAiResponse(query: string, apiKey: string): Promise<string> {
     const context = await getRelevantContext(query, apiKey);
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Usamos gemini-1.5-pro que sigue siendo el modelo más estable y disponible en Europa tras la retirada de 1.5 Flash
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
     const prompt = `
 Eres Kairos AI, un asistente experto en el conocimiento compartido de la organización Kairos. 
@@ -181,13 +179,18 @@ Responde de forma profesional, clara y en español. Cita los documentos si es po
 `;
 
     try {
-        const result = await model.generateContent(prompt);
-        const textResponse = result.response.text();
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.3,
+        });
+
+        const textResponse = response.choices[0].message.content;
         if (!textResponse) throw new Error('La IA devolvió una respuesta vacía.');
         return textResponse;
     } catch (err: any) {
         console.error('Error final in generateAiResponse:', err);
-        throw new Error(`Error en la generación de IA: ${err.message || 'Error desconocido'}`);
+        throw new Error(`Error en la generación de OpenAI: ${err.message || 'Error desconocido'}`);
     }
 }
 
@@ -195,9 +198,9 @@ Responde de forma profesional, clara y en español. Cita los documentos si es po
  * Runs a full batch ingestion of all existing documents in Supabase.
  */
 export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
-    const key = localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
+    const key = localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY;
     if (!key) {
-        if (onProgress) onProgress('Error: No se encontró Gemini API Key. Por favor, introdúcela en el chat de IA primero.');
+        if (onProgress) onProgress('Error: No se encontró OpenAI API Key. Por favor, introdúcela en el chat de IA primero.');
         return;
     }
 

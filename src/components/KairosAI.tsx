@@ -15,10 +15,10 @@ export const KairosAI: React.FC = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [apiKey, setApiKey] = useState(() => {
-        return localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+        return localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY || '';
     });
     const [showKeyInput, setShowKeyInput] = useState(() => {
-        const key = localStorage.getItem('kairos_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+        const key = localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY || '';
         return !key;
     });
 
@@ -37,7 +37,7 @@ export const KairosAI: React.FC = () => {
     const handleSaveKey = (e: React.FormEvent) => {
         e.preventDefault();
         if (apiKey.trim()) {
-            localStorage.setItem('kairos_gemini_key', apiKey.trim());
+            localStorage.setItem('kairos_openai_key', apiKey.trim());
             setShowKeyInput(false);
         }
     };
@@ -107,19 +107,19 @@ export const KairosAI: React.FC = () => {
                                     </div>
                                     <div>
                                         <h4 className="font-heading font-bold text-kairos-navy text-lg">Configuración de IA</h4>
-                                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">Para acceder al conocimiento de Kairos, conecta tu API Key de Google Gemini.</p>
+                                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">Para acceder al conocimiento de Kairos, conecta tu API Key de OpenAI.</p>
                                     </div>
                                     <form onSubmit={handleSaveKey} className="w-full space-y-3">
                                         <input
                                             type="password"
                                             value={apiKey}
                                             onChange={(e) => setApiKey(e.target.value)}
-                                            placeholder="Gemini API Key..."
+                                            placeholder="OpenAI API Key (sk-...)"
                                             className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-kairos-navy outline-none transition-all shadow-sm"
                                             required
                                         />
                                         <button type="submit" className="w-full btn-primary py-4 rounded-2xl font-bold shadow-lg shadow-blue-900/10">Guardar y Vincular</button>
-                                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="inline-block text-[10px] text-blue-600 font-bold uppercase hover:underline tracking-wider">¿No tienes una? Consíguela gratis aquí</a>
+                                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="inline-block text-[10px] text-blue-600 font-bold uppercase hover:underline tracking-wider">¿No tienes una? Consíguela aquí</a>
                                     </form>
                                     <div className="pt-4 border-t border-gray-100 w-full">
                                         <p className="text-[10px] text-gray-400 font-medium">Tus datos se procesan de forma segura y privada.</p>
