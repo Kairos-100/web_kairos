@@ -58,7 +58,7 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
  */
 export async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+    const model = genAI.getGenerativeModel({ model: "embedding-001" });
     const result = await model.embedContent(text);
     return result.embedding.values;
 }

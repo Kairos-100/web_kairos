@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.document_sections (
     source_id UUID NOT NULL,
     source_type TEXT NOT NULL CHECK (source_type IN ('essay', 'metric')),
     content TEXT NOT NULL,
-    embedding VECTOR(1536), -- Standard size for Gemini/OpenAI embeddings
+    embedding VECTOR(768), -- Standard size for embedding-001
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
