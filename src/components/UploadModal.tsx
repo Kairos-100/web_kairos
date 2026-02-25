@@ -389,9 +389,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                         <textarea
                                             value={content}
                                             onChange={(e) => setContent(e.target.value)}
-                                            placeholder="# Resumen Ejecutivo...
-                       
-Explica brevemente de qué trata este documento."
+                                            placeholder="Impacto al proyecto..."
+
                                             rows={6}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all resize-none font-mono text-sm"
                                         />

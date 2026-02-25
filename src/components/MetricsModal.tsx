@@ -335,7 +335,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                             <textarea
                                                 value={cvDescription}
                                                 onChange={(e) => setCvDescription(e.target.value)}
-                                                placeholder="Resumen de la visita..."
+                                                placeholder="Impacto al proyecto..."
                                                 className="w-full px-3 py-2 bg-white border border-blue-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400 resize-none shadow-sm"
                                                 rows={2}
                                             />
@@ -380,7 +380,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                             <textarea
                                                 value={sharingDescription}
                                                 onChange={(e) => setSharingDescription(e.target.value)}
-                                                placeholder="Resumen del contenido..."
+                                                placeholder="Impacto al proyecto..."
                                                 className="w-full px-3 py-2 bg-white border border-purple-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-purple-400 resize-none shadow-sm"
                                                 rows={2}
                                             />
@@ -425,7 +425,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                             <textarea
                                                 value={cpDescription}
                                                 onChange={(e) => setCpDescription(e.target.value)}
-                                                placeholder="Resumen de la aportación..."
+                                                placeholder="Impacto al proyecto..."
                                                 className="w-full px-3 py-2 bg-white border border-red-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-400 resize-none shadow-sm"
                                                 rows={2}
                                             />
