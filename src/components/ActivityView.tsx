@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { FileText } from 'lucide-react';
 import type { Essay, MetricEntry } from '../constants';
 import { DocumentExplorer } from './DocumentExplorer';
 
