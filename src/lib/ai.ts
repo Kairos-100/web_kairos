@@ -85,6 +85,12 @@ export async function ingestDocument(
         const text = await extractTextFromPDF(pdfUrl);
         if (!text) return;
 
+        // Limpiar secciones previas para evitar duplicados
+        await supabase
+            .from('document_sections')
+            .delete()
+            .eq('source_id', sourceId);
+
         const chunks = chunkText(text);
 
         for (const chunk of chunks) {
