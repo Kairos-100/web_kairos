@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { MetricEntry, Essay } from '../constants';
 import { WHITELIST } from '../constants';
 import type { ClockifyUserTime } from '../lib/clockify';
+import { getWorkspaceId, getWeeklyTimeSummary } from '../lib/clockify';
 import { aggregateDataForRange, generatePDF } from '../lib/reports';
 import { notifyReport } from '../lib/notifications';
 
@@ -21,20 +22,37 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         setIsSending(type);
 
         const now = new Date();
+        now.setHours(23, 59, 59, 999);
         let start = new Date();
         let period = '';
 
         if (type === 'Semanal') {
             // Last 7 days
             start.setDate(now.getDate() - 7);
+            start.setHours(0, 0, 0, 0);
             period = `${start.toLocaleDateString('es-ES')} - ${now.toLocaleDateString('es-ES')}`;
         } else {
             // This month
             start = new Date(now.getFullYear(), now.getMonth(), 1);
+            start.setHours(0, 0, 0, 0);
             period = `${start.toLocaleString('es-ES', { month: 'long' })} ${now.getFullYear()}`;
         }
 
-        const aggregated = aggregateDataForRange(metrics, essays, clockifyUsers, start, now);
+        // Fetch fresh Clockify data for the EXACT report range
+        let freshClockifyUsers = clockifyUsers;
+        try {
+            const wsId = await getWorkspaceId();
+            if (wsId) {
+                const clockifyData = await getWeeklyTimeSummary(wsId, start, now);
+                if (clockifyData) {
+                    freshClockifyUsers = clockifyData.users;
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching fresh Clockify data for report:', err);
+        }
+
+        const aggregated = aggregateDataForRange(metrics, essays, freshClockifyUsers, start, now);
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
         try {

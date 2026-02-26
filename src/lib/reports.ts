@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { MetricEntry, Essay } from '../constants';
-import { WHITELIST } from '../constants';
+import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants';
 import type { ClockifyUserTime } from './clockify';
 
 export interface ReportData {
@@ -24,6 +24,12 @@ export function aggregateDataForRange(
 ): Record<string, ReportData> {
     const grouped: Record<string, ReportData> = {};
 
+    // Normalize range boundaries to start/end of day
+    const s = new Date(start);
+    s.setHours(0, 0, 0, 0);
+    const e_range = new Date(end);
+    e_range.setHours(23, 59, 59, 999);
+
     // Initialize with all whitelist users
     WHITELIST.forEach(email => {
         const user = email.split('@')[0];
@@ -32,39 +38,59 @@ export function aggregateDataForRange(
 
     const parseDate = (str: string) => {
         if (!str) return new Date(0);
-        if (str.includes('-')) return new Date(str);
-        const [d, m, y] = str.split('/').map(Number);
-        return new Date(y, m - 1, d);
+        let d: Date;
+        if (str.includes('-')) {
+            d = new Date(str);
+        } else {
+            const [day, m, y] = str.split('/').map(Number);
+            d = new Date(y, m - 1, day);
+        }
+        d.setHours(0, 0, 0, 0);
+        return d;
     };
 
     metrics.forEach(m => {
         const d = parseDate(m.date);
-        if (d >= start && d <= end) {
+        if (d >= s && d <= e_range) {
             const user = m.user_email.split('@')[0];
             if (grouped[user]) {
-                grouped[user].cv += m.cv || 0;
-                grouped[user].cp += m.cp || 0;
-                grouped[user].sharing += m.sharing || 0;
-                grouped[user].revenue += m.revenue || 0;
-                grouped[user].profit += m.profit || 0;
+                grouped[user].cv += Number(m.cv) || 0;
+                grouped[user].cp += Number(m.cp) || 0;
+                grouped[user].sharing += Number(m.sharing) || 0;
+                grouped[user].revenue += Number(m.revenue) || 0;
+                grouped[user].profit += Number(m.profit) || 0;
             }
         }
     });
 
-    essays.forEach(e => {
-        const d = parseDate(e.date);
-        if (d >= start && d <= end) {
-            const user = e.author.split('@')[0];
+    essays.forEach(item => {
+        const d = parseDate(item.date);
+        if (d >= s && d <= e_range) {
+            const user = item.author.split('@')[0];
             if (grouped[user]) {
-                grouped[user].lp += e.points || 0;
+                grouped[user].lp += Number(item.points) || 0;
             }
         }
     });
 
     clockifyUsers.forEach(u => {
-        const user = u.email.split('@')[0];
-        if (grouped[user]) {
-            grouped[user].time += u.totalTime || 0;
+        // Find which whitelist user this Clockify user belongs to
+        const matchedUser = Object.keys(grouped).find(target => {
+            const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+            const uName = (u.userName || '').toLowerCase();
+            const uEmail = (u.email || '').toLowerCase();
+
+            if (expectedClockifyName) {
+                const expected = expectedClockifyName.toLowerCase();
+                return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+            }
+
+            const normalizedTarget = target.toLowerCase();
+            return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
+        });
+
+        if (matchedUser && grouped[matchedUser]) {
+            grouped[matchedUser].time += u.totalTime || 0;
         }
     });
 
