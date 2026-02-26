@@ -9,7 +9,7 @@ const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 const CLOCKIFY_API_KEY = process.env.VITE_CLOCKIFY_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-// Constants (Copied for independence)
+// Constants
 const WHITELIST = [
     "jaime.gonzalez@alumni.mondragon.edu",
     "carlos.ortas@alumni.mondragon.edu",
@@ -54,7 +54,7 @@ export default async function handler(req: Request) {
 
     try {
         const now = new Date();
-        // Calc range: Previous Monday (start) to Previous Sunday (end)
+        // Calc range: Monday to Sunday of LAST week
         const day = now.getDay();
         const diffToLastMonday = (day === 0 ? 6 : day - 1) + 7;
         const startDate = new Date(now);
@@ -68,7 +68,7 @@ export default async function handler(req: Request) {
         const periodStr = `${startDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')}`;
 
         // Helpers
-        const parseDDMMYYYY = (str: string) => {
+        const parseDate = (str: string) => {
             if (!str) return new Date(0);
             if (str.includes('-')) {
                 const d = new Date(str);
@@ -83,141 +83,215 @@ export default async function handler(req: Request) {
 
         // 1. Fetch Data
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
         const { data: rawMetrics } = await supabase.from('metrics').select('*');
         const { data: rawEssays } = await supabase.from('essays').select('*');
 
         const metrics = (rawMetrics || []).filter(m => {
-            const d = parseDDMMYYYY(m.date);
+            const d = parseDate(m.date);
             return d >= startDate && d <= endDate;
         });
 
         const essays = (rawEssays || []).filter(e => {
-            const d = parseDDMMYYYY(e.date);
+            const d = parseDate(e.date);
             return d >= startDate && d <= endDate;
         });
 
-        // Clockify
-        let clockifyUsers: any[] = [];
-        const wsResponse = await fetch('https://api.clockify.me/api/v1/workspaces', {
-            headers: { 'X-Api-Key': CLOCKIFY_API_KEY }
-        });
+        // 1.1 Fetch Clockify Project Data
+        let clockifyEntries: any[] = [];
+        const wsResponse = await fetch('https://api.clockify.me/api/v1/workspaces', { headers: { 'X-Api-Key': CLOCKIFY_API_KEY } });
         const workspaces = await wsResponse.json();
         const workspaceId = workspaces?.[0]?.id;
 
         if (workspaceId) {
             const reportRes = await fetch(`https://reports.api.clockify.me/v1/workspaces/${workspaceId}/reports/summary`, {
                 method: 'POST',
-                headers: {
-                    'X-Api-Key': CLOCKIFY_API_KEY,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'X-Api-Key': CLOCKIFY_API_KEY, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     dateRangeStart: startDate.toISOString(),
                     dateRangeEnd: endDate.toISOString(),
-                    summaryFilter: { groups: ["USER"] }
+                    summaryFilter: { groups: ["USER", "PROJECT"] } // Granular!
                 })
             });
             const reportData = await reportRes.json();
-            clockifyUsers = reportData.groupOne || [];
+            clockifyEntries = reportData.groupOne || [];
         }
 
         // 2. Aggregate
-        const grouped: any = {};
+        const usersData: Record<string, any> = {};
         WHITELIST.forEach(email => {
             const user = email.split('@')[0];
-            grouped[user] = { user, email, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0 };
+            usersData[user] = {
+                user, email,
+                cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0,
+                projects: [] as { name: string, duration: number }[]
+            };
         });
 
         metrics.forEach(m => {
             const mEmail = (m.user_email || '').toLowerCase();
             const user = mEmail.split('@')[0];
-            const targetKey = Object.keys(grouped).find(k => k.toLowerCase() === user || mEmail.includes(k.toLowerCase()));
+            const targetKey = Object.keys(usersData).find(k => k.toLowerCase() === user || mEmail.includes(k.toLowerCase()));
             if (targetKey) {
-                grouped[targetKey].cv += Number(m.cv) || 0;
-                grouped[targetKey].cp += Number(m.cp) || 0;
-                grouped[targetKey].sharing += Number(m.sharing) || 0;
-                grouped[targetKey].revenue += Number(m.revenue) || 0;
-                grouped[targetKey].profit += Number(m.profit) || 0;
+                usersData[targetKey].cv += Number(m.cv) || 0;
+                usersData[targetKey].cp += Number(m.cp) || 0;
+                usersData[targetKey].sharing += Number(m.sharing) || 0;
+                usersData[targetKey].revenue += Number(m.revenue) || 0;
+                usersData[targetKey].profit += Number(m.profit) || 0;
             }
         });
 
         essays.forEach(e => {
             const aEmail = (e.author || '').toLowerCase();
             const user = aEmail.split('@')[0];
-            const targetKey = Object.keys(grouped).find(k => k.toLowerCase() === user || aEmail.includes(k.toLowerCase()));
+            const targetKey = Object.keys(usersData).find(k => k.toLowerCase() === user || aEmail.includes(k.toLowerCase()));
             if (targetKey) {
-                grouped[targetKey].lp += Number(e.points) || 0;
+                usersData[targetKey].lp += Number(e.points) || 0;
             }
         });
 
-        clockifyUsers.forEach(u => {
+        clockifyEntries.forEach(u => {
             const uName = (u.name || '').toLowerCase();
             const uEmail = (u.email || '').toLowerCase();
-            const matchedKey = Object.keys(grouped).find(target => {
+            const matchedKey = Object.keys(usersData).find(target => {
                 const clockifyName = (CLOCKIFY_USER_MAP[target] || '').toLowerCase();
                 if (clockifyName) return uName === clockifyName || uName.includes(clockifyName) || clockifyName.includes(uName);
                 return uName.includes(target.toLowerCase()) || uEmail.includes(target.toLowerCase());
             });
-            if (matchedKey) grouped[matchedKey].time += u.duration || 0;
+            if (matchedKey) {
+                const totalUserDuration = u.duration || 0;
+                usersData[matchedKey].time += totalUserDuration;
+                if (u.children) {
+                    u.children.forEach((p: any) => {
+                        usersData[matchedKey].projects.push({ name: p.name, duration: p.duration });
+                    });
+                }
+            }
         });
 
-        // 3. Generate & Send CONSOLIDATED Report
+        // Team Totals
+        const teamTotals = {
+            cv: Object.values(usersData).reduce((a, b) => a + b.cv, 0),
+            lp: Object.values(usersData).reduce((a, b) => a + b.lp, 0),
+            cp: Object.values(usersData).reduce((a, b) => a + b.cp, 0),
+            sharing: Object.values(usersData).reduce((a, b) => a + b.sharing, 0),
+            revenue: Object.values(usersData).reduce((a, b) => a + b.revenue, 0),
+            profit: Object.values(usersData).reduce((a, b) => a + b.profit, 0),
+            time: Object.values(usersData).reduce((a, b) => a + b.time, 0)
+        };
+
         const resend = new Resend(RESEND_API_KEY);
-        const jointDoc = new jsPDF();
-        jointDoc.setFontSize(22);
-        jointDoc.setTextColor(15, 29, 66);
-        jointDoc.text('KAIROS', 105, 20, { align: 'center' });
-        jointDoc.setFontSize(16);
-        jointDoc.text('REPORTE SEMANAL CONSOLIDADO', 105, 30, { align: 'center' });
-        jointDoc.setFontSize(10);
-        jointDoc.setTextColor(100);
-        jointDoc.text(`Periodo: ${periodStr}`, 105, 38, { align: 'center' });
 
-        const headers = ['Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'Tiempo'];
-        let currentY = 55;
-        jointDoc.setFontSize(10);
-        jointDoc.setTextColor(0);
-        jointDoc.setFont('helvetica', 'bold');
-        jointDoc.text(headers[0], 14, currentY);
-        jointDoc.text(headers[1], 60, currentY);
-        jointDoc.text(headers[2], 80, currentY);
-        jointDoc.text(headers[3], 110, currentY);
-        jointDoc.text(headers[4], 140, currentY);
-        jointDoc.text(headers[5], 160, currentY);
-        jointDoc.text(headers[6], 180, currentY);
+        // 3. Generate Reports & Send
+        for (const userKey of Object.keys(usersData)) {
+            const data = usersData[userKey];
 
-        jointDoc.line(14, currentY + 2, 200, currentY + 2);
-        currentY += 10;
-        jointDoc.setFont('helvetica', 'normal');
+            // 3.1 Personal Indicators PDF
+            const doc1 = new jsPDF();
+            doc1.setFontSize(22); doc1.setTextColor(15, 29, 66); doc1.text('KAIROS', 105, 20, { align: 'center' });
+            doc1.setFontSize(14); doc1.text('1. TUS INDICADORES INDIVIDUALES', 105, 35, { align: 'center' });
+            doc1.setFontSize(10); doc1.setTextColor(100); doc1.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+            doc1.text(`Miembro: ${data.user}`, 105, 48, { align: 'center' });
 
-        Object.values(grouped).forEach((data: any) => {
-            jointDoc.text(data.user, 14, currentY);
-            jointDoc.text(String(data.cv), 60, currentY);
-            jointDoc.text(`${data.revenue}€`, 80, currentY);
-            jointDoc.text(`${data.profit}€`, 110, currentY);
-            jointDoc.text(String(data.lp), 140, currentY);
-            jointDoc.text(String(data.cp), 160, currentY);
-            jointDoc.text(`${Math.floor(data.time / 3600)}h`, 180, currentY);
-            currentY += 8;
+            let y = 65;
+            doc1.setFontSize(11); doc1.setTextColor(0);
+            doc1.text(`Customer Visits (CV): ${data.cv}`, 20, y); y += 10;
+            doc1.text(`Learning Points (LP): ${data.lp}`, 20, y); y += 10;
+            doc1.text(`Community Points (CP): ${data.cp}`, 20, y); y += 10;
+            doc1.text(`Sharing: ${data.sharing}`, 20, y); y += 10;
+            doc1.text(`Facturación: ${data.revenue}€`, 20, y); y += 10;
+            doc1.text(`Beneficio (Profit): ${data.profit}€`, 20, y); y += 10;
+            doc1.text(`Tiempo Total: ${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, 20, y);
+            const pdf1 = doc1.output('datauristring').split(',')[1];
+
+            // 3.2 Team Summary PDF
+            const doc2 = new jsPDF();
+            doc2.setFontSize(22); doc2.setTextColor(15, 29, 66); doc2.text('KAIROS', 105, 20, { align: 'center' });
+            doc2.setFontSize(14); doc2.text('2. RESUMEN CONJUNTO DEL EQUIPO', 105, 35, { align: 'center' });
+            doc2.setFontSize(10); doc2.setTextColor(100); doc2.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+
+            doc2.setFontSize(12); doc2.setTextColor(0); y = 65;
+            doc2.text(`Total CV: ${teamTotals.cv}`, 20, y); y += 10;
+            doc2.text(`Total LP: ${teamTotals.lp}`, 20, y); y += 10;
+            doc2.text(`Total CP: ${teamTotals.cp}`, 20, y); y += 10;
+            doc2.text(`Total Sharing: ${teamTotals.sharing}`, 20, y); y += 10;
+            doc2.text(`Facturación Equipo: ${teamTotals.revenue}€`, 20, y); y += 10;
+            doc2.text(`Beneficio Equipo: ${teamTotals.profit}€`, 20, y); y += 10;
+            doc2.text(`Tiempo Equipo: ${Math.floor(teamTotals.time / 3600)}h`, 20, y);
+            const pdf2 = doc2.output('datauristring').split(',')[1];
+
+            // 3.3 Clockify Distribution PDF
+            const doc3 = new jsPDF();
+            doc3.setFontSize(22); doc3.setTextColor(15, 29, 66); doc3.text('KAIROS', 105, 20, { align: 'center' });
+            doc3.setFontSize(14); doc3.text('3. DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 35, { align: 'center' });
+            doc3.setFontSize(10); doc3.setTextColor(100); doc3.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+
+            y = 60;
+            if (data.projects.length === 0) {
+                doc3.text('No se encontraron registros de tiempo esta semana.', 20, y);
+            } else {
+                doc3.setFont('helvetica', 'bold');
+                doc3.text('Proyecto', 20, y); doc3.text('Horas', 120, y); doc3.text('% Dedicación', 160, y);
+                doc3.line(20, y + 2, 190, y + 2);
+                y += 10; doc3.setFont('helvetica', 'normal');
+
+                data.projects.forEach((p: any) => {
+                    const hours = Math.floor(p.duration / 3600);
+                    const mins = Math.floor((p.duration % 3600) / 60);
+                    const percentage = data.time > 0 ? ((p.duration / data.time) * 100).toFixed(1) : '0';
+                    doc3.text(p.name, 20, y);
+                    doc3.text(`${hours}h ${mins}m`, 120, y);
+                    doc3.text(`${percentage}%`, 160, y);
+                    y += 8;
+                    if (y > 270) { doc3.addPage(); y = 20; }
+                });
+            }
+            const pdf3 = doc3.output('datauristring').split(',')[1];
+
+            // Send to User
+            await resend.emails.send({
+                from: 'Kairos Team <notificaciones@kairoscompany.es>',
+                to: [data.email],
+                subject: `📊 Informes Semanales Kairos: ${periodStr}`,
+                html: `
+                    <p>Hola ${data.user},</p>
+                    <p>Adjuntamos tus 3 informes correspondientes a la semana pasada:</p>
+                    <ol>
+                        <li><b>Indicadores Individuales</b>: Tu desempeño en CV, LP, CP y finanzas.</li>
+                        <li><b>Resumen Conjunto</b>: Cómo va el equipo a nivel global.</li>
+                        <li><b>Distribución de Tiempo</b>: Desglose de tus horas en Clockify con porcentajes por proyecto.</li>
+                    </ol>
+                    <p>Cualquier duda, puedes ver los detalles en la <a href="https://web-kairos.vercel.app">web de Kairos</a>.</p>
+                    <p>¡Buen inicio de semana!</p>
+                `,
+                attachments: [
+                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdf1 },
+                    { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdf2 },
+                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdf3 }
+                ]
+            });
+        }
+
+        // 4. Also send the Global Table ONLY to admins for oversight
+        const globalDoc = new jsPDF();
+        globalDoc.text('TABLA GLOBAL DE CONTROL (SOLO ADMIN)', 105, 20, { align: 'center' });
+        let gy = 40;
+        globalDoc.setFontSize(8);
+        globalDoc.text('Miembro', 14, gy); globalDoc.text('CV', 60, gy); globalDoc.text('LP', 80, gy); globalDoc.text('Profit', 100, gy); globalDoc.text('Tiempo', 130, gy);
+        gy += 5;
+        Object.values(usersData).forEach((d: any) => {
+            globalDoc.text(d.user, 14, gy); globalDoc.text(String(d.cv), 60, gy); globalDoc.text(String(d.lp), 80, gy); globalDoc.text(`${d.profit}€`, 100, gy); globalDoc.text(`${Math.floor(d.time / 3600)}h`, 130, gy);
+            gy += 6;
         });
-
-        const jointBase64 = jointDoc.output('datauristring').split(',')[1];
+        const globalPdf = globalDoc.output('datauristring').split(',')[1];
         await resend.emails.send({
-            from: 'Kairos Team <notificaciones@kairoscompany.es>',
+            from: 'Kairos Admin <notificaciones@kairoscompany.es>',
             to: ADMIN_RECIPIENTS,
-            subject: `🌎 RESUMEN SEMANAL CONSOLIDADO: ${periodStr}`,
-            html: `
-                <p>Hola,</p>
-                <p>Adjunto enviamos el <b>resumen consolidado</b> con la actividad de todo el equipo durante la semana pasada.</p>
-                <p><b>Periodo:</b> ${periodStr}</p>
-                <p>Buen inicio de semana,</p>
-                <p>El equipo de Kairos</p>
-            `,
-            attachments: [{ filename: `Resumen_Consolidado_Kairos.pdf`, content: jointBase64 }]
+            subject: `🌎 CONTROL GLOBAL KAIROS: ${periodStr}`,
+            html: `<p>Resumen global de control para administradores.</p>`,
+            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: globalPdf }]
         });
 
-        return new Response(JSON.stringify({ success: true, count: Object.keys(grouped).length, period: periodStr }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, recipients: WHITELIST.length }), { status: 200 });
     } catch (err: any) {
         console.error('Cron Error:', err);
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
