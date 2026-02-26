@@ -18,7 +18,8 @@ export const CLOCKIFY_USER_MAP: Record<string, string> = {
     "claudia.pinna": "Claudia Pinna Jurado",
     "marc.cano": "Marc Cano",
     "paula.gascon": "Paula Gascón Escobedo",
-    "angela.cuevas": "Angela"
+    "angela.cuevas": "Angela",
+    "carlos.ortas": "Caorpa"
 };
 
 export const CATEGORIES = [
