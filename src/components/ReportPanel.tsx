@@ -27,8 +27,11 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         let period = '';
 
         if (type === 'Semanal') {
-            // Last 7 days
-            start.setDate(now.getDate() - 7);
+            // This week starting on Monday
+            const day = now.getDay(); // 0 Sunday, 1 Monday...
+            const diff = now.getDate() - (day === 0 ? 6 : day - 1);
+            start = new Date(now);
+            start.setDate(diff);
             start.setHours(0, 0, 0, 0);
             period = `${start.toLocaleDateString('es-ES')} - ${now.toLocaleDateString('es-ES')}`;
         } else {
