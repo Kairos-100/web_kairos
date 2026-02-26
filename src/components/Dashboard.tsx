@@ -1,14 +1,19 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import type { Essay } from '../constants';
 import { motion } from 'framer-motion';
+import type { ClockifyProjectSummary } from '../lib/clockify';
 
 interface DashboardProps {
     essays: Essay[];
+    clockifyData?: {
+        projects: ClockifyProjectSummary[];
+        totalTime: number;
+    } | null;
 }
 
 const COLORS = ['#0F1D42', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-export const Dashboard: React.FC<DashboardProps> = ({ essays }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ essays, clockifyData }) => {
     // Process data for charts
     const categoryData = essays.reduce((acc: any[], essay) => {
         const existing = acc.find(i => i.name === essay.category);
@@ -81,6 +86,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ essays }) => {
                     </div>
                 </motion.div>
             </div>
+
+            {/* Time Distribution Summary (Clockify) */}
+            {clockifyData && clockifyData.projects.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="card"
+                >
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-heading font-bold text-kairos-navy">Distribución de Tiempo por Proyecto (Semanal)</h3>
+                        <p className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                            Total: {Math.floor(clockifyData.totalTime / 3600)}h {Math.floor((clockifyData.totalTime % 3600) / 60)}m
+                        </p>
+                    </div>
+                    <div className="h-80 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={clockifyData.projects} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" stroke="#eee" horizontal={true} vertical={false} />
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    dataKey="projectName"
+                                    type="category"
+                                    width={150}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fontWeight: 'bold' }}
+                                />
+                                <Tooltip
+                                    cursor={{ fill: '#f8f8f8' }}
+                                    formatter={(value: any) => {
+                                        const h = Math.floor(value / 3600);
+                                        const m = Math.floor((value % 3600) / 60);
+                                        return [`${h}h ${m}m`, 'Tiempo'];
+                                    }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                />
+                                <Bar dataKey="totalTime" radius={[0, 4, 4, 0]}>
+                                    {clockifyData.projects.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

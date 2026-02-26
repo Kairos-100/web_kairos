@@ -19,6 +19,7 @@ import ReactMarkdown from 'react-markdown';
 import { DateRangePicker, type DateRange } from './components/DateRangePicker';
 import { runLegacyIngestion } from './lib/ai';
 import { notifyNewComment } from './lib/notifications';
+import { getWorkspaceId, getWeeklyTimeSummary, type ClockifyUserTime, type ClockifyProjectSummary } from './lib/clockify';
 
 const INITIAL_ESSAYS: Essay[] = [
   {
@@ -63,11 +64,17 @@ const App: React.FC = () => {
     return localStorage.getItem('kairos_user');
   });
   const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const [clockifyData, setClockifyData] = useState<{
+    users: ClockifyUserTime[];
+    projects: ClockifyProjectSummary[];
+    totalTime: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchEssays();
     fetchMetrics();
-  }, []);
+    fetchClockifyData();
+  }, [dateRange]);
 
   const fetchEssays = async () => {
     const hasConfig = import.meta.env.VITE_SUPABASE_URL;
@@ -109,6 +116,14 @@ const App: React.FC = () => {
       if (data) setMetrics(data);
     } catch (err) {
       console.error('Error fetching metrics from Supabase:', err);
+    }
+  };
+
+  const fetchClockifyData = async () => {
+    const wsId = await getWorkspaceId();
+    if (wsId) {
+      const data = await getWeeklyTimeSummary(wsId, dateRange.start, dateRange.end);
+      setClockifyData(data);
     }
   };
 
@@ -252,7 +267,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'stats':
-        return <Dashboard essays={filteredByDateEssays} />;
+        return <Dashboard essays={filteredByDateEssays} clockifyData={clockifyData} />;
       case 'commercial':
         return (
           <MetricsView
@@ -284,6 +299,7 @@ const App: React.FC = () => {
           <TeamView
             essays={filteredByDateEssays}
             metrics={filteredMetrics}
+            clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
             onDeleteEssay={handleDeleteEssay}

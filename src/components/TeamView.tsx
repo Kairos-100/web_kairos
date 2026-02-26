@@ -9,14 +9,21 @@ import {
     Share2,
     Target,
     Zap,
-    BookOpen
+    BookOpen,
+    Clock
 } from 'lucide-react';
 import type { MetricEntry, Essay } from '../constants';
 import { DocumentExplorer, type UnifiedDocument } from './DocumentExplorer';
+import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
 
 interface TeamViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
+    clockifyData: {
+        users: ClockifyUserTime[];
+        projects: ClockifyProjectSummary[];
+        totalTime: number;
+    } | null;
     currentUserEmail?: string | null;
     onEditEssay?: (essay: Essay) => void;
     onDeleteEssay?: (id: string, pdfUrl?: string) => void;
@@ -38,6 +45,7 @@ const COLORS = {
 export const TeamView: React.FC<TeamViewProps> = ({
     metrics,
     essays,
+    clockifyData,
     currentUserEmail,
     onEditEssay,
     onDeleteEssay,
@@ -204,6 +212,56 @@ export const TeamView: React.FC<TeamViewProps> = ({
                     ))}
                 </div>
 
+                {/* Clockify Project Breakdown for Individual */}
+                {(() => {
+                    const clockifyUser = clockifyData?.users.find(u => u.email.toLowerCase().includes(selectedUserDetail.name.toLowerCase()));
+                    if (!clockifyUser || clockifyUser.projects.length === 0) return null;
+
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                        <Clock size={20} />
+                                    </div>
+                                    <h3 className="text-xl font-heading font-black text-kairos-navy">Distribución de Tiempo (Esta Semana)</h3>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Semanal</p>
+                                    <p className="text-xl font-black text-blue-600">
+                                        {Math.floor(clockifyUser.totalTime / 3600)}h {Math.floor((clockifyUser.totalTime % 3600) / 60)}m
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                {clockifyUser.projects.map((proj, idx) => {
+                                    const percentage = (proj.time / clockifyUser.totalTime) * 100;
+                                    return (
+                                        <div key={idx}>
+                                            <div className="flex justify-between items-end mb-1">
+                                                <span className="text-xs font-bold text-gray-700">{proj.projectName}</span>
+                                                <span className="text-[10px] font-black text-gray-400">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m ({percentage.toFixed(1)}%)</span>
+                                            </div>
+                                            <div className="h-2 bg-gray-50 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${percentage}%` }}
+                                                    className="h-full rounded-full"
+                                                    style={{ backgroundColor: proj.color || '#3B82F6' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    );
+                })()}
+
                 {/* Timeline */}
                 <DocumentExplorer
                     title="Timeline de Actividad"
@@ -321,6 +379,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                 <th className="p-6 text-center border-b border-gray-100 bg-blue-50/30 text-blue-600">LP</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">CP</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-purple-50/30 text-purple-600">SH</th>
+                                <th className="p-6 text-center border-b border-gray-100 bg-blue-50/10 text-blue-800">TIEMPO</th>
                                 <th className="p-6 text-center border-b border-gray-100">Total</th>
                             </tr>
                         </thead>
@@ -351,6 +410,19 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                     <td className="p-6 text-center font-black text-blue-600">{user.lp}</td>
                                     <td className="p-6 text-center font-black text-red-600">{user.cp}</td>
                                     <td className="p-6 text-center font-black text-purple-600">{user.sharing}</td>
+                                    <td className="p-6 text-center">
+                                        {(() => {
+                                            const clockifyUser = clockifyData?.users.find(u => u.email.toLowerCase().includes(user.user.toLowerCase()));
+                                            if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
+                                            const hours = Math.floor(clockifyUser.totalTime / 3600);
+                                            const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
+                                            return (
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-blue-800 font-black">{hours}h {mins}m</span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
                                     <td className="p-6 text-center">
                                         <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-black text-kairos-navy">
                                             {user.cv + user.lp + user.cp + user.sharing}
