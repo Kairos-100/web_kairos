@@ -30,7 +30,7 @@ export const CATEGORIES = [
     "Operaciones",
     "Cultura",
     "Finanzas",
-    "Otros"
+    "Wellbeing"
 ];
 
 export interface Comment {

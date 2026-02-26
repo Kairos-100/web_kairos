@@ -31,7 +31,7 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
 
     // 2. Type distribution
     const typeData = essays.reduce((acc: any[], essay) => {
-        const typeLabel = essay.type === 'molecula' ? 'Moléculas' : essay.type === 'libro' ? 'Libros' : 'Otros';
+        const typeLabel = essay.type === 'molecula' ? 'Moléculas' : essay.type === 'libro' ? 'Libros' : 'Bienestar';
         const existing = acc.find(i => i.name === typeLabel);
         if (existing) existing.value += (essay.points || 0);
         else acc.push({ name: typeLabel, value: (essay.points || 0) });
@@ -241,7 +241,9 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
                                         <td className="py-4 text-sm font-medium text-gray-400">{essay.date}</td>
                                         <td className="py-4 text-sm font-bold text-kairos-navy">{essay.title}</td>
                                         <td className="py-4 text-xs font-medium text-gray-500">{essay.author.split('@')[0]}</td>
-                                        <td className="py-4 text-xs font-bold text-blue-600/70">{essay.category}</td>
+                                        <td className="py-4 text-xs font-bold text-blue-600/70">
+                                            {essay.category === 'Otros' ? 'Wellbeing' : essay.category}
+                                        </td>
                                         <td className="py-4">
                                             <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider ${essay.type === 'molecula' ? 'bg-blue-50 text-blue-600' :
                                                 essay.type === 'libro' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'

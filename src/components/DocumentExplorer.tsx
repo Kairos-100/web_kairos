@@ -160,7 +160,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                 doc.type === 'cv' ? 'bg-amber-100 text-amber-600' :
                                     doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' : 'bg-red-100 text-red-600'
                                 }`}>
-                                {doc.category}
+                                {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
                             </span>
                             <div className="flex items-center space-x-1">
                                 {canManage && (
@@ -252,7 +252,9 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                     <div className="flex flex-col">
                                         <span className="text-sm font-bold text-kairos-navy group-hover:text-blue-600 transition-colors">{doc.title}</span>
                                         {doc.description && <span className="text-[10px] text-gray-400 font-medium line-clamp-1 italic">{doc.description}</span>}
-                                        <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight mt-0.5">{doc.category}</span>
+                                        <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight mt-0.5">
+                                            {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
+                                        </span>
                                     </div>
                                 </td>
                                 <td className="p-6 text-xs font-bold text-gray-500">{doc.author.split('@')[0]}</td>
