@@ -20,7 +20,7 @@ async function sendEmail(to: string[], subject: string, html: string) {
                 'Authorization': `Bearer ${RESEND_API_KEY}`
             },
             body: JSON.stringify({
-                from: 'Kairos Team <notifications@resend.dev>', // Usar dominio verificado en Resend en el futuro
+                from: 'Kairos Team <notificaciones@kairoscompany.es>',
                 to,
                 subject,
                 html
