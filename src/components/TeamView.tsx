@@ -333,10 +333,6 @@ export const TeamView: React.FC<TeamViewProps> = ({
         );
     }
 
-    import { ReportPanel } from './ReportPanel';
-
-    // ... existing code ...
-
     return (
         <div className="space-y-12 pb-20">
             <ReportPanel metrics={metrics} essays={essays} clockifyUsers={clockifyData?.users || []} />
