@@ -214,7 +214,13 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                 {/* Clockify Project Breakdown for Individual */}
                 {(() => {
-                    const clockifyUser = clockifyData?.users.find(u => u.email.toLowerCase().includes(selectedUserDetail.name.toLowerCase()));
+                    const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                    const target = normalize(selectedUserDetail.name);
+                    const clockifyUser = clockifyData?.users.find(u => {
+                        const uName = normalize(u.userName);
+                        const uEmail = normalize(u.email);
+                        return uName.includes(target) || target.includes(uName) || uEmail.includes(target);
+                    });
                     if (!clockifyUser || clockifyUser.projects.length === 0) return null;
 
                     return (
@@ -412,7 +418,13 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                     <td className="p-6 text-center font-black text-purple-600">{user.sharing}</td>
                                     <td className="p-6 text-center">
                                         {(() => {
-                                            const clockifyUser = clockifyData?.users.find(u => u.email.toLowerCase().includes(user.user.toLowerCase()));
+                                            const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                                            const target = normalize(user.user);
+                                            const clockifyUser = clockifyData?.users.find(u => {
+                                                const uName = normalize(u.userName);
+                                                const uEmail = normalize(u.email);
+                                                return uName.includes(target) || target.includes(uName) || uEmail.includes(target);
+                                            });
                                             if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
                                             const hours = Math.floor(clockifyUser.totalTime / 3600);
                                             const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
