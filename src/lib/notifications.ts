@@ -22,8 +22,11 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Server Error: ${error.error || JSON.stringify(error)}`);
+            const errorData = await response.json();
+            const errorMessage = typeof errorData.error === 'string'
+                ? errorData.error
+                : (errorData.error?.message || JSON.stringify(errorData.error || errorData));
+            throw new Error(`Server Error: ${errorMessage}`);
         }
     } catch (err) {
         console.error('Error enviando notificación por email:', err);
