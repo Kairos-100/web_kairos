@@ -162,62 +162,8 @@ export default async function handler(req: Request) {
             if (matchedKey) grouped[matchedKey].time += u.duration || 0;
         });
 
-        // 3. Generate & Send Individual Reports
+        // 3. Generate & Send CONSOLIDATED Report
         const resend = new Resend(RESEND_API_KEY);
-        const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-
-        for (const userKey of Object.keys(grouped)) {
-            const data = grouped[userKey];
-            const doc = new jsPDF();
-
-            doc.setFontSize(22);
-            doc.setTextColor(15, 29, 66);
-            doc.text('KAIROS', 105, 20, { align: 'center' });
-            doc.setFontSize(16);
-            doc.text('Reporte Semanal Individual', 105, 30, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(`Periodo: ${periodStr}`, 105, 38, { align: 'center' });
-
-            doc.setFontSize(12);
-            doc.setTextColor(0);
-            const startY = 55;
-            doc.text(`Miembro del equipo: ${userKey}`, 14, startY);
-
-            doc.setFontSize(10);
-            const reportRows = [
-                ['Métrica', 'Total'],
-                ['Visitas (CV)', String(data.cv)],
-                ['Facturación', `${data.revenue.toLocaleString('es-ES')}€`],
-                ['Beneficio', `${data.profit.toLocaleString('es-ES')}€`],
-                ['Tesis (LP)', String(data.lp)],
-                ['Comunidad (CP)', String(data.cp)],
-                ['Tiempo Clockify', `${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`]
-            ];
-
-            reportRows.forEach((row, rowIndex) => {
-                const y = startY + 15 + (rowIndex * 8);
-                doc.text(row[0], 20, y);
-                doc.text(row[1], 80, y);
-            });
-
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`Generado automáticamente por Kairos Web`, 105, 285, { align: 'center' });
-
-            const pdfBase64 = doc.output('datauristring').split(',')[1];
-
-            await resend.emails.send({
-                from: 'Kairos Team <notificaciones@kairoscompany.es>',
-                to: [data.email],
-                subject: `📊 Reporte Semanal Kairos: ${periodStr}`,
-                html: `<p>Hola <b>${userKey}</b>,</p><p>Adjunto tienes tu resumen semanal individual.</p><p>Buen lunes,</p><p>El equipo de Kairos</p>`,
-                attachments: [{ filename: `Reporte_Individual_${userKey}.pdf`, content: pdfBase64 }]
-            });
-            await sleep(700);
-        }
-
-        // 4. Generate & Send CONSOLIDATED Report
         const jointDoc = new jsPDF();
         jointDoc.setFontSize(22);
         jointDoc.setTextColor(15, 29, 66);
