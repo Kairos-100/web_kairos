@@ -19,6 +19,7 @@ interface DateRangePickerProps {
 }
 
 const PRESETS = [
+    { label: 'Hoy', value: 'today' },
     { label: 'Últimos 7 días', value: 7 },
     { label: 'Últimos 30 días', value: 30 },
     { label: 'Este mes', value: 'current_month' },
@@ -92,6 +93,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onChang
 
         if (typeof value === 'number') {
             start.setDate(end.getDate() - value);
+        } else if (value === 'today') {
+            // start/end already set to today
         } else if (value === 'current_month') {
             start.setDate(1);
         } else if (value === 'current_year') {
