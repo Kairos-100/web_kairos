@@ -35,6 +35,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         }
 
         const aggregated = aggregateDataForRange(metrics, essays, clockifyUsers, start, now);
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
         try {
             for (const email of WHITELIST) {
@@ -45,6 +46,8 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                     const pdf = generatePDF(`Reporte Individual ${type}`, period, [userData]);
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
                     await notifyReport(email, `Individual ${type}`, pdfBase64, period);
+                    // Add a small delay to avoid Resend's rate limit (2 req/s)
+                    await sleep(700);
                 }
             }
             setShowSuccess(type);
