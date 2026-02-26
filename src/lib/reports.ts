@@ -1,15 +1,8 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import type { MetricEntry, Essay } from '../constants';
 import { WHITELIST } from '../constants';
 import type { ClockifyUserTime } from './clockify';
-
-// Extend jsPDF for autotable
-declare module 'jspdf' {
-    interface jsPDF {
-        autoTable: (options: any) => jsPDF;
-    }
-}
 
 export interface ReportData {
     user: string;
@@ -110,7 +103,7 @@ export function generatePDF(
         `${Math.floor(row.time / 3600)}h ${Math.floor((row.time % 3600) / 60)}m`
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: 45,
         head: [['#', 'Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'SH', 'Tiempo']],
         body: tableData,
