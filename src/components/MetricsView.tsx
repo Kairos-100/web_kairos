@@ -7,6 +7,7 @@ import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
+import { parseDate } from '../lib/dates';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
@@ -74,12 +75,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         });
 
         return Object.values(grouped).sort((a: any, b: any) => {
-            const [d1, m1, y1] = a.date.split('/').map(Number);
-            const [d2, m2, y2] = b.date.split('/').map(Number);
-            return new Date(y1, m1 - 1, d1).getTime() - new Date(y2, m2 - 1, d2).getTime();
+            return parseDate(a.date).getTime() - parseDate(b.date).getTime();
         }).map((item: any) => {
-            const [d, m, y] = item.date.split('/').map(Number);
-            const dateObj = new Date(y, m - 1, d);
+            const dateObj = parseDate(item.date);
             return {
                 ...item,
                 chartDate: dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
@@ -124,9 +122,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         // Sort each user's log by date descending
         Object.keys(logs).forEach(u => {
             logs[u].sort((a, b) => {
-                const [d1, m1, y1] = a.date.split('/').map(Number);
-                const [d2, m2, y2] = b.date.split('/').map(Number);
-                return new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime();
+                return parseDate(b.date).getTime() - parseDate(a.date).getTime();
             });
         });
 
@@ -183,9 +179,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 rawDate: e.date
             }))
         ].sort((a, b) => {
-            const [d1, m1, y1] = a.rawDate.split('/').map(Number);
-            const [d2, m2, y2] = b.rawDate.split('/').map(Number);
-            return new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime();
+            return parseDate(b.rawDate).getTime() - parseDate(a.rawDate).getTime();
         });
 
         return { name: profileName, stats, timeline };

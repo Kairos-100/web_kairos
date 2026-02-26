@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Essay, MetricEntry } from '../constants';
+import { parseDate } from '../lib/dates';
 
 export interface UnifiedDocument {
     id: string;
@@ -109,9 +110,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
             (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (doc.rawContent && doc.rawContent.toLowerCase().includes(searchTerm.toLowerCase()))
         ).sort((a, b) => {
-            const [d1, m1, y1] = a.date.split('/').map(Number);
-            const [d2, m2, y2] = b.date.split('/').map(Number);
-            return new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime();
+            return parseDate(b.date).getTime() - parseDate(a.date).getTime();
         });
     }, [essays, metrics, initialDocuments, searchTerm]);
 
