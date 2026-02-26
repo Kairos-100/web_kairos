@@ -158,6 +158,7 @@ const App: React.FC = () => {
   const handleDeleteMetric = async (id: string) => {
     if (!window.confirm('¿Estás seguro de que quieres borrar este registro de métricas?')) return;
     setIsLoading(true);
+    console.log('Attempting to delete metric with ID:', id);
     try {
       const { error } = await supabase.from('metrics').delete().eq('id', id);
       if (error) throw error;

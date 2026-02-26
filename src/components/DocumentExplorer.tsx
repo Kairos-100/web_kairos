@@ -87,6 +87,18 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                 rawContent: e.content,
                 tags: e.tags,
                 isMetric: false
+            })),
+            ...metrics.map(m => ({
+                id: m.id,
+                title: m.cv_title || m.sharing_title || m.cp_title || `Métricas - ${m.user_email.split('@')[0]}`,
+                description: m.cv_description || m.sharing_description || m.cp_description,
+                author: m.user_email,
+                date: m.date,
+                category: m.cv > 0 ? 'Comercial' : m.sharing > 0 ? 'Comunidad' : 'Iniciativa',
+                pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || '',
+                type: (m.cv > 0 ? 'cv' : m.sharing > 0 ? 'sharing' : 'cp') as any,
+                isMetric: true,
+                points: m.cv > 0 ? `+${m.cv} CV` : m.sharing > 0 ? `+${m.sharing} SH` : m.cp > 0 ? `+${m.cp} CP` : undefined
             }))
         ];
 
@@ -120,10 +132,12 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
 
     const handleDelete = (e: React.MouseEvent, doc: UnifiedDocument) => {
         e.stopPropagation();
+        const cleanId = doc.id.replace('essay-', '').replace('metric-', '');
+
         if (doc.type === 'tesis' && onDeleteEssay) {
-            onDeleteEssay(doc.id, doc.pdfUrl);
+            onDeleteEssay(cleanId, doc.pdfUrl);
         } else if (doc.isMetric && onDeleteMetric) {
-            onDeleteMetric(doc.id.split('-')[1] || doc.id);
+            onDeleteMetric(cleanId);
         } else if (onDelete) {
             onDelete(doc);
         }
