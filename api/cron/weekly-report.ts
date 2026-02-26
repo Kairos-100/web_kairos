@@ -181,76 +181,73 @@ export default async function handler(req: Request) {
 
         const resend = new Resend(RESEND_API_KEY);
 
-        // 3. Generate Reports & Send
-        // 3. Generate Reports & Send
+        // 3. Generate Common Team Report Once
+        const docTeam = new jsPDF();
+        docTeam.setFontSize(22); docTeam.setTextColor(15, 29, 66); docTeam.text('KAIROS', 105, 20, { align: 'center' });
+        docTeam.setFontSize(14); docTeam.text('2. RESUMEN CONJUNTO DEL EQUIPO', 105, 35, { align: 'center' });
+        docTeam.setFontSize(10); docTeam.setTextColor(100); docTeam.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+        docTeam.setFontSize(12); docTeam.setTextColor(0); let teamY = 65;
+        docTeam.text(`Total CV: ${teamTotals.cv}`, 20, teamY); teamY += 10;
+        docTeam.text(`Total LP: ${teamTotals.lp}`, 20, teamY); teamY += 10;
+        docTeam.text(`Total CP: ${teamTotals.cp}`, 20, teamY); teamY += 10;
+        docTeam.text(`Total Sharing: ${teamTotals.sharing}`, 20, teamY); teamY += 10;
+        docTeam.text(`Facturación Equipo: ${teamTotals.revenue}€`, 20, teamY); teamY += 10;
+        docTeam.text(`Beneficio Equipo: ${teamTotals.profit}€`, 20, teamY); teamY += 10;
+        docTeam.text(`Tiempo Equipo: ${Math.floor(teamTotals.time / 3600)}h`, 20, teamY);
+
+        const pdfTeamBatch = Buffer.from(docTeam.output('arraybuffer')).toString('base64');
+
+        // 4. Generate Individual Reports & Send
         for (const userKey of Object.keys(usersData)) {
             const data = usersData[userKey];
 
-            // 3.1 Personal Indicators PDF
-            const doc1 = new jsPDF();
-            doc1.setFontSize(22); doc1.setTextColor(15, 29, 66); doc1.text('KAIROS', 105, 20, { align: 'center' });
-            doc1.setFontSize(14); doc1.text('1. TUS INDICADORES INDIVIDUALES', 105, 35, { align: 'center' });
-            doc1.setFontSize(10); doc1.setTextColor(100); doc1.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
-            doc1.text(`Miembro: ${data.user}`, 105, 48, { align: 'center' });
+            // 4.1 Personal Indicators PDF
+            const docIndiv = new jsPDF();
+            docIndiv.setFontSize(22); docIndiv.setTextColor(15, 29, 66); docIndiv.text('KAIROS', 105, 20, { align: 'center' });
+            docIndiv.setFontSize(14); docIndiv.text('1. TUS INDICADORES INDIVIDUALES', 105, 35, { align: 'center' });
+            docIndiv.setFontSize(10); docIndiv.setTextColor(100); docIndiv.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+            docIndiv.text(`Miembro: ${data.user}`, 105, 48, { align: 'center' });
 
-            let y = 65;
-            doc1.setFontSize(11); doc1.setTextColor(0);
-            doc1.text(`Customer Visits (CV): ${data.cv}`, 20, y); y += 10;
-            doc1.text(`Learning Points (LP): ${data.lp}`, 20, y); y += 10;
-            doc1.text(`Community Points (CP): ${data.cp}`, 20, y); y += 10;
-            doc1.text(`Sharing: ${data.sharing}`, 20, y); y += 10;
-            doc1.text(`Facturación: ${data.revenue}€`, 20, y); y += 10;
-            doc1.text(`Beneficio (Profit): ${data.profit}€`, 20, y); y += 10;
-            doc1.text(`Tiempo Total: ${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, 20, y);
+            let iy = 65;
+            docIndiv.setFontSize(11); docIndiv.setTextColor(0);
+            docIndiv.text(`Customer Visits (CV): ${data.cv}`, 20, iy); iy += 10;
+            docIndiv.text(`Learning Points (LP): ${data.lp}`, 20, iy); iy += 10;
+            docIndiv.text(`Community Points (CP): ${data.cp}`, 20, iy); iy += 10;
+            docIndiv.text(`Sharing: ${data.sharing}`, 20, iy); iy += 10;
+            docIndiv.text(`Facturación: ${data.revenue}€`, 20, iy); iy += 10;
+            docIndiv.text(`Beneficio (Profit): ${data.profit}€`, 20, iy); iy += 10;
+            docIndiv.text(`Tiempo Total: ${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, 20, iy);
 
-            // 3.2 Team Summary PDF
-            const doc2 = new jsPDF();
-            doc2.setFontSize(22); doc2.setTextColor(15, 29, 66); doc2.text('KAIROS', 105, 20, { align: 'center' });
-            doc2.setFontSize(14); doc2.text('2. RESUMEN CONJUNTO DEL EQUIPO', 105, 35, { align: 'center' });
-            doc2.setFontSize(10); doc2.setTextColor(100); doc2.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+            const pdfIndivBase64 = Buffer.from(docIndiv.output('arraybuffer')).toString('base64');
 
-            doc2.setFontSize(12); doc2.setTextColor(0); let y2 = 65;
-            doc2.text(`Total CV: ${teamTotals.cv}`, 20, y2); y2 += 10;
-            doc2.text(`Total LP: ${teamTotals.lp}`, 20, y2); y2 += 10;
-            doc2.text(`Total CP: ${teamTotals.cp}`, 20, y2); y2 += 10;
-            doc2.text(`Total Sharing: ${teamTotals.sharing}`, 20, y2); y2 += 10;
-            doc2.text(`Facturación Equipo: ${teamTotals.revenue}€`, 20, y2); y2 += 10;
-            doc2.text(`Beneficio Equipo: ${teamTotals.profit}€`, 20, y2); y2 += 10;
-            doc2.text(`Tiempo Equipo: ${Math.floor(teamTotals.time / 3600)}h`, 20, y2);
+            // 4.2 Clockify Distribution PDF
+            const docClock = new jsPDF();
+            docClock.setFontSize(22); docClock.setTextColor(15, 29, 66); docClock.text('KAIROS', 105, 20, { align: 'center' });
+            docClock.setFontSize(14); docClock.text('3. DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 35, { align: 'center' });
+            docClock.setFontSize(10); docClock.setTextColor(100); docClock.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
 
-            // 3.3 Clockify Distribution PDF
-            const doc3 = new jsPDF();
-            doc3.setFontSize(22); doc3.setTextColor(15, 29, 66); doc3.text('KAIROS', 105, 20, { align: 'center' });
-            doc3.setFontSize(14); doc3.text('3. DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 35, { align: 'center' });
-            doc3.setFontSize(10); doc3.setTextColor(100); doc3.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
-
-            let y3 = 60;
+            let cy = 60;
             if (data.projects.length === 0) {
-                doc3.text('No se encontraron registros de tiempo esta semana.', 20, y3);
+                docClock.text('No se encontraron registros de tiempo esta semana.', 20, cy);
             } else {
-                doc3.setFont('helvetica', 'bold');
-                doc3.text('Proyecto', 20, y3); doc3.text('Horas', 120, y3); doc3.text('% Dedicación', 160, y3);
-                doc3.line(20, y3 + 2, 190, y3 + 2);
-                y3 += 10; doc3.setFont('helvetica', 'normal');
+                docClock.setFont('helvetica', 'bold');
+                docClock.text('Proyecto', 20, cy); docClock.text('Horas', 120, cy); docClock.text('% Dedicación', 160, cy);
+                docClock.line(20, cy + 2, 190, cy + 2);
+                cy += 10; docClock.setFont('helvetica', 'normal');
 
                 data.projects.forEach((p: any) => {
                     const hours = Math.floor(p.duration / 3600);
                     const mins = Math.floor((p.duration % 3600) / 60);
                     const percentage = data.time > 0 ? ((p.duration / data.time) * 100).toFixed(1) : '0';
-                    doc3.text(p.name, 20, y3);
-                    doc3.text(`${hours}h ${mins}m`, 120, y3);
-                    doc3.text(`${percentage}%`, 160, y3);
-                    y3 += 8;
-                    if (y3 > 270) { doc3.addPage(); y3 = 20; }
+                    docClock.text(p.name, 20, cy);
+                    docClock.text(`${hours}h ${mins}m`, 120, cy);
+                    docClock.text(`${percentage}%`, 160, cy);
+                    cy += 8;
+                    if (cy > 270) { docClock.addPage(); cy = 20; }
                 });
             }
 
-            // Clean base64 helper
-            const cleanBase64 = (uri: string) => uri.replace(/^data:application\/pdf;base64,/, '');
-
-            const pdf1Base64 = cleanBase64(doc1.output('datauristring'));
-            const pdf2Base64 = cleanBase64(doc2.output('datauristring'));
-            const pdf3Base64 = cleanBase64(doc3.output('datauristring'));
+            const pdfClockBase64 = Buffer.from(docClock.output('arraybuffer')).toString('base64');
 
             console.log(`Sending email to ${data.email} with 3 attachments...`);
 
@@ -263,17 +260,17 @@ export default async function handler(req: Request) {
                     <p>Hola ${data.user},</p>
                     <p>Adjuntamos tus 3 informes correspondientes a la semana pasada:</p>
                     <ol>
-                        <li><b>Indicadores Individuales</b>: Tu desempeño en CV, LP, CP y finanzas.</li>
-                        <li><b>Resumen Conjunto</b>: Cómo va el equipo a nivel global.</li>
-                        <li><b>Distribución de Tiempo</b>: Desglose de tus horas en Clockify con porcentajes por proyecto.</li>
+                        <li><b>Indicadores Individuales</b></li>
+                        <li><b>Resumen Conjunto del Equipo</b></li>
+                        <li><b>Distribución de Tiempo (Clockify)</b></li>
                     </ol>
                     <p>Cualquier duda, puedes ver los detalles en la <a href="https://web-kairos.vercel.app">web de Kairos</a>.</p>
                     <p>¡Buen inicio de semana!</p>
                 `,
                 attachments: [
-                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdf1Base64 },
-                    { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdf2Base64 },
-                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdf3Base64 }
+                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdfIndivBase64 },
+                    { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdfTeamBatch },
+                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdfClockBase64 }
                 ]
             });
 
@@ -284,7 +281,7 @@ export default async function handler(req: Request) {
             }
         }
 
-        // 4. Also send the Global Table ONLY to admins for oversight
+        // 5. Also send the Global Table ONLY to admins for oversight
         const globalDoc = new jsPDF();
         globalDoc.text('TABLA GLOBAL DE CONTROL (SOLO ADMIN)', 105, 20, { align: 'center' });
         let gy = 40;
@@ -295,13 +292,14 @@ export default async function handler(req: Request) {
             globalDoc.text(d.user, 14, gy); globalDoc.text(String(d.cv), 60, gy); globalDoc.text(String(d.lp), 80, gy); globalDoc.text(`${d.profit}€`, 100, gy); globalDoc.text(`${Math.floor(d.time / 3600)}h`, 130, gy);
             gy += 6;
         });
-        const globalPdf = globalDoc.output('datauristring').split(',')[1];
+        const globalPdfBase64 = Buffer.from(globalDoc.output('arraybuffer')).toString('base64');
+
         await resend.emails.send({
             from: 'Kairos Admin <notificaciones@kairoscompany.es>',
             to: ADMIN_RECIPIENTS,
             subject: `🌎 CONTROL GLOBAL KAIROS: ${periodStr}`,
             html: `<p>Resumen global de control para administradores.</p>`,
-            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: globalPdf }]
+            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: globalPdfBase64 }]
         });
 
         return new Response(JSON.stringify({ success: true, recipients: WHITELIST.length }), { status: 200 });
