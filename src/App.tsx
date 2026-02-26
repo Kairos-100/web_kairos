@@ -164,14 +164,21 @@ const App: React.FC = () => {
       // If it's a number string, try to pass as number.
       const idToUse = !isNaN(Number(id)) && !id.includes('-') ? Number(id) : id;
 
-      const { error, count } = await supabase
+      const { data, error } = await supabase
         .from('metrics')
         .delete()
-        .eq('id', idToUse);
+        .eq('id', idToUse)
+        .select();
 
       if (error) throw error;
 
-      console.log(`Deletion finished for ID ${id}. Result:`, { count });
+      const deletedCount = data?.length || 0;
+      console.log(`Deletion attempt for ID ${id}. Rows deleted:`, deletedCount);
+
+      if (deletedCount === 0) {
+        alert('⚠️ No se ha podido borrar el registro en la base de datos de Supabase. Probablemente necesites ejecutar el script metrics_deletion_fix.sql para dar permisos de borrado.');
+        return;
+      }
 
       // Filter using type-agnostic comparison
       setMetrics(prev => prev.filter(m => String(m.id) !== String(id)));
