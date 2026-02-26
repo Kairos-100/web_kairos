@@ -49,9 +49,9 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
             }
             setShowSuccess(type);
             setTimeout(() => setShowSuccess(null), 5000);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error sending reports:', error);
-            alert('Error enviando reportes. Revisa la consola.');
+            alert(`Error enviando reportes: ${error.message || 'Error desconocido'}`);
         } finally {
             setIsSending(null);
         }

@@ -30,10 +30,11 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`Error de Resend: ${JSON.stringify(error)}`);
+            throw new Error(`Resend Error: ${JSON.stringify(error)}`);
         }
     } catch (err) {
         console.error('Error enviando notificación por email:', err);
+        throw err; // Re-throw to handle in UI
     }
 }
 
