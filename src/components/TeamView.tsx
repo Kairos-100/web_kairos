@@ -21,6 +21,8 @@ import { ReportPanel } from './ReportPanel';
 interface TeamViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
+    allMetrics: MetricEntry[];
+    allEssays: Essay[];
     clockifyData: {
         users: ClockifyUserTime[];
         projects: ClockifyProjectSummary[];
@@ -47,6 +49,8 @@ const COLORS = {
 export const TeamView: React.FC<TeamViewProps> = ({
     metrics,
     essays,
+    allMetrics,
+    allEssays,
     clockifyData,
     currentUserEmail,
     onEditEssay,
@@ -335,7 +339,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
     return (
         <div className="space-y-12 pb-20">
-            <ReportPanel metrics={metrics} essays={essays} clockifyUsers={clockifyData?.users || []} />
+            <ReportPanel metrics={allMetrics} essays={allEssays} clockifyUsers={clockifyData?.users || []} />
 
             {/* Top Performers */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

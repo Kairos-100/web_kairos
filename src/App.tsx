@@ -308,6 +308,8 @@ const App: React.FC = () => {
           <TeamView
             essays={filteredByDateEssays}
             metrics={filteredMetrics}
+            allEssays={essays}
+            allMetrics={metrics}
             clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
