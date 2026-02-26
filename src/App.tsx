@@ -201,6 +201,10 @@ const App: React.FC = () => {
           text,
           date: new Date().toLocaleDateString('es-ES')
         };
+
+        // Notify the team
+        notifyNewComment(e.title, newComment).catch(console.error);
+
         return { ...e, comments: [...e.comments, newComment] };
       }
       return e;

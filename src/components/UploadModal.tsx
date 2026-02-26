@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
 import { ingestDocument } from '../lib/ai';
+import { notifyNewEssay } from '../lib/notifications';
 
 interface UploadModalProps {
     onClose: () => void;
@@ -165,7 +166,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
 
                     // Trigger AI Ingestion in background
                     if (newData && newData[0] && finalPdfUrl) {
+                        const newEssay: Essay = {
+                            ...essayPayload,
+                            id: newData[0].id,
+                            comments: [],
+                            pdfUrl: essayPayload.pdf_url,
+                            readingTime: essayPayload.reading_time
+                        } as any;
                         ingestDocument(newData[0].id, 'essay', finalPdfUrl).catch(console.error);
+                        notifyNewEssay(newEssay).catch(console.error);
                     }
                 }
 

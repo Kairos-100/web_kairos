@@ -4,6 +4,7 @@ import { WHITELIST } from '../constants';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { ingestDocument } from '../lib/ai';
+import { notifyNewMetric } from '../lib/notifications';
 
 interface MetricsModalProps {
     onClose: () => void;
@@ -164,9 +165,13 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
             // Trigger AI Ingestion for each PDF in background
             if (newData && newData[0]) {
                 const metricId = newData[0].id;
+                const newMetric = { ...newData[0] };
                 if (finalCvUrl) ingestDocument(metricId, 'metric', finalCvUrl).catch(console.error);
                 if (finalSharingUrl) ingestDocument(metricId, 'metric', finalSharingUrl).catch(console.error);
                 if (finalCpUrl) ingestDocument(metricId, 'metric', finalCpUrl).catch(console.error);
+
+                // Notify the team
+                notifyNewMetric(newMetric).catch(console.error);
             }
 
             if (onSuccess) onSuccess();
