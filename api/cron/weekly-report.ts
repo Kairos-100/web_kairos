@@ -182,6 +182,7 @@ export default async function handler(req: Request) {
         const resend = new Resend(RESEND_API_KEY);
 
         // 3. Generate Reports & Send
+        // 3. Generate Reports & Send
         for (const userKey of Object.keys(usersData)) {
             const data = usersData[userKey];
 
@@ -201,7 +202,6 @@ export default async function handler(req: Request) {
             doc1.text(`Facturación: ${data.revenue}€`, 20, y); y += 10;
             doc1.text(`Beneficio (Profit): ${data.profit}€`, 20, y); y += 10;
             doc1.text(`Tiempo Total: ${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, 20, y);
-            const pdf1 = doc1.output('datauristring').split(',')[1];
 
             // 3.2 Team Summary PDF
             const doc2 = new jsPDF();
@@ -209,15 +209,14 @@ export default async function handler(req: Request) {
             doc2.setFontSize(14); doc2.text('2. RESUMEN CONJUNTO DEL EQUIPO', 105, 35, { align: 'center' });
             doc2.setFontSize(10); doc2.setTextColor(100); doc2.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
 
-            doc2.setFontSize(12); doc2.setTextColor(0); y = 65;
-            doc2.text(`Total CV: ${teamTotals.cv}`, 20, y); y += 10;
-            doc2.text(`Total LP: ${teamTotals.lp}`, 20, y); y += 10;
-            doc2.text(`Total CP: ${teamTotals.cp}`, 20, y); y += 10;
-            doc2.text(`Total Sharing: ${teamTotals.sharing}`, 20, y); y += 10;
-            doc2.text(`Facturación Equipo: ${teamTotals.revenue}€`, 20, y); y += 10;
-            doc2.text(`Beneficio Equipo: ${teamTotals.profit}€`, 20, y); y += 10;
-            doc2.text(`Tiempo Equipo: ${Math.floor(teamTotals.time / 3600)}h`, 20, y);
-            const pdf2 = doc2.output('datauristring').split(',')[1];
+            doc2.setFontSize(12); doc2.setTextColor(0); let y2 = 65;
+            doc2.text(`Total CV: ${teamTotals.cv}`, 20, y2); y2 += 10;
+            doc2.text(`Total LP: ${teamTotals.lp}`, 20, y2); y2 += 10;
+            doc2.text(`Total CP: ${teamTotals.cp}`, 20, y2); y2 += 10;
+            doc2.text(`Total Sharing: ${teamTotals.sharing}`, 20, y2); y2 += 10;
+            doc2.text(`Facturación Equipo: ${teamTotals.revenue}€`, 20, y2); y2 += 10;
+            doc2.text(`Beneficio Equipo: ${teamTotals.profit}€`, 20, y2); y2 += 10;
+            doc2.text(`Tiempo Equipo: ${Math.floor(teamTotals.time / 3600)}h`, 20, y2);
 
             // 3.3 Clockify Distribution PDF
             const doc3 = new jsPDF();
@@ -225,30 +224,38 @@ export default async function handler(req: Request) {
             doc3.setFontSize(14); doc3.text('3. DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 35, { align: 'center' });
             doc3.setFontSize(10); doc3.setTextColor(100); doc3.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
 
-            y = 60;
+            let y3 = 60;
             if (data.projects.length === 0) {
-                doc3.text('No se encontraron registros de tiempo esta semana.', 20, y);
+                doc3.text('No se encontraron registros de tiempo esta semana.', 20, y3);
             } else {
                 doc3.setFont('helvetica', 'bold');
-                doc3.text('Proyecto', 20, y); doc3.text('Horas', 120, y); doc3.text('% Dedicación', 160, y);
-                doc3.line(20, y + 2, 190, y + 2);
-                y += 10; doc3.setFont('helvetica', 'normal');
+                doc3.text('Proyecto', 20, y3); doc3.text('Horas', 120, y3); doc3.text('% Dedicación', 160, y3);
+                doc3.line(20, y3 + 2, 190, y3 + 2);
+                y3 += 10; doc3.setFont('helvetica', 'normal');
 
                 data.projects.forEach((p: any) => {
                     const hours = Math.floor(p.duration / 3600);
                     const mins = Math.floor((p.duration % 3600) / 60);
                     const percentage = data.time > 0 ? ((p.duration / data.time) * 100).toFixed(1) : '0';
-                    doc3.text(p.name, 20, y);
-                    doc3.text(`${hours}h ${mins}m`, 120, y);
-                    doc3.text(`${percentage}%`, 160, y);
-                    y += 8;
-                    if (y > 270) { doc3.addPage(); y = 20; }
+                    doc3.text(p.name, 20, y3);
+                    doc3.text(`${hours}h ${mins}m`, 120, y3);
+                    doc3.text(`${percentage}%`, 160, y3);
+                    y3 += 8;
+                    if (y3 > 270) { doc3.addPage(); y3 = 20; }
                 });
             }
-            const pdf3 = doc3.output('datauristring').split(',')[1];
+
+            // Clean base64 helper
+            const cleanBase64 = (uri: string) => uri.replace(/^data:application\/pdf;base64,/, '');
+
+            const pdf1Base64 = cleanBase64(doc1.output('datauristring'));
+            const pdf2Base64 = cleanBase64(doc2.output('datauristring'));
+            const pdf3Base64 = cleanBase64(doc3.output('datauristring'));
+
+            console.log(`Sending email to ${data.email} with 3 attachments...`);
 
             // Send to User
-            await resend.emails.send({
+            const { data: resendData, error: resendError } = await resend.emails.send({
                 from: 'Kairos Team <notificaciones@kairoscompany.es>',
                 to: [data.email],
                 subject: `📊 Informes Semanales Kairos: ${periodStr}`,
@@ -264,11 +271,17 @@ export default async function handler(req: Request) {
                     <p>¡Buen inicio de semana!</p>
                 `,
                 attachments: [
-                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdf1 },
-                    { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdf2 },
-                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdf3 }
+                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdf1Base64 },
+                    { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdf2Base64 },
+                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdf3Base64 }
                 ]
             });
+
+            if (resendError) {
+                console.error(`Error sending individual report to ${data.email}:`, resendError);
+            } else {
+                console.log(`Report sent successfully to ${data.email}. ID: ${resendData?.id}`);
+            }
         }
 
         // 4. Also send the Global Table ONLY to admins for oversight
