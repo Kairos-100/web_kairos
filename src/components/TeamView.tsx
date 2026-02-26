@@ -16,6 +16,7 @@ import type { MetricEntry, Essay } from '../constants';
 import { DocumentExplorer, type UnifiedDocument } from './DocumentExplorer';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
 import { CLOCKIFY_USER_MAP } from '../constants';
+import { ReportPanel } from './ReportPanel';
 
 interface TeamViewProps {
     metrics: MetricEntry[];
@@ -332,8 +333,14 @@ export const TeamView: React.FC<TeamViewProps> = ({
         );
     }
 
+    import { ReportPanel } from './ReportPanel';
+
+    // ... existing code ...
+
     return (
         <div className="space-y-12 pb-20">
+            <ReportPanel metrics={metrics} essays={essays} clockifyUsers={clockifyData?.users || []} />
+
             {/* Top Performers */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {userData.slice(0, 3).map((user, i) => (

@@ -6,7 +6,7 @@ const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY || '';
 /**
  * Generic function to send email via Resend REST API
  */
-async function sendEmail(to: string[], subject: string, html: string) {
+async function sendEmail(to: string[], subject: string, html: string, attachments?: { filename: string, content: string }[]) {
     if (!RESEND_API_KEY) {
         console.warn('Resend API Key no configurada. Saltando envío de email.');
         return;
@@ -23,7 +23,8 @@ async function sendEmail(to: string[], subject: string, html: string) {
                 from: 'Kairos Team <notificaciones@kairoscompany.es>',
                 to,
                 subject,
-                html
+                html,
+                attachments
             })
         });
 
@@ -117,4 +118,29 @@ export async function notifyNewComment(essayTitle: string, comment: Comment) {
     `;
 
     await sendEmail(recipients, subject, html);
+}
+
+/**
+ * Envía un reporte (mensual/semanal) con PDF adjunto
+ */
+export async function notifyReport(email: string, title: string, pdfBase64: string, period: string) {
+    const subject = `📊 Tu Reporte ${title} - Kairos`;
+    const html = `
+        <div style="font-family: sans-serif; color: #0F1D42; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 20px;">
+            <h2 style="color: #3B82F6;">Tu resumen de actividad está listo 📈</h2>
+            <p>Hola <strong>${email.split('@')[0]}</strong>,</p>
+            <p>Adjunto encontrarás tu reporte detallado correspondiente al periodo: <strong>${period}</strong>.</p>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 15px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 14px;">Este reporte incluye tus métricas de visitas (CV), aprendizaje (LP), comunidad (CP) y tiempos registrados en Clockify.</p>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8;">Sigue impulsando el crecimiento de Kairos.</p>
+        </div>
+    `;
+
+    await sendEmail([email], subject, html, [
+        {
+            filename: `Reporte_${title.replace(/\s/g, '_')}_${period.replace(/\//g, '-')}.pdf`,
+            content: pdfBase64
+        }
+    ]);
 }
