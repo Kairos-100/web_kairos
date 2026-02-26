@@ -1,26 +1,19 @@
 import type { Essay, MetricEntry, Comment } from '../constants';
 import { WHITELIST } from '../constants';
 
-const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY || '';
+
 
 /**
- * Generic function to send email via Resend REST API
+ * Generic function to send email via our serverless API proxy
  */
 async function sendEmail(to: string[], subject: string, html: string, attachments?: { filename: string, content: string }[]) {
-    if (!RESEND_API_KEY) {
-        console.warn('Resend API Key no configurada. Saltando envío de email.');
-        return;
-    }
-
     try {
-        const response = await fetch('https://api.resend.com/emails', {
+        const response = await fetch('/api/send-email', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${RESEND_API_KEY}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                from: 'Kairos Team <notificaciones@kairoscompany.es>',
                 to,
                 subject,
                 html,
@@ -30,11 +23,11 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`Resend Error: ${JSON.stringify(error)}`);
+            throw new Error(`Server Error: ${error.error || JSON.stringify(error)}`);
         }
     } catch (err) {
         console.error('Error enviando notificación por email:', err);
-        throw err; // Re-throw to handle in UI
+        throw err;
     }
 }
 
