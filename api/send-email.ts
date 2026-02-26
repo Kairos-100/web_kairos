@@ -39,7 +39,10 @@ export default async function handler(req: Request) {
         });
 
         if (error) {
-            return new Response(JSON.stringify({ error }), {
+            console.error('Resend API Error:', error);
+            return new Response(JSON.stringify({
+                error: typeof error === 'string' ? error : (error as any).message || JSON.stringify(error)
+            }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -50,7 +53,8 @@ export default async function handler(req: Request) {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (err: any) {
-        return new Response(JSON.stringify({ error: err.message }), {
+        console.error('Serverless Function Error:', err);
+        return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });
