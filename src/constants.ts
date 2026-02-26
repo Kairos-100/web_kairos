@@ -8,7 +8,8 @@ export const WHITELIST = [
     "carlos.pereza@alumni.mondragon.edu",
     "marc.cano@alumni.mondragon.edu",
     "jimena.gonzalez-tarr@alumni.mondragon.edu",
-    "guillermo.haya@alumni.mondragon.edu"
+    "guillermo.haya@alumni.mondragon.edu",
+    "eider.viela@alumni.mondragon.edu"
 ];
 
 export const CLOCKIFY_USER_MAP: Record<string, string> = {

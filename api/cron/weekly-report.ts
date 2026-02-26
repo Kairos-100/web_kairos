@@ -19,7 +19,13 @@ const WHITELIST = [
     "carlos.pereza@alumni.mondragon.edu",
     "marc.cano@alumni.mondragon.edu",
     "jimena.gonzalez-tarr@alumni.mondragon.edu",
-    "guillermo.haya@alumni.mondragon.edu"
+    "guillermo.haya@alumni.mondragon.edu",
+    "eider.viela@alumni.mondragon.edu"
+];
+
+const ADMIN_RECIPIENTS = [
+    "guillermo.haya@alumni.mondragon.edu",
+    "eider.viela@alumni.mondragon.edu"
 ];
 
 const CLOCKIFY_USER_MAP: Record<string, string> = {
@@ -78,7 +84,6 @@ export default async function handler(req: Request) {
         // 1. Fetch Data
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Fetch all metrics and essays to filter by date in memory (Supabase stores dates as text DD/MM/YYYY)
         const { data: rawMetrics } = await supabase.from('metrics').select('*');
         const { data: rawEssays } = await supabase.from('essays').select('*');
 
@@ -125,20 +130,24 @@ export default async function handler(req: Request) {
         });
 
         metrics.forEach(m => {
-            const user = (m.user_email || '').split('@')[0];
-            if (grouped[user]) {
-                grouped[user].cv += Number(m.cv) || 0;
-                grouped[user].cp += Number(m.cp) || 0;
-                grouped[user].sharing += Number(m.sharing) || 0;
-                grouped[user].revenue += Number(m.revenue) || 0;
-                grouped[user].profit += Number(m.profit) || 0;
+            const mEmail = (m.user_email || '').toLowerCase();
+            const user = mEmail.split('@')[0];
+            const targetKey = Object.keys(grouped).find(k => k.toLowerCase() === user || mEmail.includes(k.toLowerCase()));
+            if (targetKey) {
+                grouped[targetKey].cv += Number(m.cv) || 0;
+                grouped[targetKey].cp += Number(m.cp) || 0;
+                grouped[targetKey].sharing += Number(m.sharing) || 0;
+                grouped[targetKey].revenue += Number(m.revenue) || 0;
+                grouped[targetKey].profit += Number(m.profit) || 0;
             }
         });
 
         essays.forEach(e => {
-            const user = (e.author || '').split('@')[0];
-            if (grouped[user]) {
-                grouped[user].lp += Number(e.points) || 0;
+            const aEmail = (e.author || '').toLowerCase();
+            const user = aEmail.split('@')[0];
+            const targetKey = Object.keys(grouped).find(k => k.toLowerCase() === user || aEmail.includes(k.toLowerCase()));
+            if (targetKey) {
+                grouped[targetKey].lp += Number(e.points) || 0;
             }
         });
 
@@ -153,7 +162,7 @@ export default async function handler(req: Request) {
             if (matchedKey) grouped[matchedKey].time += u.duration || 0;
         });
 
-        // 3. Generate & Send
+        // 3. Generate & Send Individual Reports
         const resend = new Resend(RESEND_API_KEY);
         const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -161,17 +170,15 @@ export default async function handler(req: Request) {
             const data = grouped[userKey];
             const doc = new jsPDF();
 
-            // Header
             doc.setFontSize(22);
             doc.setTextColor(15, 29, 66);
             doc.text('KAIROS', 105, 20, { align: 'center' });
             doc.setFontSize(16);
-            doc.text('Reporte Semanal Automático', 105, 30, { align: 'center' });
+            doc.text('Reporte Semanal Individual', 105, 30, { align: 'center' });
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(`Periodo: ${periodStr}`, 105, 38, { align: 'center' });
 
-            // Data Info
             doc.setFontSize(12);
             doc.setTextColor(0);
             const startY = 55;
@@ -196,8 +203,7 @@ export default async function handler(req: Request) {
 
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text(`Este reporte automático resume tu actividad del lunes al domingo previo.`, 105, 280, { align: 'center' });
-            doc.text(`Generado el ${now.toLocaleDateString('es-ES')} a las ${now.toLocaleTimeString('es-ES')}.`, 105, 288, { align: 'center' });
+            doc.text(`Generado automáticamente por Kairos Web`, 105, 285, { align: 'center' });
 
             const pdfBase64 = doc.output('datauristring').split(',')[1];
 
@@ -205,21 +211,65 @@ export default async function handler(req: Request) {
                 from: 'Kairos Team <notificaciones@kairoscompany.es>',
                 to: [data.email],
                 subject: `📊 Reporte Semanal Kairos: ${periodStr}`,
-                html: `
-                    <p>Hola <b>${userKey}</b>,</p>
-                    <p>Aquí tienes tu resumen semanal de actividad consolidado (Lunes a Domingo).</p>
-                    <p><b>Periodo:</b> ${periodStr}</p>
-                    <p>Buen inicio de semana,</p>
-                    <p>El equipo de Kairos</p>
-                `,
-                attachments: [{
-                    filename: `Reporte_Kairos_${userKey}.pdf`,
-                    content: pdfBase64
-                }]
+                html: `<p>Hola <b>${userKey}</b>,</p><p>Adjunto tienes tu resumen semanal individual.</p><p>Buen lunes,</p><p>El equipo de Kairos</p>`,
+                attachments: [{ filename: `Reporte_Individual_${userKey}.pdf`, content: pdfBase64 }]
             });
-
             await sleep(700);
         }
+
+        // 4. Generate & Send CONSOLIDATED Report
+        const jointDoc = new jsPDF();
+        jointDoc.setFontSize(22);
+        jointDoc.setTextColor(15, 29, 66);
+        jointDoc.text('KAIROS', 105, 20, { align: 'center' });
+        jointDoc.setFontSize(16);
+        jointDoc.text('REPORTE SEMANAL CONSOLIDADO', 105, 30, { align: 'center' });
+        jointDoc.setFontSize(10);
+        jointDoc.setTextColor(100);
+        jointDoc.text(`Periodo: ${periodStr}`, 105, 38, { align: 'center' });
+
+        const headers = ['Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'Tiempo'];
+        let currentY = 55;
+        jointDoc.setFontSize(10);
+        jointDoc.setTextColor(0);
+        jointDoc.setFont('helvetica', 'bold');
+        jointDoc.text(headers[0], 14, currentY);
+        jointDoc.text(headers[1], 60, currentY);
+        jointDoc.text(headers[2], 80, currentY);
+        jointDoc.text(headers[3], 110, currentY);
+        jointDoc.text(headers[4], 140, currentY);
+        jointDoc.text(headers[5], 160, currentY);
+        jointDoc.text(headers[6], 180, currentY);
+
+        jointDoc.line(14, currentY + 2, 200, currentY + 2);
+        currentY += 10;
+        jointDoc.setFont('helvetica', 'normal');
+
+        Object.values(grouped).forEach((data: any) => {
+            jointDoc.text(data.user, 14, currentY);
+            jointDoc.text(String(data.cv), 60, currentY);
+            jointDoc.text(`${data.revenue}€`, 80, currentY);
+            jointDoc.text(`${data.profit}€`, 110, currentY);
+            jointDoc.text(String(data.lp), 140, currentY);
+            jointDoc.text(String(data.cp), 160, currentY);
+            jointDoc.text(`${Math.floor(data.time / 3600)}h`, 180, currentY);
+            currentY += 8;
+        });
+
+        const jointBase64 = jointDoc.output('datauristring').split(',')[1];
+        await resend.emails.send({
+            from: 'Kairos Team <notificaciones@kairoscompany.es>',
+            to: ADMIN_RECIPIENTS,
+            subject: `🌎 RESUMEN SEMANAL CONSOLIDADO: ${periodStr}`,
+            html: `
+                <p>Hola,</p>
+                <p>Adjunto enviamos el <b>resumen consolidado</b> con la actividad de todo el equipo durante la semana pasada.</p>
+                <p><b>Periodo:</b> ${periodStr}</p>
+                <p>Buen inicio de semana,</p>
+                <p>El equipo de Kairos</p>
+            `,
+            attachments: [{ filename: `Resumen_Consolidado_Kairos.pdf`, content: jointBase64 }]
+        });
 
         return new Response(JSON.stringify({ success: true, count: Object.keys(grouped).length, period: periodStr }), { status: 200 });
     } catch (err: any) {
