@@ -145,8 +145,8 @@ const App: React.FC = () => {
       }
       const { error } = await supabase.from('essays').delete().eq('id', id);
       if (error) throw error;
-      setEssays(prev => prev.filter(essay => essay.id !== id));
-      if (selectedEssayId === id) setSelectedEssayId(null);
+      setEssays(prev => prev.filter(essay => String(essay.id) !== String(id)));
+      if (String(selectedEssayId) === String(id)) setSelectedEssayId(null);
     } catch (err: any) {
       console.error('Error deleting essay:', err);
       alert(`Error al borrar: ${err.message}`);
@@ -160,9 +160,21 @@ const App: React.FC = () => {
     setIsLoading(true);
     console.log('Attempting to delete metric with ID:', id);
     try {
-      const { error } = await supabase.from('metrics').delete().eq('id', id);
+      // Ensure we pass the ID in the correct format (BigInt IDs should be numbers, UUIDs strings)
+      // If it's a number string, try to pass as number.
+      const idToUse = !isNaN(Number(id)) && !id.includes('-') ? Number(id) : id;
+
+      const { error, count } = await supabase
+        .from('metrics')
+        .delete()
+        .eq('id', idToUse);
+
       if (error) throw error;
-      setMetrics(prev => prev.filter(m => m.id !== id));
+
+      console.log(`Deletion finished for ID ${id}. Result:`, { count });
+
+      // Filter using type-agnostic comparison
+      setMetrics(prev => prev.filter(m => String(m.id) !== String(id)));
     } catch (err: any) {
       console.error('Error deleting metric:', err);
       alert(`Error al borrar: ${err.message}`);

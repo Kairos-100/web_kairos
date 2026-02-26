@@ -63,16 +63,16 @@ export const ActivityView: React.FC<ActivityViewProps> = ({
                 hideSearch={true}
                 currentUserEmail={currentUserEmail}
                 onSelectEssay={(id) => {
-                    const originalId = id.replace('essay-', '');
-                    const essay = essays.find(e => e.id === originalId);
+                    const originalId = String(id).replace('essay-', '');
+                    const essay = essays.find(e => String(e.id) === originalId);
                     if (essay && onEditEssay) onEditEssay(essay);
                 }}
                 onDelete={(doc) => {
                     if (doc.type === 'tesis' && onDeleteEssay) {
-                        const originalId = doc.id.replace('essay-', '');
+                        const originalId = String(doc.id).replace('essay-', '');
                         onDeleteEssay(originalId, doc.pdfUrl);
                     } else if (onDeleteMetric) {
-                        const originalId = doc.id.replace('metric-', '');
+                        const originalId = String(doc.id).replace('metric-', '');
                         onDeleteMetric(originalId);
                     }
                 }}

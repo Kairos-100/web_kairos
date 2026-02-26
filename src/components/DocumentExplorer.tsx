@@ -131,7 +131,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
 
     const handleDelete = (e: React.MouseEvent, doc: UnifiedDocument) => {
         e.stopPropagation();
-        const cleanId = doc.id.replace('essay-', '').replace('metric-', '');
+        const cleanId = String(doc.id).replace('essay-', '').replace('metric-', '');
 
         if (doc.type === 'tesis' && onDeleteEssay) {
             onDeleteEssay(cleanId, doc.pdfUrl);
