@@ -120,7 +120,10 @@ export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics, clockifyDat
                                     </div>
                                     <div>
                                         <h4 className="font-heading font-bold text-kairos-navy text-lg">Configuración de IA</h4>
-                                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">Para acceder al conocimiento de Kairos, conecta tu API Key de OpenAI.</p>
+                                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                                            Para acceder al conocimiento de Kairos, conecta tu API Key de OpenAI.
+                                            {import.meta.env.VITE_OPENAI_API_KEY ? " (Detectada en servidor)" : " (No detectada en servidor)"}
+                                        </p>
                                     </div>
                                     <form onSubmit={handleSaveKey} className="w-full space-y-3">
                                         <input
@@ -131,11 +134,13 @@ export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics, clockifyDat
                                             className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-kairos-navy outline-none transition-all shadow-sm"
                                             required
                                         />
-                                        <button type="submit" className="w-full btn-primary py-4 rounded-2xl font-bold shadow-lg shadow-blue-900/10">Guardar y Vincular</button>
+                                        <button type="submit" className="w-full btn-primary py-4 rounded-2xl font-bold shadow-lg shadow-blue-900/10">Guardar Localmente</button>
                                         <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="inline-block text-[10px] text-blue-600 font-bold uppercase hover:underline tracking-wider">¿No tienes una? Consíguela aquí</a>
                                     </form>
                                     <div className="pt-4 border-t border-gray-100 w-full">
-                                        <p className="text-[10px] text-gray-400 font-medium">Tus datos se procesan de forma segura y privada.</p>
+                                        <p className="text-[10px] text-gray-400 font-medium leading-tight">
+                                            <b>Nota:</b> Si estás en producción (Vercel), añade <code>VITE_OPENAI_API_KEY</code> en los Ajustes de Vercel para que se guarde de forma permanente para todo el equipo.
+                                        </p>
                                     </div>
                                 </div>
                             ) : messages.length === 0 ? (
@@ -228,7 +233,7 @@ export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics, clockifyDat
                                         className="flex items-center space-x-1.5 text-[9px] text-gray-400 hover:text-kairos-navy transition-colors font-bold uppercase tracking-wider"
                                     >
                                         <Key size={11} className="opacity-50" />
-                                        <span>Reconfigurar Key</span>
+                                        <span>Key: {apiKey ? '••••' + apiKey.slice(-4) : 'No configurada'}</span>
                                     </button>
                                     <div className="flex items-center space-x-1.5 text-[9px] text-gray-500 font-bold uppercase tracking-wider">
                                         <Sparkles size={11} className="text-blue-500" />

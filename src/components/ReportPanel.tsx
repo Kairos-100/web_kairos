@@ -25,20 +25,29 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         now.setHours(23, 59, 59, 999);
         let start = new Date();
         let period = '';
+        let reportEnd = now;
 
         if (type === 'Semanal') {
-            // This week starting on Monday
-            const day = now.getDay(); // 0 Sunday, 1 Monday...
-            const diff = now.getDate() - (day === 0 ? 6 : day - 1);
+            // Manual report: Show this current week (Monday to Sunday)
+            const day = now.getDay();
+            const daysSinceMonday = (day === 0 ? 6 : day - 1);
             start = new Date(now);
-            start.setDate(diff);
+            start.setDate(now.getDate() - daysSinceMonday);
             start.setHours(0, 0, 0, 0);
-            period = `${start.toLocaleDateString('es-ES')} - ${now.toLocaleDateString('es-ES')}`;
+
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+
+            period = `${start.toLocaleDateString('es-ES')} - ${end.toLocaleDateString('es-ES')}`;
+            // Use 'now' as the end bound for aggregation if we haven't reached Sunday yet
+            reportEnd = now < end ? now : end;
         } else {
-            // This month
+            // This month up to now
             start = new Date(now.getFullYear(), now.getMonth(), 1);
             start.setHours(0, 0, 0, 0);
             period = `${start.toLocaleString('es-ES', { month: 'long' })} ${now.getFullYear()}`;
+            reportEnd = now;
         }
 
         // Fetch fresh Clockify data for the EXACT report range
@@ -46,7 +55,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         try {
             const wsId = await getWorkspaceId();
             if (wsId) {
-                const clockifyData = await getWeeklyTimeSummary(wsId, start, now);
+                const clockifyData = await getWeeklyTimeSummary(wsId, start, reportEnd);
                 if (clockifyData) {
                     freshClockifyUsers = clockifyData.users;
                 }
@@ -55,7 +64,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
             console.error('Error fetching fresh Clockify data for report:', err);
         }
 
-        const aggregated = aggregateDataForRange(metrics, essays, freshClockifyUsers, start, now);
+        const aggregated = aggregateDataForRange(metrics, essays, freshClockifyUsers, start, reportEnd);
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
         try {
@@ -118,7 +127,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                 {[
                     {
                         title: 'Reporte Semanal',
-                        desc: 'Últimos 7 días de actividad',
+                        desc: 'Lunes a Domingo (Semana en curso)',
                         icon: Send,
                         action: () => handleSendReports('Semanal'),
                         type: 'Semanal',

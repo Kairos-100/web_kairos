@@ -48,10 +48,8 @@ export default async function handler(req: Request) {
 
     try {
         const now = new Date();
-        // Calculate Previous Monday to Previous Sunday
-        const day = now.getDay(); // 0 Sun, 1 Mon...
-        // We are at Monday morning (hopefully)
-        // If today is Monday (1), diffToLastMonday is 7 days ago.
+        // Calc range: Previous Monday (start) to Previous Sunday (end)
+        const day = now.getDay();
         const diffToLastMonday = (day === 0 ? 6 : day - 1) + 7;
         const startDate = new Date(now);
         startDate.setDate(now.getDate() - diffToLastMonday);
@@ -63,22 +61,36 @@ export default async function handler(req: Request) {
 
         const periodStr = `${startDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')}`;
 
+        // Helpers
+        const parseDDMMYYYY = (str: string) => {
+            if (!str) return new Date(0);
+            if (str.includes('-')) {
+                const d = new Date(str);
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }
+            const [d, m, y] = str.split('/').map(Number);
+            const date = new Date(y, m - 1, d);
+            date.setHours(0, 0, 0, 0);
+            return date;
+        };
+
         // 1. Fetch Data
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Metrics
-        const { data: metrics } = await supabase
-            .from('metrics')
-            .select('*')
-            .gte('date', startDate.toISOString())
-            .lte('date', endDate.toISOString());
+        // Fetch all metrics and essays to filter by date in memory (Supabase stores dates as text DD/MM/YYYY)
+        const { data: rawMetrics } = await supabase.from('metrics').select('*');
+        const { data: rawEssays } = await supabase.from('essays').select('*');
 
-        // Essays
-        const { data: essays } = await supabase
-            .from('essays')
-            .select('*')
-            .gte('date', startDate.toISOString())
-            .lte('date', endDate.toISOString());
+        const metrics = (rawMetrics || []).filter(m => {
+            const d = parseDDMMYYYY(m.date);
+            return d >= startDate && d <= endDate;
+        });
+
+        const essays = (rawEssays || []).filter(e => {
+            const d = parseDDMMYYYY(e.date);
+            return d >= startDate && d <= endDate;
+        });
 
         // Clockify
         let clockifyUsers: any[] = [];
@@ -89,8 +101,7 @@ export default async function handler(req: Request) {
         const workspaceId = workspaces?.[0]?.id;
 
         if (workspaceId) {
-            const clockifyUrl = `https://api.clockify.me/api/v1/workspaces/${workspaceId}/reports/summary`;
-            const reportRes = await fetch(clockifyUrl, {
+            const reportRes = await fetch(`https://reports.api.clockify.me/v1/workspaces/${workspaceId}/reports/summary`, {
                 method: 'POST',
                 headers: {
                     'X-Api-Key': CLOCKIFY_API_KEY,
@@ -113,8 +124,8 @@ export default async function handler(req: Request) {
             grouped[user] = { user, email, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0 };
         });
 
-        metrics?.forEach(m => {
-            const user = m.user_email.split('@')[0];
+        metrics.forEach(m => {
+            const user = (m.user_email || '').split('@')[0];
             if (grouped[user]) {
                 grouped[user].cv += Number(m.cv) || 0;
                 grouped[user].cp += Number(m.cp) || 0;
@@ -124,8 +135,8 @@ export default async function handler(req: Request) {
             }
         });
 
-        essays?.forEach(e => {
-            const user = e.author.split('@')[0];
+        essays.forEach(e => {
+            const user = (e.author || '').split('@')[0];
             if (grouped[user]) {
                 grouped[user].lp += Number(e.points) || 0;
             }
@@ -136,8 +147,8 @@ export default async function handler(req: Request) {
             const uEmail = (u.email || '').toLowerCase();
             const matchedKey = Object.keys(grouped).find(target => {
                 const clockifyName = (CLOCKIFY_USER_MAP[target] || '').toLowerCase();
-                if (clockifyName) return uName.includes(clockifyName) || clockifyName.includes(uName);
-                return uName.includes(target.toLowerCase());
+                if (clockifyName) return uName === clockifyName || uName.includes(clockifyName) || clockifyName.includes(uName);
+                return uName.includes(target.toLowerCase()) || uEmail.includes(target.toLowerCase());
             });
             if (matchedKey) grouped[matchedKey].time += u.duration || 0;
         });
@@ -160,21 +171,33 @@ export default async function handler(req: Request) {
             doc.setTextColor(100);
             doc.text(`Periodo: ${periodStr}`, 105, 38, { align: 'center' });
 
-            // Basic Data Row (Simple Manual Table to Avoid AutoTable Node dependency issues)
+            // Data Info
             doc.setFontSize(12);
             doc.setTextColor(0);
-            const startY = 50;
-            doc.text(`Miembro: ${userKey}`, 14, startY);
-            doc.text(`Visitas (CV): ${data.cv}`, 14, startY + 10);
-            doc.text(`Facturación: ${data.revenue}€`, 14, startY + 20);
-            doc.text(`Beneficio: ${data.profit}€`, 14, startY + 30);
-            doc.text(`Formación (LP): ${data.lp}`, 14, startY + 40);
-            doc.text(`Comunidad (CP): ${data.cp}`, 14, startY + 50);
-            doc.text(`Tiempo: ${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, 14, startY + 60);
+            const startY = 55;
+            doc.text(`Miembro del equipo: ${userKey}`, 14, startY);
+
+            doc.setFontSize(10);
+            const reportRows = [
+                ['Métrica', 'Total'],
+                ['Visitas (CV)', String(data.cv)],
+                ['Facturación', `${data.revenue.toLocaleString('es-ES')}€`],
+                ['Beneficio', `${data.profit.toLocaleString('es-ES')}€`],
+                ['Tesis (LP)', String(data.lp)],
+                ['Comunidad (CP)', String(data.cp)],
+                ['Tiempo Clockify', `${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`]
+            ];
+
+            reportRows.forEach((row, rowIndex) => {
+                const y = startY + 15 + (rowIndex * 8);
+                doc.text(row[0], 20, y);
+                doc.text(row[1], 80, y);
+            });
 
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text(`Generado automáticamente por Kairos Web`, 105, 285, { align: 'center' });
+            doc.text(`Este reporte automático resume tu actividad del lunes al domingo previo.`, 105, 280, { align: 'center' });
+            doc.text(`Generado el ${now.toLocaleDateString('es-ES')} a las ${now.toLocaleTimeString('es-ES')}.`, 105, 288, { align: 'center' });
 
             const pdfBase64 = doc.output('datauristring').split(',')[1];
 
@@ -182,7 +205,13 @@ export default async function handler(req: Request) {
                 from: 'Kairos Team <notificaciones@kairoscompany.es>',
                 to: [data.email],
                 subject: `📊 Reporte Semanal Kairos: ${periodStr}`,
-                html: `<p>Hola ${userKey},</p><p>Adjunto encontrarás tu reporte semanal de actividad de <b>${periodStr}</b>.</p><p>Buen lunes,</p><p>El equipo de Kairos</p>`,
+                html: `
+                    <p>Hola <b>${userKey}</b>,</p>
+                    <p>Aquí tienes tu resumen semanal de actividad consolidado (Lunes a Domingo).</p>
+                    <p><b>Periodo:</b> ${periodStr}</p>
+                    <p>Buen inicio de semana,</p>
+                    <p>El equipo de Kairos</p>
+                `,
                 attachments: [{
                     filename: `Reporte_Kairos_${userKey}.pdf`,
                     content: pdfBase64
@@ -192,7 +221,7 @@ export default async function handler(req: Request) {
             await sleep(700);
         }
 
-        return new Response(JSON.stringify({ success: true, count: Object.keys(grouped).length }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, count: Object.keys(grouped).length, period: periodStr }), { status: 200 });
     } catch (err: any) {
         console.error('Cron Error:', err);
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });

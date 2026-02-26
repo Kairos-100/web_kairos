@@ -52,13 +52,16 @@ export function aggregateDataForRange(
     metrics.forEach(m => {
         const d = parseDate(m.date);
         if (d >= s && d <= e_range) {
-            const user = m.user_email.split('@')[0];
-            if (grouped[user]) {
-                grouped[user].cv += Number(m.cv) || 0;
-                grouped[user].cp += Number(m.cp) || 0;
-                grouped[user].sharing += Number(m.sharing) || 0;
-                grouped[user].revenue += Number(m.revenue) || 0;
-                grouped[user].profit += Number(m.profit) || 0;
+            const mEmail = (m.user_email || '').toLowerCase();
+            const user = mEmail.split('@')[0];
+            const targetKey = Object.keys(grouped).find(k => k.toLowerCase() === user || mEmail.includes(k.toLowerCase()));
+
+            if (targetKey) {
+                grouped[targetKey].cv += Number(m.cv) || 0;
+                grouped[targetKey].cp += Number(m.cp) || 0;
+                grouped[targetKey].sharing += Number(m.sharing) || 0;
+                grouped[targetKey].revenue += Number(m.revenue) || 0;
+                grouped[targetKey].profit += Number(m.profit) || 0;
             }
         }
     });
@@ -66,9 +69,12 @@ export function aggregateDataForRange(
     essays.forEach(item => {
         const d = parseDate(item.date);
         if (d >= s && d <= e_range) {
-            const user = item.author.split('@')[0];
-            if (grouped[user]) {
-                grouped[user].lp += Number(item.points) || 0;
+            const aEmail = (item.author || '').toLowerCase();
+            const user = aEmail.split('@')[0];
+            const targetKey = Object.keys(grouped).find(k => k.toLowerCase() === user || aEmail.includes(k.toLowerCase()));
+
+            if (targetKey) {
+                grouped[targetKey].lp += Number(item.points) || 0;
             }
         }
     });
