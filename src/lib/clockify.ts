@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 
 const CLOCKIFY_API_KEY = import.meta.env.VITE_CLOCKIFY_API_KEY || '';
 const CLOCKIFY_API_URL = 'https://api.clockify.me/api/v1';
@@ -122,5 +123,40 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
     } catch (err) {
         console.error('Clockify Error (getWeeklyTimeSummary):', err);
         return null;
+    }
+}
+
+/**
+ * Persists weekly time data to Supabase for historical analysis and AI training.
+ */
+export async function syncWeeklyStatsToSupabase(
+    start: Date,
+    end: Date,
+    users: ClockifyUserTime[]
+) {
+    if (!import.meta.env.VITE_SUPABASE_URL) return;
+
+    try {
+        const rows = users.flatMap(user =>
+            user.projects.map(proj => ({
+                week_start: start.toISOString().split('T')[0],
+                week_end: end.toISOString().split('T')[0],
+                user_email: user.email,
+                project_name: proj.projectName,
+                duration_seconds: proj.time,
+                project_color: proj.color
+            }))
+        );
+
+        if (rows.length === 0) return;
+
+        const { error } = await supabase
+            .from('clockify_stats')
+            .upsert(rows, { onConflict: 'week_start, week_end, user_email, project_name' });
+
+        if (error) throw error;
+        console.log(`Clockify data synced to Supabase for ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`);
+    } catch (err) {
+        console.error('Error syncing Clockify data to Supabase:', err);
     }
 }

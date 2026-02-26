@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateAiResponse, generateDashboardSummary } from '../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import type { Essay, MetricEntry } from '../constants';
+import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
 
 interface Message {
     role: 'user' | 'ai';
@@ -13,9 +14,14 @@ interface Message {
 interface KairosAIProps {
     essays: Essay[];
     metrics: MetricEntry[];
+    clockifyData?: {
+        users: ClockifyUserTime[];
+        projects: ClockifyProjectSummary[];
+        totalTime: number;
+    } | null;
 }
 
-export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics }) => {
+export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics, clockifyData }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -58,7 +64,7 @@ export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics }) => {
         setIsLoading(true);
 
         try {
-            const summary = generateDashboardSummary(essays, metrics);
+            const summary = generateDashboardSummary(essays, metrics, clockifyData);
             const response = await generateAiResponse(userMessage, apiKey, summary);
             setMessages(prev => [...prev, { role: 'ai', content: response }]);
         } catch (error: any) {

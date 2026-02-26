@@ -2,6 +2,7 @@ import * as pdfjs from 'pdfjs-dist';
 import { supabase } from './supabase';
 import OpenAI from 'openai';
 import type { Essay, MetricEntry } from '../constants';
+import type { ClockifyUserTime, ClockifyProjectSummary } from './clockify';
 
 // Configure the worker for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -207,7 +208,15 @@ INSTRUCCIONES:
 /**
  * Generates a text summary of the dashboard data for AI context injection.
  */
-export function generateDashboardSummary(essays: Essay[], metrics: MetricEntry[]): string {
+export function generateDashboardSummary(
+    essays: Essay[],
+    metrics: MetricEntry[],
+    clockifyData?: {
+        users: ClockifyUserTime[];
+        projects: ClockifyProjectSummary[];
+        totalTime: number;
+    } | null
+): string {
     const totalEssays = essays.length;
     const totalPoints = essays.reduce((acc, e) => acc + (e.points || 0), 0);
     const moleculas = essays.filter(e => e.type === 'molecula').length;
@@ -232,6 +241,26 @@ export function generateDashboardSummary(essays: Essay[], metrics: MetricEntry[]
     const topCategory = Object.entries(categories)
         .sort((a, b) => b[1] - a[1])[0];
 
+    // Clockify section
+    let clockifySummary = '';
+    if (clockifyData && clockifyData.totalTime > 0) {
+        const totalHours = Math.floor(clockifyData.totalTime / 3600);
+        const topProject = clockifyData.projects[0];
+        const projectsText = clockifyData.projects.map(p => {
+            const h = Math.floor(p.totalTime / 3600);
+            const m = Math.floor((p.totalTime % 3600) / 60);
+            return `- ${p.projectName}: ${h}h ${m}m`;
+        }).join('\n');
+
+        clockifySummary = `
+DISTRIBUCIÓN DE TIEMPO (CLOCKIFY ESTA SEMANA):
+- Tiempo Total: ${totalHours} horas acumuladas.
+- Foco Principal: El proyecto "${topProject?.projectName || 'N/A'}" es el que más tiempo consume.
+- Desglose por Proyectos:
+${projectsText}
+`;
+    }
+
     return `
 ESTADO ACTUAL DEL DASHBOARD (RESUMEN EN TIEMPO REAL):
 - Actividad: ${totalEssays} aportaciones totales (${moleculas} Moléculas, ${libros} Libros).
@@ -240,6 +269,7 @@ ESTADO ACTUAL DEL DASHBOARD (RESUMEN EN TIEMPO REAL):
 - Liderazgo: El top contributor es ${topContributor ? topContributor[0] : 'N/A'} con ${topContributor ? topContributor[1] : 0} puntos.
 - Temas: La categoría más explorada es "${topCategory ? topCategory[0] : 'N/A'}".
 - Registros: Hay ${metrics.length} entradas en el historial de métricas.
+${clockifySummary}
 `;
 }
 

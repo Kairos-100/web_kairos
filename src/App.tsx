@@ -19,7 +19,7 @@ import ReactMarkdown from 'react-markdown';
 import { DateRangePicker, type DateRange } from './components/DateRangePicker';
 import { runLegacyIngestion } from './lib/ai';
 import { notifyNewComment } from './lib/notifications';
-import { getWorkspaceId, getWeeklyTimeSummary, type ClockifyUserTime, type ClockifyProjectSummary } from './lib/clockify';
+import { getWorkspaceId, getWeeklyTimeSummary, syncWeeklyStatsToSupabase, type ClockifyUserTime, type ClockifyProjectSummary } from './lib/clockify';
 
 const INITIAL_ESSAYS: Essay[] = [
   {
@@ -124,6 +124,9 @@ const App: React.FC = () => {
     if (wsId) {
       const data = await getWeeklyTimeSummary(wsId, dateRange.start, dateRange.end);
       setClockifyData(data);
+      if (data) {
+        syncWeeklyStatsToSupabase(dateRange.start, dateRange.end, data.users);
+      }
     }
   };
 
@@ -415,7 +418,7 @@ const App: React.FC = () => {
         {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} />}
         {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} />}
       </Layout>
-      <KairosAI essays={filteredByDateEssays} metrics={filteredMetrics} />
+      <KairosAI essays={filteredByDateEssays} metrics={filteredMetrics} clockifyData={clockifyData} />
     </>
   );
 };
