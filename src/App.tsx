@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { DateRangePicker, type DateRange } from './components/DateRangePicker';
 import { runLegacyIngestion } from './lib/ai';
+import { notifyNewComment } from './lib/notifications';
 
 const INITIAL_ESSAYS: Essay[] = [
   {
