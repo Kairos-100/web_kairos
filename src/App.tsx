@@ -55,9 +55,14 @@ const App: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const end = new Date();
     end.setHours(23, 59, 59, 999);
+
+    // Default to current week (Monday to current moment)
     const start = new Date();
-    start.setDate(end.getDate() - 30);
+    const day = start.getDay(); // 0 is Sunday, 1 is Monday...
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    start.setDate(diff);
     start.setHours(0, 0, 0, 0);
+
     return { start, end };
   });
   const [loggedInUser, setLoggedInUser] = useState<string | null>(() => {

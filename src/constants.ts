@@ -11,6 +11,16 @@ export const WHITELIST = [
     "guillermo.haya@alumni.mondragon.edu"
 ];
 
+export const CLOCKIFY_USER_MAP: Record<string, string> = {
+    "guillermo.haya": "Guillermo Haya",
+    "jaime.gonzalez": "Jaimegmesa03",
+    "jimena.gonzalez-tarr": "Jimenagtleinn",
+    "claudia.pinna": "Claudia Pinna Jurado",
+    "marc.cano": "Marc Cano",
+    "paula.gascon": "Paula Gascón Escobedo",
+    "angela.cuevas": "Angela"
+};
+
 export const CATEGORIES = [
     "Estrategia",
     "Tecnología",

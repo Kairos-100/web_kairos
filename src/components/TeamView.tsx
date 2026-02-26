@@ -15,6 +15,7 @@ import {
 import type { MetricEntry, Essay } from '../constants';
 import { DocumentExplorer, type UnifiedDocument } from './DocumentExplorer';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
+import { CLOCKIFY_USER_MAP } from '../constants';
 
 interface TeamViewProps {
     metrics: MetricEntry[];
@@ -214,12 +215,19 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                 {/* Clockify Project Breakdown for Individual */}
                 {(() => {
-                    const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-                    const target = normalize(selectedUserDetail.name);
+                    const target = selectedUserDetail.name;
                     const clockifyUser = clockifyData?.users.find(u => {
-                        const uName = normalize(u.userName);
-                        const uEmail = normalize(u.email);
-                        return uName.includes(target) || target.includes(uName) || uEmail.includes(target);
+                        const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                        const uName = u.userName.toLowerCase();
+                        const uEmail = u.email.toLowerCase();
+
+                        if (expectedClockifyName) {
+                            const expected = expectedClockifyName.toLowerCase();
+                            return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                        }
+
+                        const normalizedTarget = target.toLowerCase();
+                        return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
                     });
                     if (!clockifyUser || clockifyUser.projects.length === 0) return null;
 
@@ -418,12 +426,19 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                     <td className="p-6 text-center font-black text-purple-600">{user.sharing}</td>
                                     <td className="p-6 text-center">
                                         {(() => {
-                                            const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-                                            const target = normalize(user.user);
+                                            const target = user.user;
                                             const clockifyUser = clockifyData?.users.find(u => {
-                                                const uName = normalize(u.userName);
-                                                const uEmail = normalize(u.email);
-                                                return uName.includes(target) || target.includes(uName) || uEmail.includes(target);
+                                                const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                                                const uName = u.userName.toLowerCase();
+                                                const uEmail = u.email.toLowerCase();
+
+                                                if (expectedClockifyName) {
+                                                    const expected = expectedClockifyName.toLowerCase();
+                                                    return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                                                }
+
+                                                const normalizedTarget = target.toLowerCase();
+                                                return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
                                             });
                                             if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
                                             const hours = Math.floor(clockifyUser.totalTime / 3600);

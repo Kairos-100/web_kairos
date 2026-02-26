@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import type { Essay } from '../constants';
 import { motion } from 'framer-motion';
 import { Trophy, TrendingUp, BookOpen, Layers } from 'lucide-react';
+import { CLOCKIFY_USER_MAP } from '../constants';
 
 interface ScoresViewProps {
     essays: Essay[];
@@ -43,7 +44,9 @@ export const ScoresView: React.FC<ScoresViewProps> = ({ essays }) => {
 
     // 3. Top Contributors
     const topContributors = essays.reduce((acc: Record<string, number>, essay) => {
-        const name = essay.author.split('@')[0].split('.').map(s => s[0].toUpperCase() + s.slice(1)).join(' ');
+        const userId = essay.author.split('@')[0];
+        const clockifyName = CLOCKIFY_USER_MAP[userId];
+        const name = clockifyName || userId.split('.').map(s => s[0].toUpperCase() + s.slice(1)).join(' ');
         acc[name] = (acc[name] || 0) + (essay.points || 0);
         return acc;
     }, {});
