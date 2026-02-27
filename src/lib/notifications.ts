@@ -120,24 +120,26 @@ export async function notifyNewComment(essayTitle: string, comment: Comment) {
 /**
  * Envía un reporte (mensual/semanal) con PDF adjunto
  */
-export async function notifyReport(email: string, title: string, pdfBase64: string, period: string) {
+export async function notifyReport(email: string, title: string, pdfBase64: string, period: string, extraAttachments?: { filename: string, content: string }[]) {
     const subject = `📊 Tu Reporte ${title} - Kairos`;
     const html = `
         <div style="font-family: sans-serif; color: #0F1D42; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 20px;">
-            <h2 style="color: #3B82F6;">Tu resumen de actividad está listo 📈</h2>
+            <h2 style="color: #3B82F6;">Tus reportes Kairos están listos 📈</h2>
             <p>Hola <strong>${email.split('@')[0]}</strong>,</p>
-            <p>Adjunto encontrarás tu reporte detallado correspondiente al periodo: <strong>${period}</strong>.</p>
+            <p>Adjuntamos los reportes detallados correspondientes al periodo: <strong>${period}</strong>.</p>
             <div style="background: #f8fafc; padding: 20px; border-radius: 15px; margin: 20px 0;">
-                <p style="margin: 0; font-size: 14px;">Este reporte incluye tus métricas de visitas (CV), aprendizaje (LP), comunidad (CP) y tiempos registrados en Clockify.</p>
+                <p style="margin: 0; font-size: 14px;">Estos reportes incluyen vista de equipo, tus indicadores individuales y el desglose de Clockify.</p>
             </div>
             <p style="font-size: 12px; color: #94a3b8;">Sigue impulsando el crecimiento de Kairos.</p>
         </div>
     `;
 
-    await sendEmail([email], subject, html, [
+    const attachments = extraAttachments || [
         {
             filename: `Reporte_${title.replace(/\s/g, '_')}_${period.replace(/\//g, '-')}.pdf`,
             content: pdfBase64
         }
-    ]);
+    ];
+
+    await sendEmail([email], subject, html, attachments);
 }

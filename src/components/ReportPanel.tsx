@@ -65,20 +65,35 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         }
 
         const aggregated = aggregateDataForRange(metrics, essays, freshClockifyUsers, start, reportEnd);
+        const aggregatedArray = Object.values(aggregated);
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
         try {
+            // Pre-generate SHARED reports for everyone
+            const teamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, { includeTable: true, includeDistributions: false });
+            const clockPdf = generatePDF(`Distribución Clockify Equipo - ${type}`, period, aggregatedArray, { includeTable: false, includeDistributions: true });
+
+            const teamBase64 = teamPdf.output('datauristring').split(',')[1];
+            const clockBase64 = clockPdf.output('datauristring').split(',')[1];
+
             for (const email of WHITELIST) {
                 const userKey = email.split('@')[0];
                 const userData = aggregated[userKey];
 
                 if (userData) {
-                    const pdf = generatePDF(`Reporte Individual ${type}`, period, [userData]);
-                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    await notifyReport(email, `Individual ${type}`, pdfBase64, period);
-                    // Add a small delay to avoid Resend's rate limit (2 req/s)
-                    await sleep(700);
+                    // Generate only the personal Indicators PDF
+                    const indivPdf = generatePDF(`Tus Indicadores ${type}`, period, [userData], { includeTable: true, includeDistributions: false });
+                    const indivBase64 = indivPdf.output('datauristring').split(',')[1];
+
+                    // Send the 3 attachments
+                    await notifyReport(email, `Reporte ${type}`, indivBase64, period, [
+                        { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
+                        { filename: `2_Tus_Indicadores_${type}_${userKey}.pdf`, content: indivBase64 },
+                        { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
+                    ]);
                 }
+                // Add a small delay to avoid Resend's rate limit (2 req/s)
+                await sleep(700);
             }
             setShowSuccess(type);
             setTimeout(() => setShowSuccess(null), 5000);
@@ -100,7 +115,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         const aggregated = aggregateDataForRange(metrics, essays, clockifyUsers, start, now);
         const dataArray = Object.values(aggregated);
 
-        const pdf = generatePDF(`Reporte Corporativo Trimestral Q${q}`, period, dataArray, true);
+        const pdf = generatePDF(`Reporte Corporativo Trimestral Q${q}`, period, dataArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
         pdf.save(`Kairos_Trimestral_Q${q}_${now.getFullYear()}.pdf`);
     };
 

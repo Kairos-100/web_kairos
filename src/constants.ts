@@ -12,6 +12,11 @@ export const WHITELIST = [
     "eider.viela@alumni.mondragon.edu"
 ];
 
+export const ADMIN_RECIPIENTS = [
+    "guillermo.haya@alumni.mondragon.edu",
+    "eider.viela@alumni.mondragon.edu"
+];
+
 export const CLOCKIFY_USER_MAP: Record<string, string> = {
     "guillermo.haya": "Guillermo Haya",
     "jaime.gonzalez": "Jaimegmesa03",

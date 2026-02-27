@@ -13,6 +13,7 @@ export interface ReportData {
     revenue: number;
     profit: number;
     time: number; // in seconds
+    projects: { name: string, duration: number }[];
 }
 
 export function aggregateDataForRange(
@@ -33,7 +34,7 @@ export function aggregateDataForRange(
     // Initialize with all whitelist users
     WHITELIST.forEach(email => {
         const user = email.split('@')[0];
-        grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0 };
+        grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0, projects: [] };
     });
 
     const parseDate = (str: string) => {
@@ -97,6 +98,16 @@ export function aggregateDataForRange(
 
         if (matchedUser && grouped[matchedUser]) {
             grouped[matchedUser].time += u.totalTime || 0;
+            if (u.projects) {
+                u.projects.forEach((p) => {
+                    const existing = grouped[matchedUser].projects.find(ep => ep.name === p.projectName);
+                    if (existing) {
+                        existing.duration += p.time || 0;
+                    } else {
+                        grouped[matchedUser].projects.push({ name: p.projectName, duration: p.time || 0 });
+                    }
+                });
+            }
         }
     });
 
@@ -107,7 +118,11 @@ export function generatePDF(
     title: string,
     period: string,
     data: ReportData[],
-    isCompanyReport: boolean = false
+    options: {
+        includeTable?: boolean;
+        includeDistributions?: boolean;
+        includeCorporate?: boolean;
+    } = { includeTable: true, includeDistributions: true }
 ): jsPDF {
     const doc = new jsPDF();
 
@@ -123,39 +138,127 @@ export function generatePDF(
     doc.setTextColor(100);
     doc.text(`Periodo: ${period}`, 105, 38, { align: 'center' });
 
-    const tableData = data.map((row, idx) => [
-        idx + 1,
-        row.user,
-        row.cv,
-        `${row.revenue.toLocaleString('es-ES')}€`,
-        `${row.profit.toLocaleString('es-ES')}€`,
-        row.lp,
-        row.cp,
-        row.sharing,
-        `${Math.floor(row.time / 3600)}h ${Math.floor((row.time % 3600) / 60)}m`
-    ]);
+    if (options.includeTable) {
+        const tableData = data.map((row, idx) => [
+            idx + 1,
+            row.user,
+            row.cv,
+            `${row.revenue.toLocaleString('es-ES')}€`,
+            `${row.profit.toLocaleString('es-ES')}€`,
+            row.lp,
+            row.cp,
+            row.sharing,
+            `${Math.floor(row.time / 3600)}h ${Math.floor((row.time % 3600) / 60)}m`
+        ]);
 
-    autoTable(doc, {
-        startY: 45,
-        head: [['#', 'Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'SH', 'Tiempo']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 29, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 3 },
-        columnStyles: {
-            0: { cellWidth: 10 },
-            1: { cellWidth: 35 },
-            2: { halign: 'center' },
-            3: { halign: 'right' },
-            4: { halign: 'right' },
-            5: { halign: 'center' },
-            6: { halign: 'center' },
-            7: { halign: 'center' },
-            8: { halign: 'right' }
-        }
-    });
+        autoTable(doc, {
+            startY: 45,
+            head: [['#', 'Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'SH', 'Tiempo']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: { fillColor: [15, 29, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 8, cellPadding: 3 },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { cellWidth: 35 },
+                2: { halign: 'center' },
+                3: { halign: 'right' },
+                4: { halign: 'right' },
+                5: { halign: 'center' },
+                6: { halign: 'center' },
+                7: { halign: 'center' },
+                8: { halign: 'right' }
+            }
+        });
+    }
 
-    if (isCompanyReport) {
+    // --- Add Clockify Breakdown Page if requested ---
+    if (options.includeDistributions && data.length > 0) {
+        doc.addPage();
+        doc.setFontSize(18);
+        doc.setTextColor(15, 29, 66);
+        doc.text('Distribución de Tiempo (Clockify)', 105, 20, { align: 'center' });
+
+        let y = 35;
+
+        // --- 1. Team Total Section ---
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL EQUIPO', 14, y);
+        y += 7;
+
+        const teamProjects: Record<string, number> = {};
+        let totalTeamTime = 0;
+        data.forEach(u => {
+            totalTeamTime += u.time;
+            u.projects.forEach(p => {
+                teamProjects[p.name] = (teamProjects[p.name] || 0) + p.duration;
+            });
+        });
+
+        const sortedTeamProjects = Object.entries(teamProjects)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, duration]) => [
+                name,
+                `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}m`,
+                totalTeamTime > 0 ? `${((duration / totalTeamTime) * 100).toFixed(1)}%` : '0%'
+            ]);
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Proyecto (Equipo)', 'Tiempo Total', '%']],
+            body: sortedTeamProjects,
+            theme: 'striped',
+            headStyles: { fillColor: [40, 80, 200], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 8, cellPadding: 3 },
+        });
+
+        y = (doc as any).lastAutoTable.finalY + 15;
+
+        // --- 2. Individual Breakdowns ---
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DESGLOSE POR MIEMBRO', 14, y);
+        y += 8;
+
+        data.forEach(user => {
+            if (user.projects.length > 0) {
+                if (y > 240) { doc.addPage(); y = 20; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(60, 60, 60);
+                doc.text(user.user.toUpperCase(), 14, y);
+                y += 5;
+
+                const projectData = user.projects
+                    .sort((a, b) => b.duration - a.duration)
+                    .map(p => [
+                        p.name,
+                        `${Math.floor(p.duration / 3600)}h ${Math.floor((p.duration % 3600) / 60)}m`,
+                        user.time > 0 ? `${((p.duration / user.time) * 100).toFixed(1)}%` : '0%'
+                    ]);
+
+                autoTable(doc, {
+                    startY: y,
+                    head: [['Proyecto', 'Tiempo', '%']],
+                    body: projectData,
+                    theme: 'plain',
+                    headStyles: { fillColor: [245, 247, 250], textColor: [0, 0, 0], fontStyle: 'bold' },
+                    styles: { fontSize: 7, cellPadding: 2 },
+                    margin: { left: 20 },
+                    columnStyles: {
+                        0: { cellWidth: 80 },
+                        1: { halign: 'right', cellWidth: 25 },
+                        2: { halign: 'right', cellWidth: 20 }
+                    }
+                });
+
+                y = (doc as any).lastAutoTable.finalY + 10;
+            }
+        });
+    }
+
+    if (options.includeCorporate) {
         const totals = data.reduce((acc, curr) => ({
             cv: acc.cv + curr.cv,
             rev: acc.rev + curr.revenue,
