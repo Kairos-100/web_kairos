@@ -183,17 +183,30 @@ export default async function handler(req: Request) {
 
         // 3. Generate Common Team Report Once
         const docTeam = new jsPDF();
-        docTeam.setFontSize(22); docTeam.setTextColor(15, 29, 66); docTeam.text('KAIROS', 105, 20, { align: 'center' });
-        docTeam.setFontSize(14); docTeam.text('2. RESUMEN CONJUNTO DEL EQUIPO', 105, 35, { align: 'center' });
-        docTeam.setFontSize(10); docTeam.setTextColor(100); docTeam.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
-        docTeam.setFontSize(12); docTeam.setTextColor(0); let teamY = 65;
-        docTeam.text(`Total CV: ${teamTotals.cv}`, 20, teamY); teamY += 10;
-        docTeam.text(`Total LP: ${teamTotals.lp}`, 20, teamY); teamY += 10;
-        docTeam.text(`Total CP: ${teamTotals.cp}`, 20, teamY); teamY += 10;
-        docTeam.text(`Total Sharing: ${teamTotals.sharing}`, 20, teamY); teamY += 10;
-        docTeam.text(`Facturación Equipo: ${teamTotals.revenue}€`, 20, teamY); teamY += 10;
-        docTeam.text(`Beneficio Equipo: ${teamTotals.profit}€`, 20, teamY); teamY += 10;
-        docTeam.text(`Tiempo Equipo: ${Math.floor(teamTotals.time / 3600)}h`, 20, teamY);
+        docTeam.setFontSize(26); docTeam.setTextColor(15, 29, 66); docTeam.setFont('helvetica', 'bold');
+        docTeam.text('KAIROS', 105, 25, { align: 'center' });
+        docTeam.setDrawColor(15, 29, 66); docTeam.setLineWidth(0.5); docTeam.line(20, 30, 190, 30);
+
+        docTeam.setFontSize(16); docTeam.text('RESUMEN CONJUNTO DEL EQUIPO', 105, 45, { align: 'center' });
+        docTeam.setFontSize(11); docTeam.setTextColor(100); docTeam.setFont('helvetica', 'normal');
+        docTeam.text(`Periodo: ${periodStr}`, 105, 52, { align: 'center' });
+
+        let teamY = 75;
+        const renderMetric = (doc: any, label: string, value: string, y: number) => {
+            doc.setFontSize(12); doc.setTextColor(80); doc.text(label, 25, y);
+            doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 29, 66); doc.text(value, 120, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setDrawColor(230); doc.setLineWidth(0.1); doc.line(25, y + 2, 185, y + 2);
+            return y + 12;
+        };
+
+        teamY = renderMetric(docTeam, 'Total Customer Visits (CV):', String(teamTotals.cv), teamY);
+        teamY = renderMetric(docTeam, 'Total Learning Points (LP):', String(teamTotals.lp), teamY);
+        teamY = renderMetric(docTeam, 'Total Community Points (CP):', String(teamTotals.cp), teamY);
+        teamY = renderMetric(docTeam, 'Total Content Sharing:', String(teamTotals.sharing), teamY);
+        teamY = renderMetric(docTeam, 'Facturación Total Equipo:', `${teamTotals.revenue.toLocaleString('es-ES')}€`, teamY);
+        teamY = renderMetric(docTeam, 'Beneficio Neto Equipo:', `${teamTotals.profit.toLocaleString('es-ES')}€`, teamY);
+        teamY = renderMetric(docTeam, 'Tiempo Total Imputado:', `${Math.floor(teamTotals.time / 3600)}h`, teamY);
 
         const pdfTeamBatch = Buffer.from(docTeam.output('arraybuffer')).toString('base64');
 
@@ -203,47 +216,61 @@ export default async function handler(req: Request) {
 
             // 4.1 Personal Indicators PDF
             const docIndiv = new jsPDF();
-            docIndiv.setFontSize(22); docIndiv.setTextColor(15, 29, 66); docIndiv.text('KAIROS', 105, 20, { align: 'center' });
-            docIndiv.setFontSize(14); docIndiv.text('1. TUS INDICADORES INDIVIDUALES', 105, 35, { align: 'center' });
-            docIndiv.setFontSize(10); docIndiv.setTextColor(100); docIndiv.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
-            docIndiv.text(`Miembro: ${data.user}`, 105, 48, { align: 'center' });
+            docIndiv.setFontSize(26); docIndiv.setTextColor(15, 29, 66); docIndiv.setFont('helvetica', 'bold');
+            docIndiv.text('KAIROS', 105, 25, { align: 'center' });
+            docIndiv.setDrawColor(15, 29, 66); docIndiv.setLineWidth(0.5); docIndiv.line(20, 30, 190, 30);
 
-            let iy = 65;
-            docIndiv.setFontSize(11); docIndiv.setTextColor(0);
-            docIndiv.text(`Customer Visits (CV): ${data.cv}`, 20, iy); iy += 10;
-            docIndiv.text(`Learning Points (LP): ${data.lp}`, 20, iy); iy += 10;
-            docIndiv.text(`Community Points (CP): ${data.cp}`, 20, iy); iy += 10;
-            docIndiv.text(`Sharing: ${data.sharing}`, 20, iy); iy += 10;
-            docIndiv.text(`Facturación: ${data.revenue}€`, 20, iy); iy += 10;
-            docIndiv.text(`Beneficio (Profit): ${data.profit}€`, 20, iy); iy += 10;
-            docIndiv.text(`Tiempo Total: ${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, 20, iy);
+            docIndiv.setFontSize(16); docIndiv.text('TUS INDICADORES INDIVIDUALES', 105, 45, { align: 'center' });
+            docIndiv.setFontSize(11); docIndiv.setTextColor(100); docIndiv.setFont('helvetica', 'normal');
+            docIndiv.text(`Semana: ${periodStr}`, 105, 52, { align: 'center' });
+            docIndiv.setFont('helvetica', 'bold'); docIndiv.setTextColor(40, 80, 200);
+            docIndiv.text(`Miembro: ${data.user}`, 105, 60, { align: 'center' });
+
+            let iy = 80;
+            iy = renderMetric(docIndiv, 'Customer Visits (CV):', String(data.cv), iy);
+            iy = renderMetric(docIndiv, 'Learning Points (LP):', String(data.lp), iy);
+            iy = renderMetric(docIndiv, 'Community Points (CP):', String(data.cp), iy);
+            iy = renderMetric(docIndiv, 'Content Sharing:', String(data.sharing), iy);
+            iy = renderMetric(docIndiv, 'Tu Facturación:', `${data.revenue.toLocaleString('es-ES')}€`, iy);
+            iy = renderMetric(docIndiv, 'Tu Beneficio (Profit):', `${data.profit.toLocaleString('es-ES')}€`, iy);
+            iy = renderMetric(docIndiv, 'Tu Tiempo Total:', `${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, iy);
 
             const pdfIndivBase64 = Buffer.from(docIndiv.output('arraybuffer')).toString('base64');
 
             // 4.2 Clockify Distribution PDF
             const docClock = new jsPDF();
-            docClock.setFontSize(22); docClock.setTextColor(15, 29, 66); docClock.text('KAIROS', 105, 20, { align: 'center' });
-            docClock.setFontSize(14); docClock.text('3. DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 35, { align: 'center' });
-            docClock.setFontSize(10); docClock.setTextColor(100); docClock.text(`Semana: ${periodStr}`, 105, 42, { align: 'center' });
+            docClock.setFontSize(26); docClock.setTextColor(15, 29, 66); docClock.setFont('helvetica', 'bold');
+            docClock.text('KAIROS', 105, 25, { align: 'center' });
+            docClock.setDrawColor(15, 29, 66); docClock.setLineWidth(0.5); docClock.line(20, 30, 190, 30);
 
-            let cy = 60;
+            docClock.setFontSize(16); docClock.text('DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 45, { align: 'center' });
+            docClock.setFontSize(11); docClock.setTextColor(100); docClock.setFont('helvetica', 'normal');
+            docClock.text(`Semana: ${periodStr} | Usuario: ${data.user}`, 105, 52, { align: 'center' });
+
+            let cy = 70;
             if (data.projects.length === 0) {
-                docClock.text('No se encontraron registros de tiempo esta semana.', 20, cy);
+                docClock.setTextColor(150);
+                docClock.text('No se encontraron registros de tiempo esta semana.', 105, cy, { align: 'center' });
             } else {
-                docClock.setFont('helvetica', 'bold');
-                docClock.text('Proyecto', 20, cy); docClock.text('Horas', 120, cy); docClock.text('% Dedicación', 160, cy);
-                docClock.line(20, cy + 2, 190, cy + 2);
-                cy += 10; docClock.setFont('helvetica', 'normal');
+                docClock.setFillColor(245, 247, 250);
+                docClock.rect(20, cy, 170, 10, 'F');
+                docClock.setFont('helvetica', 'bold'); docClock.setTextColor(15, 29, 66); docClock.setFontSize(10);
+                docClock.text('PROYECTO', 25, cy + 7); docClock.text('HORAS', 120, cy + 7); docClock.text('% DEDICACIÓN', 155, cy + 7);
+                cy += 15; docClock.setFont('helvetica', 'normal'); docClock.setTextColor(0);
 
                 data.projects.forEach((p: any) => {
                     const hours = Math.floor(p.duration / 3600);
                     const mins = Math.floor((p.duration % 3600) / 60);
                     const percentage = data.time > 0 ? ((p.duration / data.time) * 100).toFixed(1) : '0';
-                    docClock.text(p.name, 20, cy);
+
+                    docClock.setFontSize(10);
+                    docClock.text(p.name, 25, cy);
                     docClock.text(`${hours}h ${mins}m`, 120, cy);
                     docClock.text(`${percentage}%`, 160, cy);
-                    cy += 8;
-                    if (cy > 270) { docClock.addPage(); cy = 20; }
+
+                    docClock.setDrawColor(240); docClock.line(20, cy + 2, 190, cy + 2);
+                    cy += 10;
+                    if (cy > 270) { docClock.addPage(); cy = 25; }
                 });
             }
 
@@ -285,14 +312,28 @@ export default async function handler(req: Request) {
 
         // 5. Also send the Global Table ONLY to admins for oversight
         const globalDoc = new jsPDF();
-        globalDoc.text('TABLA GLOBAL DE CONTROL (SOLO ADMIN)', 105, 20, { align: 'center' });
+        globalDoc.setFontSize(22); globalDoc.setTextColor(15, 29, 66); globalDoc.setFont('helvetica', 'bold');
+        globalDoc.text('CONTROL GLOBAL KAIROS', 105, 20, { align: 'center' });
+        globalDoc.setDrawColor(15, 29, 66); globalDoc.line(20, 25, 190, 25);
+
         let gy = 40;
-        globalDoc.setFontSize(8);
-        globalDoc.text('Miembro', 14, gy); globalDoc.text('CV', 60, gy); globalDoc.text('LP', 80, gy); globalDoc.text('Profit', 100, gy); globalDoc.text('Tiempo', 130, gy);
-        gy += 5;
+        globalDoc.setFillColor(245, 247, 250);
+        globalDoc.rect(14, gy - 5, 182, 7, 'F');
+        globalDoc.setFontSize(8); globalDoc.setTextColor(100);
+        globalDoc.text('MIEMBRO', 16, gy); globalDoc.text('CV', 60, gy); globalDoc.text('LP', 80, gy); globalDoc.text('PROFIT', 100, gy); globalDoc.text('TIEMPO', 130, gy);
+        gy += 7;
+
+        globalDoc.setTextColor(0); globalDoc.setFont('helvetica', 'normal');
         Object.values(usersData).forEach((d: any) => {
-            globalDoc.text(d.user, 14, gy); globalDoc.text(String(d.cv), 60, gy); globalDoc.text(String(d.lp), 80, gy); globalDoc.text(`${d.profit}€`, 100, gy); globalDoc.text(`${Math.floor(d.time / 3600)}h`, 130, gy);
+            globalDoc.text(d.user, 16, gy);
+            globalDoc.text(String(d.cv), 60, gy);
+            globalDoc.text(String(d.lp), 80, gy);
+            globalDoc.text(`${d.profit}€`, 100, gy);
+            globalDoc.text(`${Math.floor(d.time / 3600)}h`, 130, gy);
+
+            globalDoc.setDrawColor(240); globalDoc.line(14, gy + 2, 196, gy + 2);
             gy += 6;
+            if (gy > 280) { globalDoc.addPage(); gy = 20; }
         });
         const globalPdfBase64 = Buffer.from(globalDoc.output('arraybuffer')).toString('base64');
 
