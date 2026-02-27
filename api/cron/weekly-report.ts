@@ -212,99 +212,103 @@ export default async function handler(req: Request) {
 
         // 4. Generate Individual Reports & Send
         const emailPromises = Object.keys(usersData).map(async (userKey) => {
-            const data = usersData[userKey];
+            try {
+                const data = usersData[userKey];
 
-            // 4.1 Personal Indicators PDF
-            const docIndiv = new jsPDF();
-            docIndiv.setFontSize(26); docIndiv.setTextColor(15, 29, 66); docIndiv.setFont('helvetica', 'bold');
-            docIndiv.text('KAIROS', 105, 25, { align: 'center' });
-            docIndiv.setDrawColor(15, 29, 66); docIndiv.setLineWidth(0.5); docIndiv.line(20, 30, 190, 30);
+                // 4.1 Personal Indicators PDF
+                const docIndiv = new jsPDF();
+                docIndiv.setFontSize(26); docIndiv.setTextColor(15, 29, 66); docIndiv.setFont('helvetica', 'bold');
+                docIndiv.text('KAIROS', 105, 25, { align: 'center' });
+                docIndiv.setDrawColor(15, 29, 66); docIndiv.setLineWidth(0.5); docIndiv.line(20, 30, 190, 30);
 
-            docIndiv.setFontSize(16); docIndiv.text('TUS INDICADORES INDIVIDUALES', 105, 45, { align: 'center' });
-            docIndiv.setFontSize(11); docIndiv.setTextColor(100); docIndiv.setFont('helvetica', 'normal');
-            docIndiv.text(`Semana: ${periodStr}`, 105, 52, { align: 'center' });
-            docIndiv.setFont('helvetica', 'bold'); docIndiv.setTextColor(40, 80, 200);
-            docIndiv.text(`Miembro: ${data.user}`, 105, 60, { align: 'center' });
+                docIndiv.setFontSize(16); docIndiv.text('TUS INDICADORES INDIVIDUALES', 105, 45, { align: 'center' });
+                docIndiv.setFontSize(11); docIndiv.setTextColor(100); docIndiv.setFont('helvetica', 'normal');
+                docIndiv.text(`Semana: ${periodStr}`, 105, 52, { align: 'center' });
+                docIndiv.setFont('helvetica', 'bold'); docIndiv.setTextColor(40, 80, 200);
+                docIndiv.text(`Miembro: ${data.user}`, 105, 60, { align: 'center' });
 
-            let iy = 80;
-            iy = renderMetric(docIndiv, 'Customer Visits (CV):', String(data.cv), iy);
-            iy = renderMetric(docIndiv, 'Learning Points (LP):', String(data.lp), iy);
-            iy = renderMetric(docIndiv, 'Community Points (CP):', String(data.cp), iy);
-            iy = renderMetric(docIndiv, 'Content Sharing:', String(data.sharing), iy);
-            iy = renderMetric(docIndiv, 'Tu Facturación:', `${data.revenue.toLocaleString('es-ES')}€`, iy);
-            iy = renderMetric(docIndiv, 'Tu Beneficio (Profit):', `${data.profit.toLocaleString('es-ES')}€`, iy);
-            iy = renderMetric(docIndiv, 'Tu Tiempo Total:', `${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, iy);
+                let iy = 80;
+                iy = renderMetric(docIndiv, 'Customer Visits (CV):', String(data.cv), iy);
+                iy = renderMetric(docIndiv, 'Learning Points (LP):', String(data.lp), iy);
+                iy = renderMetric(docIndiv, 'Community Points (CP):', String(data.cp), iy);
+                iy = renderMetric(docIndiv, 'Content Sharing:', String(data.sharing), iy);
+                iy = renderMetric(docIndiv, 'Tu Facturación:', `${data.revenue.toLocaleString('es-ES')}€`, iy);
+                iy = renderMetric(docIndiv, 'Tu Beneficio (Profit):', `${data.profit.toLocaleString('es-ES')}€`, iy);
+                iy = renderMetric(docIndiv, 'Tu Tiempo Total:', `${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, iy);
 
-            const pdfIndivBuffer = Buffer.from(docIndiv.output('arraybuffer'));
+                const pdfIndivBuffer = Buffer.from(docIndiv.output('arraybuffer'));
 
-            // 4.2 Clockify Distribution PDF
-            const docClock = new jsPDF();
-            docClock.setFontSize(26); docClock.setTextColor(15, 29, 66); docClock.setFont('helvetica', 'bold');
-            docClock.text('KAIROS', 105, 25, { align: 'center' });
-            docClock.setDrawColor(15, 29, 66); docClock.setLineWidth(0.5); docClock.line(20, 30, 190, 30);
+                // 4.2 Clockify Distribution PDF
+                const docClock = new jsPDF();
+                docClock.setFontSize(26); docClock.setTextColor(15, 29, 66); docClock.setFont('helvetica', 'bold');
+                docClock.text('KAIROS', 105, 25, { align: 'center' });
+                docClock.setDrawColor(15, 29, 66); docClock.setLineWidth(0.5); docClock.line(20, 30, 190, 30);
 
-            docClock.setFontSize(16); docClock.text('DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 45, { align: 'center' });
-            docClock.setFontSize(11); docClock.setTextColor(100); docClock.setFont('helvetica', 'normal');
-            docClock.text(`Semana: ${periodStr} | Usuario: ${data.user}`, 105, 52, { align: 'center' });
+                docClock.setFontSize(16); docClock.text('DISTRIBUCIÓN DE TIEMPO (CLOCKIFY)', 105, 45, { align: 'center' });
+                docClock.setFontSize(11); docClock.setTextColor(100); docClock.setFont('helvetica', 'normal');
+                docClock.text(`Semana: ${periodStr} | Usuario: ${data.user}`, 105, 52, { align: 'center' });
 
-            let cy = 70;
-            if (data.projects.length === 0) {
-                docClock.setTextColor(150);
-                docClock.text('No se encontraron registros de tiempo esta semana.', 105, cy, { align: 'center' });
-            } else {
-                docClock.setFillColor(245, 247, 250);
-                docClock.rect(20, cy, 170, 10, 'F');
-                docClock.setFont('helvetica', 'bold'); docClock.setTextColor(15, 29, 66); docClock.setFontSize(10);
-                docClock.text('PROYECTO', 25, cy + 7); docClock.text('HORAS', 120, cy + 7); docClock.text('% DEDICACIÓN', 155, cy + 7);
-                cy += 15; docClock.setFont('helvetica', 'normal'); docClock.setTextColor(0);
+                let cy = 70;
+                if (data.projects.length === 0) {
+                    docClock.setTextColor(150);
+                    docClock.text('No se encontraron registros de tiempo esta semana.', 105, cy, { align: 'center' });
+                } else {
+                    docClock.setFillColor(245, 247, 250);
+                    docClock.rect(20, cy, 170, 10, 'F');
+                    docClock.setFont('helvetica', 'bold'); docClock.setTextColor(15, 29, 66); docClock.setFontSize(10);
+                    docClock.text('PROYECTO', 25, cy + 7); docClock.text('HORAS', 120, cy + 7); docClock.text('% DEDICACIÓN', 155, cy + 7);
+                    cy += 15; docClock.setFont('helvetica', 'normal'); docClock.setTextColor(0);
 
-                data.projects.forEach((p: any) => {
-                    const hours = Math.floor(p.duration / 3600);
-                    const mins = Math.floor((p.duration % 3600) / 60);
-                    const percentage = data.time > 0 ? ((p.duration / data.time) * 100).toFixed(1) : '0';
+                    data.projects.forEach((p: any) => {
+                        const hours = Math.floor(p.duration / 3600);
+                        const mins = Math.floor((p.duration % 3600) / 60);
+                        const percentage = data.time > 0 ? ((p.duration / data.time) * 100).toFixed(1) : '0';
 
-                    docClock.setFontSize(10);
-                    docClock.text(p.name, 25, cy);
-                    docClock.text(`${hours}h ${mins}m`, 120, cy);
-                    docClock.text(`${percentage}%`, 160, cy);
+                        docClock.setFontSize(10);
+                        docClock.text(p.name, 25, cy);
+                        docClock.text(`${hours}h ${mins}m`, 120, cy);
+                        docClock.text(`${percentage}%`, 160, cy);
 
-                    docClock.setDrawColor(240); docClock.line(20, cy + 2, 190, cy + 2);
-                    cy += 10;
-                    if (cy > 270) { docClock.addPage(); cy = 25; }
+                        docClock.setDrawColor(240); docClock.line(20, cy + 2, 190, cy + 2);
+                        cy += 10;
+                        if (cy > 270) { docClock.addPage(); cy = 25; }
+                    });
+                }
+
+                const pdfClockBuffer = Buffer.from(docClock.output('arraybuffer'));
+
+                console.log(`[Batch] Sending email to ${data.email}...`);
+
+                // Send to User
+                const { data: resendData, error: resendError } = await resend.emails.send({
+                    from: 'Kairos Team <notificaciones@kairoscompany.es>',
+                    to: [data.email],
+                    subject: `📊 Informes Semanales Kairos: ${periodStr}`,
+                    html: `
+                        <p>Hola ${data.user},</p>
+                        <p>Adjuntamos tus 3 informes correspondientes a la semana pasada:</p>
+                        <ol>
+                            <li><b>Indicadores Individuales</b></li>
+                            <li><b>Resumen Conjunto del Equipo</b></li>
+                            <li><b>Distribución de Tiempo (Clockify)</b></li>
+                        </ol>
+                        <p>Cualquier duda, puedes ver los detalles en la <a href="https://web-kairos.vercel.app">web de Kairos</a>.</p>
+                        <p>¡Buen inicio de semana!</p>
+                    `,
+                    attachments: [
+                        { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdfIndivBuffer },
+                        { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdfTeamBatch },
+                        { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdfClockBuffer }
+                    ]
                 });
-            }
 
-            const pdfClockBuffer = Buffer.from(docClock.output('arraybuffer'));
-
-            console.log(`Sending email to ${data.email} with 3 attachments...`);
-
-            // Send to User
-            const { data: resendData, error: resendError } = await resend.emails.send({
-                from: 'Kairos Team <notificaciones@kairoscompany.es>',
-                to: [data.email],
-                subject: `📊 Informes Semanales Kairos: ${periodStr}`,
-                html: `
-                    <p>Hola ${data.user},</p>
-                    <p>Adjuntamos tus 3 informes correspondientes a la semana pasada:</p>
-                    <ol>
-                        <li><b>Indicadores Individuales</b></li>
-                        <li><b>Resumen Conjunto del Equipo</b></li>
-                        <li><b>Distribución de Tiempo (Clockify)</b></li>
-                    </ol>
-                    <p>Cualquier duda, puedes ver los detalles en la <a href="https://web-kairos.vercel.app">web de Kairos</a>.</p>
-                    <p>¡Buen inicio de semana!</p>
-                `,
-                attachments: [
-                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdfIndivBuffer },
-                    { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdfTeamBatch },
-                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdfClockBuffer }
-                ]
-            });
-
-            if (resendError) {
-                console.error(`Error sending individual report to ${data.email}:`, resendError);
-            } else {
-                console.log(`Report sent successfully to ${data.email}. ID: ${resendData?.id}`);
+                if (resendError) {
+                    console.error(`[Error] Failed for ${data.email}:`, resendError);
+                } else {
+                    console.log(`[Success] Sent to ${data.email}. ID: ${resendData?.id}`);
+                }
+            } catch (err) {
+                console.error(`[Fatal] Unexpected error processing ${userKey}:`, err);
             }
         });
 
