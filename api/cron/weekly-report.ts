@@ -198,7 +198,7 @@ export default async function handler(req: Request) {
         const pdfTeamBatch = Buffer.from(docTeam.output('arraybuffer')).toString('base64');
 
         // 4. Generate Individual Reports & Send
-        for (const userKey of Object.keys(usersData)) {
+        const emailPromises = Object.keys(usersData).map(async (userKey) => {
             const data = usersData[userKey];
 
             // 4.1 Personal Indicators PDF
@@ -279,7 +279,9 @@ export default async function handler(req: Request) {
             } else {
                 console.log(`Report sent successfully to ${data.email}. ID: ${resendData?.id}`);
             }
-        }
+        });
+
+        await Promise.all(emailPromises);
 
         // 5. Also send the Global Table ONLY to admins for oversight
         const globalDoc = new jsPDF();
