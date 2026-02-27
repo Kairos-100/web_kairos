@@ -208,7 +208,7 @@ export default async function handler(req: Request) {
         teamY = renderMetric(docTeam, 'Beneficio Neto Equipo:', `${teamTotals.profit.toLocaleString('es-ES')}€`, teamY);
         teamY = renderMetric(docTeam, 'Tiempo Total Imputado:', `${Math.floor(teamTotals.time / 3600)}h`, teamY);
 
-        const pdfTeamBatch = Buffer.from(docTeam.output('arraybuffer')).toString('base64');
+        const pdfTeamBatch = Buffer.from(docTeam.output('arraybuffer'));
 
         // 4. Generate Individual Reports & Send
         const emailPromises = Object.keys(usersData).map(async (userKey) => {
@@ -235,7 +235,7 @@ export default async function handler(req: Request) {
             iy = renderMetric(docIndiv, 'Tu Beneficio (Profit):', `${data.profit.toLocaleString('es-ES')}€`, iy);
             iy = renderMetric(docIndiv, 'Tu Tiempo Total:', `${Math.floor(data.time / 3600)}h ${Math.floor((data.time % 3600) / 60)}m`, iy);
 
-            const pdfIndivBase64 = Buffer.from(docIndiv.output('arraybuffer')).toString('base64');
+            const pdfIndivBuffer = Buffer.from(docIndiv.output('arraybuffer'));
 
             // 4.2 Clockify Distribution PDF
             const docClock = new jsPDF();
@@ -274,7 +274,7 @@ export default async function handler(req: Request) {
                 });
             }
 
-            const pdfClockBase64 = Buffer.from(docClock.output('arraybuffer')).toString('base64');
+            const pdfClockBuffer = Buffer.from(docClock.output('arraybuffer'));
 
             console.log(`Sending email to ${data.email} with 3 attachments...`);
 
@@ -295,9 +295,9 @@ export default async function handler(req: Request) {
                     <p>¡Buen inicio de semana!</p>
                 `,
                 attachments: [
-                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdfIndivBase64 },
+                    { filename: `1_Indicadores_Individuales_${data.user}.pdf`, content: pdfIndivBuffer },
                     { filename: `2_Resumen_Conjunto_Equipo.pdf`, content: pdfTeamBatch },
-                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdfClockBase64 }
+                    { filename: `3_Distribucion_Tiempo_${data.user}.pdf`, content: pdfClockBuffer }
                 ]
             });
 
@@ -335,14 +335,14 @@ export default async function handler(req: Request) {
             gy += 6;
             if (gy > 280) { globalDoc.addPage(); gy = 20; }
         });
-        const globalPdfBase64 = Buffer.from(globalDoc.output('arraybuffer')).toString('base64');
+        const globalPdfBuffer = Buffer.from(globalDoc.output('arraybuffer'));
 
         await resend.emails.send({
             from: 'Kairos Admin <notificaciones@kairoscompany.es>',
             to: ADMIN_RECIPIENTS,
             subject: `🌎 CONTROL GLOBAL KAIROS: ${periodStr}`,
             html: `<p>Resumen global de control para administradores.</p>`,
-            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: globalPdfBase64 }]
+            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: globalPdfBuffer }]
         });
 
         return new Response(JSON.stringify({ success: true, recipients: WHITELIST.length }), { status: 200 });
