@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -255,6 +255,69 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                         </motion.div>
                     ))}
                 </div>
+
+                {/* Clockify Project Breakdown for Individual */}
+                {(() => {
+                    const target = selectedUserDetail.name;
+                    const clockifyUser = clockifyData?.users.find(u => {
+                        const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                        const uName = u.userName.toLowerCase();
+                        const uEmail = u.email.toLowerCase();
+
+                        if (expectedClockifyName) {
+                            const expected = expectedClockifyName.toLowerCase();
+                            return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                        }
+
+                        const normalizedTarget = target.toLowerCase();
+                        return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
+                    });
+                    if (!clockifyUser || clockifyUser.projects.length === 0) return null;
+
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                        <Clock size={20} />
+                                    </div>
+                                    <h3 className="text-xl font-heading font-black text-kairos-navy">Distribución de Tiempo (Esta Semana)</h3>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Semanal</p>
+                                    <p className="text-xl font-black text-blue-600">
+                                        {Math.floor(clockifyUser.totalTime / 3600)}h {Math.floor((clockifyUser.totalTime % 3600) / 60)}m
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                {clockifyUser.projects.map((proj, idx) => {
+                                    const percentage = (proj.time / clockifyUser.totalTime) * 100;
+                                    return (
+                                        <div key={idx}>
+                                            <div className="flex justify-between items-end mb-1">
+                                                <span className="text-xs font-bold text-gray-700">{proj.projectName}</span>
+                                                <span className="text-[10px] font-black text-gray-400">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m ({percentage.toFixed(1)}%)</span>
+                                            </div>
+                                            <div className="h-2 bg-gray-50 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${percentage}%` }}
+                                                    className="h-full rounded-full"
+                                                    style={{ backgroundColor: proj.color || '#3B82F6' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    );
+                })()}
 
                 {/* Combined Timeline */}
                 <DocumentExplorer
