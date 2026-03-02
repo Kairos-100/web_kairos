@@ -103,17 +103,20 @@ export function aggregateDataForRange(
     return grouped;
 }
 
-export function generatePDF(
+export interface ReportOptions {
+    includeTable?: boolean;
+    includeDistributions?: boolean;
+    includeCorporate?: boolean;
+}
+
+export const generatePDF = (
     title: string,
     period: string,
     data: ReportData[],
-    options: {
-        includeTable?: boolean;
-        includeDistributions?: boolean;
-        includeCorporate?: boolean;
-    } = { includeTable: true, includeDistributions: true }
-): jsPDF {
+    options: ReportOptions = { includeTable: true, includeDistributions: true }
+): jsPDF => {
     const doc = new jsPDF();
+    const autotableFunc = (autoTable as any).default || autoTable;
 
     // Header
     doc.setFontSize(22);
@@ -227,7 +230,6 @@ export function generatePDF(
                         user.time > 0 ? `${((p.duration / user.time) * 100).toFixed(1)}%` : '0%'
                     ]);
 
-                const autotableFunc = (autoTable as any).default || autoTable;
                 autotableFunc(doc, {
                     startY: y,
                     head: [['Proyecto', 'Tiempo', '%']],
