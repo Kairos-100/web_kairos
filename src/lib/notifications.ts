@@ -1,5 +1,5 @@
-import type { Essay, MetricEntry, Comment } from '../constants.js';
-import { WHITELIST } from '../constants.js';
+import type { Essay, MetricEntry, Comment } from '../constants';
+import { WHITELIST } from '../constants';
 
 
 

@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabase } from './supabase';
 
 const CLOCKIFY_API_KEY = import.meta.env.VITE_CLOCKIFY_API_KEY || '';
 const CLOCKIFY_API_URL = 'https://api.clockify.me/api/v1';

@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
-import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants.js';
-import { aggregateDataForRange, generatePDF } from '../../src/lib/reports.js';
+import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants';
+import { aggregateDataForRange, generatePDF } from '../../src/lib/reports';
 
 // Configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;

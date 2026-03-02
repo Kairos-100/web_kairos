@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { MetricEntry, Essay } from '../constants.js';
-import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants.js';
-import type { ClockifyUserTime } from './clockify.js';
-import { parseDate } from './dates.js';
+import type { MetricEntry, Essay } from '../constants';
+import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants';
+import type { ClockifyUserTime } from './clockify';
+import { parseDate } from './dates';
 
 export interface ReportData {
     user: string;
@@ -227,7 +227,8 @@ export function generatePDF(
                         user.time > 0 ? `${((p.duration / user.time) * 100).toFixed(1)}%` : '0%'
                     ]);
 
-                (autoTable as any)(doc, {
+                const safeAutoTable = (autoTable as any).default || autoTable;
+                safeAutoTable(doc, {
                     startY: y,
                     head: [['Proyecto', 'Tiempo', '%']],
                     body: projectData,
