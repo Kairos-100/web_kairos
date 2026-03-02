@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
