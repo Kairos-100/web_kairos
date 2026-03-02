@@ -1,8 +1,8 @@
 import * as pdfjs from 'pdfjs-dist';
-import { supabase } from './supabase.js';
+import { supabase } from './supabase';
 import OpenAI from 'openai';
 import type { Essay, MetricEntry } from '../constants';
-import type { ClockifyUserTime, ClockifyProjectSummary } from './clockify.js';
+import type { ClockifyUserTime, ClockifyProjectSummary } from './clockify';
 
 // Configure the worker for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;

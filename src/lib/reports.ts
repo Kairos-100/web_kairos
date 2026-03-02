@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { MetricEntry, Essay } from '../constants.js';
-import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants.js';
-import type { ClockifyUserTime } from './clockify.js';
-import { parseDate } from './dates.js';
+import type { MetricEntry, Essay } from '../constants';
+import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants';
+import type { ClockifyUserTime } from './clockify';
+import { parseDate } from './dates';
 
 export interface ReportData {
     user: string;

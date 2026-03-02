@@ -1,6 +1,15 @@
-import { supabase } from './supabase.js';
+import { supabase } from './supabase';
 
-const CLOCKIFY_API_KEY = import.meta.env.VITE_CLOCKIFY_API_KEY || '';
+const getEnv = (name: string) => {
+    if (typeof process !== 'undefined' && process.env && process.env[name]) return process.env[name];
+    try {
+        // @ts-ignore
+        if (import.meta && import.meta.env && import.meta.env[name]) return import.meta.env[name];
+    } catch (e) { }
+    return '';
+};
+
+const CLOCKIFY_API_KEY = getEnv('VITE_CLOCKIFY_API_KEY');
 const CLOCKIFY_API_URL = 'https://api.clockify.me/api/v1';
 const CLOCKIFY_REPORTS_URL = 'https://reports.api.clockify.me/v1';
 
