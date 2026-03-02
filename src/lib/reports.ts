@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { MetricEntry, Essay } from '../constants';
-import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants';
-import type { ClockifyUserTime } from './clockify';
-import { parseDate } from './dates';
+import type { MetricEntry, Essay } from '../constants.js';
+import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants.js';
+import type { ClockifyUserTime } from './clockify.js';
+import { parseDate } from './dates.js';
 
 export interface ReportData {
     user: string;
@@ -140,7 +140,7 @@ export function generatePDF(
             `${Math.floor(row.time / 3600)}h ${Math.floor((row.time % 3600) / 60)}m`
         ]);
 
-        autoTable(doc, {
+        (autoTable as any)(doc, {
             startY: 45,
             head: [['#', 'Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'SH', 'Tiempo']],
             body: tableData,
@@ -193,7 +193,7 @@ export function generatePDF(
                 totalTeamTime > 0 ? `${((duration / totalTeamTime) * 100).toFixed(1)}%` : '0%'
             ]);
 
-        autoTable(doc, {
+        (autoTable as any)(doc, {
             startY: y,
             head: [['Proyecto (Equipo)', 'Tiempo Total', '%']],
             body: sortedTeamProjects,
@@ -227,7 +227,7 @@ export function generatePDF(
                         user.time > 0 ? `${((p.duration / user.time) * 100).toFixed(1)}%` : '0%'
                     ]);
 
-                autoTable(doc, {
+                (autoTable as any)(doc, {
                     startY: y,
                     head: [['Proyecto', 'Tiempo', '%']],
                     body: projectData,
