@@ -123,9 +123,9 @@ export default async function handler(req: Request) {
                         <p>¡Buen inicio de semana!</p>
                     `,
                     attachments: [
-                        { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer },
-                        { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer },
-                        { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer }
+                        { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer as any },
+                        { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer as any },
+                        { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer as any }
                     ]
                 });
 
@@ -147,7 +147,7 @@ export default async function handler(req: Request) {
             to: ADMIN_RECIPIENTS,
             subject: `🌎 CONTROL GLOBAL KAIROS: ${periodStr}`,
             html: `<p>Resumen global de control para administradores.</p>`,
-            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: corpBuffer }]
+            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: corpBuffer as any }]
         });
 
         return new Response(JSON.stringify({ success: true, recipients: WHITELIST.length }), { status: 200 });

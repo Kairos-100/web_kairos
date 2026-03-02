@@ -110,9 +110,9 @@ export default async function handler(req: Request) {
                         <p>¡Seguimos haciendo historia!</p>
                     `,
                     attachments: [
-                        { filename: `1_Resumen_Anual_Equipo_2025.pdf`, content: teamBuffer },
-                        { filename: `2_Tus_Indicadores_Anuales_2025_${userKey}.pdf`, content: indivBuffer },
-                        { filename: `3_Distribucion_Clockify_Anual_2025.pdf`, content: clockBuffer }
+                        { filename: `1_Resumen_Equipo_2025.pdf`, content: teamBuffer as any },
+                        { filename: `2_Tus_Indicadores_2025_${userKey}.pdf`, content: indivBuffer as any },
+                        { filename: `3_Distribucion_Clockify_2025.pdf`, content: clockBuffer as any }
                     ]
                 });
                 await sleep(500); // Respect Resend rate limits
@@ -130,7 +130,7 @@ export default async function handler(req: Request) {
             to: ADMIN_RECIPIENTS,
             subject: `🌎 CIERRE GLOBAL KAIROS 2025`,
             html: `<p>Resumen ejecutivo del año 2025 completo para administradores.</p>`,
-            attachments: [{ filename: 'Cierre_Global_2025.pdf', content: corpBuffer }]
+            attachments: [{ filename: 'Control_Global_Anual_2025.pdf', content: corpBuffer as any }]
         });
 
         return new Response(JSON.stringify({ success: true, message: `Reporte 2025 enviado a ${WHITELIST.length} miembros.` }), { status: 200 });
