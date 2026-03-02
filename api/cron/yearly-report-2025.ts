@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants.js';
 import { aggregateDataForRange, generatePDF } from '../../src/lib/reports.js';
 
+export const config = {
+    runtime: 'edge',
+};
+
 // Configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
@@ -70,8 +74,8 @@ export default async function handler(req: Request) {
         const teamPdf = generatePDF('RESUMEN ANUAL DE EQUIPO 2025', periodStr, aggregatedArray, { includeTable: true, includeDistributions: false });
         const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY ANUAL 2025', periodStr, aggregatedArray, { includeTable: false, includeDistributions: true });
 
-        const teamBuffer = Buffer.from(teamPdf.output('arraybuffer'));
-        const clockBuffer = Buffer.from(clockPdf.output('arraybuffer'));
+        const teamBuffer = new Uint8Array(teamPdf.output('arraybuffer'));
+        const clockBuffer = new Uint8Array(clockPdf.output('arraybuffer'));
 
         const resend = new Resend(RESEND_API_KEY);
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -87,8 +91,8 @@ export default async function handler(req: Request) {
                     continue;
                 }
 
-                const indivPdf = generatePDF('TUS INDICADORES ANUALES 2025', periodStr, [userData], { includeTable: true, includeDistributions: false });
-                const indivBuffer = Buffer.from(indivPdf.output('arraybuffer'));
+                const indivPdf = generatePDF('TUS INDICADORES SEMANALES', periodStr, [userData], { includeTable: true, includeDistributions: false });
+                const indivBuffer = new Uint8Array(indivPdf.output('arraybuffer'));
 
                 console.log(`[Manual Report] Sending to ${email}...`);
                 await resend.emails.send({
@@ -118,8 +122,8 @@ export default async function handler(req: Request) {
         }
 
         // 5. Corporate report to admins
-        const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN 2025', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
-        const corpBuffer = Buffer.from(corpPdf.output('arraybuffer'));
+        const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
+        const corpBuffer = new Uint8Array(corpPdf.output('arraybuffer'));
 
         await resend.emails.send({
             from: 'Kairos Admin <notificaciones@kairoscompany.es>',
