@@ -4,5 +4,11 @@
             "path": "/api/cron/weekly-report",
             "schedule": "0 5 * * 1"
         }
-    ]
+    ],
+    "functions": {
+        "api/**/*.ts": {
+            "memory": 1024,
+            "maxDuration": 10
+        }
+    }
 }
