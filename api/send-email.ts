@@ -2,7 +2,7 @@
 import { Resend } from 'resend';
 
 export const config = {
-    runtime: 'edge',
+    runtime: 'nodejs',
 };
 
 export default async function handler(req: Request) {
@@ -23,7 +23,7 @@ export default async function handler(req: Request) {
     }
 
     try {
-        const { to, subject, html, attachments, from } = await req.json();
+        const { to, subject, html, attachments, from } = await req.json() as any;
 
         const resend = new Resend(RESEND_API_KEY);
 

@@ -4,6 +4,10 @@ import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants.js';
 import { aggregateDataForRange, generatePDF } from '../../src/lib/reports.js';
 
 // Configuration
+export const config = {
+    runtime: 'nodejs'
+};
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
@@ -35,7 +39,7 @@ export default async function handler(req: Request) {
         // 1.1 Fetch Clockify Project Data (Full Year 2025)
         let clockifyUsers: any[] = [];
         const wsResponse = await fetch('https://api.clockify.me/api/v1/workspaces', { headers: { 'X-Api-Key': CLOCKIFY_API_KEY } });
-        const workspaces = await wsResponse.json();
+        const workspaces = await wsResponse.json() as any[];
         const workspaceId = workspaces?.[0]?.id;
 
         if (workspaceId) {
@@ -48,7 +52,7 @@ export default async function handler(req: Request) {
                     summaryFilter: { groups: ["USER", "PROJECT"] }
                 })
             });
-            const reportData = await reportRes.json();
+            const reportData = await reportRes.json() as any;
 
             clockifyUsers = (reportData.groupOne || []).map((u: any) => ({
                 userName: u.name,

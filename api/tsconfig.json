@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": [
+            "ES2022"
+        ],
+        "types": [
+            "node"
+        ],
+        "strict": true,
+        "skipLibCheck": true,
+        "baseUrl": "..",
+        "paths": {
+            "@/*": [
+                "src/*"
+            ]
+        },
+        "allowJs": true,
+        "esModuleInterop": true,
+        "allowImportingTsExtensions": true,
+        "noEmit": true
+    },
+    "include": [
+        "**/*.ts",
+        "../src/lib/**/*.ts",
+        "../src/constants.ts"
+    ]
+}

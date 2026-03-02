@@ -44,7 +44,7 @@ export async function getWorkspaceId(): Promise<string | null> {
             }
         });
         if (!response.ok) throw new Error('Failed to fetch workspaces');
-        const workspaces = await response.json();
+        const workspaces = await response.json() as any[];
         return workspaces.length > 0 ? workspaces[0].id : null;
     } catch (err) {
         console.error('Clockify Error (getWorkspaceId):', err);
@@ -80,8 +80,7 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
         });
 
         if (!response.ok) throw new Error('Failed to fetch summary report');
-        const data = await response.json();
-
+        const data = await response.json() as any;
         const userMap: Record<string, ClockifyUserTime> = {};
         const projectMap: Record<string, ClockifyProjectSummary> = {};
         let grandTotal = 0;
@@ -143,7 +142,7 @@ export async function syncWeeklyStatsToSupabase(
     end: Date,
     users: ClockifyUserTime[]
 ) {
-    if (!import.meta.env.VITE_SUPABASE_URL) return;
+    if (!getEnv('VITE_SUPABASE_URL')) return;
 
     try {
         const rows = users.flatMap(user =>

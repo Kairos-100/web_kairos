@@ -7,6 +7,26 @@ import type { ClockifyUserTime, ClockifyProjectSummary } from './clockify.js';
 // Configure the worker for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
+// Helper for environment variables and browser storage
+const getEnv = (name: string) => {
+    if (typeof process !== 'undefined' && process.env && process.env[name]) return process.env[name];
+    try {
+        // @ts-ignore
+        if (import.meta && import.meta.env && import.meta.env[name]) return import.meta.env[name];
+    } catch (e) { }
+    return '';
+};
+
+const getFromStorage = (key: string) => {
+    try {
+        const global_any = globalThis as any;
+        if (typeof global_any.window !== 'undefined' && global_any.window.localStorage) {
+            return global_any.window.localStorage.getItem(key);
+        }
+    } catch (e) { }
+    return null;
+};
+
 /**
  * Robust text sanitation to prevent Unicode and control character errors.
  */
@@ -92,7 +112,7 @@ export async function ingestDocument(
     apiKey?: string
 ) {
     // If no apiKey, we can't do real embeddings, but we'll try to find one
-    const key = apiKey || localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY;
+    const key = apiKey || getFromStorage('kairos_openai_key') || getEnv('VITE_OPENAI_API_KEY');
     if (!key) {
         console.warn('No se encontró API Key de OpenAI para generar embeddings reales. Saltando ingesta.');
         return;
@@ -277,7 +297,7 @@ ${clockifySummary}
  * Runs a full batch ingestion of all existing documents in Supabase.
  */
 export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
-    const key = localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY;
+    const key = getFromStorage('kairos_openai_key') || getEnv('VITE_OPENAI_API_KEY');
     if (!key) {
         if (onProgress) onProgress('Error: No se encontró OpenAI API Key. Por favor, introdúcela en el chat de IA primero.');
         return;

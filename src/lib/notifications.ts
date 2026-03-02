@@ -22,7 +22,7 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json() as any;
             const errorMessage = typeof errorData.error === 'string'
                 ? errorData.error
                 : (errorData.error?.message || JSON.stringify(errorData.error || errorData));
