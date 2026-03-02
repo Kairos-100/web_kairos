@@ -4,20 +4,15 @@ import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants';
 import { aggregateDataForRange, generatePDF } from '../../src/lib/reports';
 
 // Configuration
-// Configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 const CLOCKIFY_API_KEY = process.env.VITE_CLOCKIFY_API_KEY;
-const CRON_SECRET = process.env.CRON_SECRET;
 
 export default async function handler(req: Request) {
-    // Vercel Cron Security (if secret is defined)
-    if (CRON_SECRET) {
-        const authHeader = req.headers.get('authorization');
-        if (authHeader !== `Bearer ${CRON_SECRET}`) {
-            return new Response('Unauthorized', { status: 401 });
-        }
+    // One-off script, can be triggered manually via browser or curl
+    if (req.method !== 'GET' && req.method !== 'POST') {
+        return new Response('Method not allowed', { status: 405 });
     }
 
     if (!RESEND_API_KEY || !SUPABASE_URL || !SUPABASE_KEY || !CLOCKIFY_API_KEY) {
@@ -25,26 +20,19 @@ export default async function handler(req: Request) {
     }
 
     try {
-        const now = new Date();
-        // Calc range: Monday to Sunday of LAST week
-        const day = now.getDay();
-        const diffToLastMonday = (day === 0 ? 6 : day - 1) + 7;
-        const startDate = new Date(now);
-        startDate.setDate(now.getDate() - diffToLastMonday);
-        startDate.setHours(0, 0, 0, 0);
+        // Define 2025 Range
+        const startDate = new Date(2025, 0, 1, 0, 0, 0, 0); // Jan 1, 2025
+        const endDate = new Date(2025, 11, 31, 23, 59, 59, 999); // Dec 31, 2025
+        const periodStr = "AÑO COMPLETO 2025";
 
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
-        endDate.setHours(23, 59, 59, 999);
-
-        const periodStr = `${startDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')}`;
+        console.log(`[Manual Report] Starting report for: ${periodStr}`);
 
         // 1. Fetch Data
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data: rawMetrics } = await supabase.from('metrics').select('*');
         const { data: rawEssays } = await supabase.from('essays').select('*');
 
-        // 1.1 Fetch Clockify Project Data
+        // 1.1 Fetch Clockify Project Data (Full Year 2025)
         let clockifyUsers: any[] = [];
         const wsResponse = await fetch('https://api.clockify.me/api/v1/workspaces', { headers: { 'X-Api-Key': CLOCKIFY_API_KEY } });
         const workspaces = await wsResponse.json();
@@ -62,7 +50,6 @@ export default async function handler(req: Request) {
             });
             const reportData = await reportRes.json();
 
-            // Map Clockify raw to our lib's expected ClockifyUserTime
             clockifyUsers = (reportData.groupOne || []).map((u: any) => ({
                 userName: u.name,
                 email: u.email || u.name,
@@ -75,82 +62,77 @@ export default async function handler(req: Request) {
             }));
         }
 
-        // 2. Aggregate using unified lib
+        // 2. Aggregate
         const aggregated = aggregateDataForRange(rawMetrics || [], rawEssays || [], clockifyUsers, startDate, endDate);
         const aggregatedArray = Object.values(aggregated);
 
         // 3. Pre-generate shared reports
-        const teamPdf = generatePDF('RESUMEN SEMANAL DE EQUIPO', periodStr, aggregatedArray, { includeTable: true, includeDistributions: false });
-        const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY (EQUIPO)', periodStr, aggregatedArray, { includeTable: false, includeDistributions: true });
+        const teamPdf = generatePDF('RESUMEN ANUAL DE EQUIPO 2025', periodStr, aggregatedArray, { includeTable: true, includeDistributions: false });
+        const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY ANUAL 2025', periodStr, aggregatedArray, { includeTable: false, includeDistributions: true });
 
         const teamBuffer = Buffer.from(teamPdf.output('arraybuffer'));
         const clockBuffer = Buffer.from(clockPdf.output('arraybuffer'));
 
         const resend = new Resend(RESEND_API_KEY);
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // 4. Send to everyone
-        const emailPromises = WHITELIST.map(async (email) => {
+        // 4. Send to everyone in WHITELIST
+        for (const email of WHITELIST) {
             try {
                 const userKey = email.split('@')[0];
                 const userData = aggregated[userKey];
 
                 if (!userData) {
-                    console.warn(`[Cron] No data found for ${email}, skipping...`);
-                    return;
+                    console.warn(`[Manual Report] No data found for ${email}, skipping...`);
+                    continue;
                 }
 
-                // Generate ONLY the individual indicators
-                const indivPdf = generatePDF('TUS INDICADORES SEMANALES', periodStr, [userData], { includeTable: true, includeDistributions: false });
+                const indivPdf = generatePDF('TUS INDICADORES ANUALES 2025', periodStr, [userData], { includeTable: true, includeDistributions: false });
                 const indivBuffer = Buffer.from(indivPdf.output('arraybuffer'));
 
-                console.log(`[Cron] Sending reports to ${email}...`);
-                const { data: resendData, error: resendError } = await resend.emails.send({
+                console.log(`[Manual Report] Sending to ${email}...`);
+                await resend.emails.send({
                     from: 'Kairos Team <notificaciones@kairoscompany.es>',
                     to: [email],
-                    subject: `📊 Reportes Semanales Kairos: ${periodStr}`,
+                    subject: `📊 Reporte Especial Kairos: CIERRE ANUAL 2025`,
                     html: `
                         <p>Hola,</p>
-                        <p>Adjuntamos tus reportes correspondientes a la semana pasada (${periodStr}):</p>
+                        <p>Adjuntamos el resumen de impacto y conocimiento de todo el año 2025:</p>
                         <ol>
-                            <li><b>Resumen de Equipo:</b> Vista conjunta de indicadores de todos los miembros.</li>
-                            <li><b>Tus Indicadores:</b> Tus métricas individuales (CV, LP, CP, etc.).</li>
-                            <li><b>Distribución Clockify Equipo:</b> Desglose detallado de las horas de TODO el equipo por proyecto.</li>
+                            <li><b>Resumen Anual de Equipo:</b> Vista consolidada de 2025.</li>
+                            <li><b>Tus Indicadores Anuales:</b> Tu resumen personal de impacto (CV, LP, CP).</li>
+                            <li><b>Distribución Clockify Anual:</b> Desglose de horas por proyecto durante todo el año.</li>
                         </ol>
-                        <p>¡Buen inicio de semana!</p>
+                        <p>¡Seguimos haciendo historia!</p>
                     `,
                     attachments: [
-                        { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer },
-                        { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer },
-                        { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer }
+                        { filename: `1_Resumen_Anual_Equipo_2025.pdf`, content: teamBuffer },
+                        { filename: `2_Tus_Indicadores_Anuales_2025_${userKey}.pdf`, content: indivBuffer },
+                        { filename: `3_Distribucion_Clockify_Anual_2025.pdf`, content: clockBuffer }
                     ]
                 });
-
-                if (resendError) console.error(`[Error] Failed for ${email}:`, resendError);
-                else console.log(`[Success] Sent to ${email}. ID: ${resendData?.id}`);
+                await sleep(500); // Respect Resend rate limits
             } catch (err) {
-                console.error(`[Fatal] Unexpected error for ${email}:`, err);
+                console.error(`[Manual Report] Error for ${email}:`, err);
             }
-        });
+        }
 
-        await Promise.all(emailPromises);
-
-        // 5. Send Corporate report only to admins
-        const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
+        // 5. Corporate report to admins
+        const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN 2025', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
         const corpBuffer = Buffer.from(corpPdf.output('arraybuffer'));
 
         await resend.emails.send({
             from: 'Kairos Admin <notificaciones@kairoscompany.es>',
             to: ADMIN_RECIPIENTS,
-            subject: `🌎 CONTROL GLOBAL KAIROS: ${periodStr}`,
-            html: `<p>Resumen global de control para administradores.</p>`,
-            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: corpBuffer }]
+            subject: `🌎 CIERRE GLOBAL KAIROS 2025`,
+            html: `<p>Resumen ejecutivo del año 2025 completo para administradores.</p>`,
+            attachments: [{ filename: 'Cierre_Global_2025.pdf', content: corpBuffer }]
         });
 
-        return new Response(JSON.stringify({ success: true, recipients: WHITELIST.length }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, message: `Reporte 2025 enviado a ${WHITELIST.length} miembros.` }), { status: 200 });
 
     } catch (err: any) {
-        console.error('CRON Fatal Error:', err);
+        console.error('Manual Report Fatal Error:', err);
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
     }
 }
-

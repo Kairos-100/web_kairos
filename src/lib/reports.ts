@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import type { MetricEntry, Essay } from '../constants';
 import { WHITELIST, CLOCKIFY_USER_MAP } from '../constants';
 import type { ClockifyUserTime } from './clockify';
+import { parseDate } from './dates';
 
 export interface ReportData {
     user: string;
@@ -37,18 +38,6 @@ export function aggregateDataForRange(
         grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0, projects: [] };
     });
 
-    const parseDate = (str: string) => {
-        if (!str) return new Date(0);
-        let d: Date;
-        if (str.includes('-')) {
-            d = new Date(str);
-        } else {
-            const [day, m, y] = str.split('/').map(Number);
-            d = new Date(y, m - 1, day);
-        }
-        d.setHours(0, 0, 0, 0);
-        return d;
-    };
 
     metrics.forEach(m => {
         const d = parseDate(m.date);
