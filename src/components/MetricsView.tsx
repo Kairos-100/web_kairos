@@ -12,6 +12,7 @@ import { parseDate } from '../lib/dates';
 interface MetricsViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
+    allEssays?: Essay[];
     currentUserEmail?: string | null;
     onEditEssay?: (essay: Essay) => void;
     onDeleteEssay?: (id: string, pdfUrl?: string) => void;
@@ -31,6 +32,7 @@ const COLORS = {
 export const MetricsView: React.FC<MetricsViewProps> = ({
     metrics,
     essays,
+    allEssays = [],
     currentUserEmail,
     onEditEssay,
     onDeleteEssay,
@@ -117,7 +119,23 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             grouped[user].lp += e.points || 0;
         });
 
-        const sortedUsers = Object.values(grouped).sort((a: any, b: any) => (b.lp + b.cp + b.cv) - (a.lp + a.cp + a.cv));
+        // Add all-time LP if provided
+        if (allEssays.length > 0) {
+            allEssays.forEach(e => {
+                const user = e.author.split('@')[0];
+                if (!grouped[user]) {
+                    grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null, cp_pdf_url: null };
+                }
+                if (!grouped[user].totalLp) grouped[user].totalLp = 0;
+                grouped[user].totalLp += e.points || 0;
+            });
+        }
+
+        const sortedUsers = Object.values(grouped).map((u: any) => ({
+            ...u,
+            finalLp: u.totalLp !== undefined ? u.totalLp : u.lp,
+            totalScore: (u.totalLp !== undefined ? u.totalLp : u.lp) + u.cp + u.cv + u.sharing
+        })).sort((a: any, b: any) => b.totalScore - a.totalScore);
 
         // Sort each user's log by date descending
         Object.keys(logs).forEach(u => {
@@ -455,6 +473,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                 <th className="p-6 text-center border-b border-gray-100 bg-blue-50/30 text-blue-600">Aprendizaje (LP)</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">Comunidad (CP)</th>
                                 <th className="p-6 text-right border-b border-gray-100">Factu. / Benef.</th>
+                                <th className="p-6 text-center border-b border-gray-100 bg-kairos-navy/10 text-kairos-navy font-black">Score Total</th>
                                 <th className="p-6 text-center border-b border-gray-100">Justificantes</th>
                             </tr>
                         </thead>
@@ -486,7 +505,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     </td>
 
                                     <td className="p-6 text-center">
-                                        <span className="text-lg font-black text-blue-600">{user.lp || '0'}</span>
+                                        <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
                                     </td>
 
                                     <td className="p-6 text-center">
@@ -496,6 +515,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     <td className="p-6 text-right">
                                         <p className="text-xs font-black text-kairos-navy leading-tight">{formatCurrency(user.revenue)}€</p>
                                         <p className="text-[10px] font-bold text-emerald-600 leading-tight">+{formatCurrency(user.profit)}€ profit</p>
+                                    </td>
+
+                                    <td className="p-6 text-center bg-gray-50/30">
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-xl font-black text-kairos-navy">{user.totalScore || '0'}</span>
+                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">LP+CV+CP</span>
+                                        </div>
                                     </td>
 
                                     <td className="p-6">

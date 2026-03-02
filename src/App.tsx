@@ -301,6 +301,7 @@ const App: React.FC = () => {
           <MetricsView
             metrics={filteredMetrics}
             essays={filteredByDateEssays}
+            allEssays={essays}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
             onDeleteEssay={handleDeleteEssay}
