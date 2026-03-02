@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
-import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants';
-import { aggregateDataForRange, generatePDF } from '../../src/lib/reports';
+import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants.js';
+import { aggregateDataForRange, generatePDF } from '../../src/lib/reports.js';
 
 // Configuration
 // Configuration
