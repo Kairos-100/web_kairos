@@ -103,7 +103,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         metrics.forEach(m => {
             const user = m.user_email.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null, cp_pdf_url: null };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
             }
             if (!logs[user]) logs[user] = [];
 
@@ -112,9 +112,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             grouped[user].sharing += m.sharing || 0;
             grouped[user].revenue += m.revenue || 0;
             grouped[user].profit += m.profit || 0;
-            if (m.cv_pdf_url) grouped[user].cv_pdf_url = m.cv_pdf_url;
-            if (m.sharing_pdf_url) grouped[user].sharing_pdf_url = m.sharing_pdf_url;
-            if (m.cp_pdf_url) grouped[user].cp_pdf_url = m.cp_pdf_url;
+            if (m.cv_pdf_url && !grouped[user].cv_pdf_urls.includes(m.cv_pdf_url)) grouped[user].cv_pdf_urls.push(m.cv_pdf_url);
+            if (m.sharing_pdf_url && !grouped[user].sharing_pdf_urls.includes(m.sharing_pdf_url)) grouped[user].sharing_pdf_urls.push(m.sharing_pdf_url);
+            if (m.cp_pdf_url && !grouped[user].cp_pdf_urls.includes(m.cp_pdf_url)) grouped[user].cp_pdf_urls.push(m.cp_pdf_url);
 
             logs[user].push(m);
         });
@@ -122,7 +122,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         essays.forEach(e => {
             const user = e.author.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null, cp_pdf_url: null };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
             }
             grouped[user].lp += e.points || 0;
         });
@@ -132,7 +132,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             allEssays.forEach(e => {
                 const user = e.author.split('@')[0];
                 if (!grouped[user]) {
-                    grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_url: null, sharing_pdf_url: null, cp_pdf_url: null };
+                    grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
                 }
                 if (!grouped[user].totalLp) grouped[user].totalLp = 0;
                 grouped[user].totalLp += e.points || 0;
@@ -561,23 +561,23 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     </td>
 
                                     <td className="p-6">
-                                        <div className="flex items-center justify-center space-x-3">
-                                            {user.cv_pdf_url && (
-                                                <a href={user.cv_pdf_url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 hover:scale-110 transition-all border border-amber-100" title="Ver Justificante CV">
-                                                    <FileText size={18} />
+                                        <div className="flex items-center justify-center space-x-2 flex-wrap max-w-[200px] gap-y-2">
+                                            {user.cv_pdf_urls?.map((url: string, i: number) => (
+                                                <a key={`cv-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 hover:scale-110 transition-all border border-amber-100" title="Ver Justificante CV">
+                                                    <FileText size={16} />
                                                 </a>
-                                            )}
-                                            {user.sharing_pdf_url && (
-                                                <a href={user.sharing_pdf_url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 hover:scale-110 transition-all border border-purple-100" title="Ver Justificante Sharing">
-                                                    <FileText size={18} />
+                                            ))}
+                                            {user.sharing_pdf_urls?.map((url: string, i: number) => (
+                                                <a key={`sh-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 hover:scale-110 transition-all border border-purple-100" title="Ver Justificante Sharing">
+                                                    <FileText size={16} />
                                                 </a>
-                                            )}
-                                            {user.cp_pdf_url && (
-                                                <a href={user.cp_pdf_url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-110 transition-all border border-red-100" title="Ver Justificante CP">
-                                                    <FileText size={18} />
+                                            ))}
+                                            {user.cp_pdf_urls?.map((url: string, i: number) => (
+                                                <a key={`cp-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-110 transition-all border border-red-100" title="Ver Justificante CP">
+                                                    <FileText size={16} />
                                                 </a>
-                                            )}
-                                            {!user.cv_pdf_url && !user.sharing_pdf_url && !user.cp_pdf_url && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
+                                            ))}
+                                            {!user.cv_pdf_urls?.length && !user.sharing_pdf_urls?.length && !user.cp_pdf_urls?.length && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
                                         </div>
                                     </td>
                                 </tr>
