@@ -143,7 +143,7 @@ export const generatePDF = (
             `${Math.floor(row.time / 3600)}h ${Math.floor((row.time % 3600) / 60)}m`
         ]);
 
-        (autoTable as any)(doc, {
+        autotableFunc(doc, {
             startY: 45,
             head: [['#', 'Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'SH', 'Tiempo']],
             body: tableData,
@@ -196,7 +196,7 @@ export const generatePDF = (
                 totalTeamTime > 0 ? `${((duration / totalTeamTime) * 100).toFixed(1)}%` : '0%'
             ]);
 
-        (autoTable as any)(doc, {
+        autotableFunc(doc, {
             startY: y,
             head: [['Proyecto (Equipo)', 'Tiempo Total', '%']],
             body: sortedTeamProjects,
