@@ -302,6 +302,7 @@ const App: React.FC = () => {
             metrics={filteredMetrics}
             essays={filteredByDateEssays}
             allEssays={essays}
+            clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
             onDeleteEssay={handleDeleteEssay}

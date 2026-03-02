@@ -5,14 +5,21 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
+import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
+import { CLOCKIFY_USER_MAP } from '../constants';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
     allEssays?: Essay[];
+    clockifyData: {
+        users: ClockifyUserTime[];
+        projects: ClockifyProjectSummary[];
+        totalTime: number;
+    } | null;
     currentUserEmail?: string | null;
     onEditEssay?: (essay: Essay) => void;
     onDeleteEssay?: (id: string, pdfUrl?: string) => void;
@@ -33,6 +40,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     metrics,
     essays,
     allEssays = [],
+    clockifyData,
     currentUserEmail,
     onEditEssay,
     onDeleteEssay,
@@ -474,6 +482,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                 <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">Comunidad (CP)</th>
                                 <th className="p-6 text-right border-b border-gray-100">Factu. / Benef.</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-kairos-navy/10 text-kairos-navy font-black">Score Total</th>
+                                <th className="p-6 text-center border-b border-gray-100 bg-blue-50/10 text-blue-800">Tiempo</th>
                                 <th className="p-6 text-center border-b border-gray-100">Justificantes</th>
                             </tr>
                         </thead>
@@ -522,6 +531,33 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                             <span className="text-xl font-black text-kairos-navy">{user.totalScore || '0'}</span>
                                             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">LP+CV+CP</span>
                                         </div>
+                                    </td>
+
+                                    <td className="p-6 text-center">
+                                        {(() => {
+                                            const target = user.user;
+                                            const clockifyUser = clockifyData?.users.find(u => {
+                                                const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                                                const uName = u.userName.toLowerCase();
+                                                const uEmail = u.email.toLowerCase();
+
+                                                if (expectedClockifyName) {
+                                                    const expected = expectedClockifyName.toLowerCase();
+                                                    return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                                                }
+
+                                                const normalizedTarget = target.toLowerCase();
+                                                return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
+                                            });
+                                            if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
+                                            const hours = Math.floor(clockifyUser.totalTime / 3600);
+                                            const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
+                                            return (
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-blue-800 font-black">{hours}h {mins}m</span>
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
 
                                     <td className="p-6">
