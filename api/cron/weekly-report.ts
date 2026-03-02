@@ -3,10 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants.js';
 import { aggregateDataForRange, generatePDF } from '../../src/lib/reports.js';
 
-export const config = {
-    runtime: 'edge',
-};
-
 // Configuration
 // Configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
@@ -87,8 +83,8 @@ export default async function handler(req: Request) {
         const teamPdf = generatePDF('RESUMEN SEMANAL DE EQUIPO', periodStr, aggregatedArray, { includeTable: true, includeDistributions: false });
         const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY (EQUIPO)', periodStr, aggregatedArray, { includeTable: false, includeDistributions: true });
 
-        const teamBuffer = new Uint8Array(teamPdf.output('arraybuffer'));
-        const clockBuffer = new Uint8Array(clockPdf.output('arraybuffer'));
+        const teamBuffer = Buffer.from(teamPdf.output('arraybuffer'));
+        const clockBuffer = Buffer.from(clockPdf.output('arraybuffer'));
 
         const resend = new Resend(RESEND_API_KEY);
 
@@ -105,7 +101,7 @@ export default async function handler(req: Request) {
 
                 // Generate ONLY the individual indicators
                 const indivPdf = generatePDF('TUS INDICADORES SEMANALES', periodStr, [userData], { includeTable: true, includeDistributions: false });
-                const indivBuffer = new Uint8Array(indivPdf.output('arraybuffer'));
+                const indivBuffer = Buffer.from(indivPdf.output('arraybuffer'));
 
                 console.log(`[Cron] Sending reports to ${email}...`);
                 const { data: resendData, error: resendError } = await resend.emails.send({
@@ -123,9 +119,9 @@ export default async function handler(req: Request) {
                         <p>¡Buen inicio de semana!</p>
                     `,
                     attachments: [
-                        { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer as any },
-                        { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer as any },
-                        { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer as any }
+                        { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer },
+                        { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer },
+                        { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer }
                     ]
                 });
 
@@ -140,14 +136,14 @@ export default async function handler(req: Request) {
 
         // 5. Send Corporate report only to admins
         const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
-        const corpBuffer = new Uint8Array(corpPdf.output('arraybuffer'));
+        const corpBuffer = Buffer.from(corpPdf.output('arraybuffer'));
 
         await resend.emails.send({
             from: 'Kairos Admin <notificaciones@kairoscompany.es>',
             to: ADMIN_RECIPIENTS,
             subject: `🌎 CONTROL GLOBAL KAIROS: ${periodStr}`,
             html: `<p>Resumen global de control para administradores.</p>`,
-            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: corpBuffer as any }]
+            attachments: [{ filename: 'Control_Global_Cuentas.pdf', content: corpBuffer }]
         });
 
         return new Response(JSON.stringify({ success: true, recipients: WHITELIST.length }), { status: 200 });

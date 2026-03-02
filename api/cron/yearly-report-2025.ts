@@ -3,10 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { WHITELIST, ADMIN_RECIPIENTS } from '../../src/constants.js';
 import { aggregateDataForRange, generatePDF } from '../../src/lib/reports.js';
 
-export const config = {
-    runtime: 'edge',
-};
-
 // Configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
@@ -74,63 +70,58 @@ export default async function handler(req: Request) {
         const teamPdf = generatePDF('RESUMEN ANUAL DE EQUIPO 2025', periodStr, aggregatedArray, { includeTable: true, includeDistributions: false });
         const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY ANUAL 2025', periodStr, aggregatedArray, { includeTable: false, includeDistributions: true });
 
-        const teamBuffer = new Uint8Array(teamPdf.output('arraybuffer'));
-        const clockBuffer = new Uint8Array(clockPdf.output('arraybuffer'));
+        const teamBuffer = Buffer.from(teamPdf.output('arraybuffer'));
+        const clockBuffer = Buffer.from(clockPdf.output('arraybuffer'));
 
         const resend = new Resend(RESEND_API_KEY);
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // 4. Send to everyone in WHITELIST
+        // 4. Send individual reports
         for (const email of WHITELIST) {
             try {
                 const userKey = email.split('@')[0];
                 const userData = aggregated[userKey];
 
                 if (!userData) {
-                    console.warn(`[Manual Report] No data found for ${email}, skipping...`);
+                    console.warn(`[Manual Report] No data for ${email}, skipping...`);
                     continue;
                 }
 
                 const indivPdf = generatePDF('TUS INDICADORES SEMANALES', periodStr, [userData], { includeTable: true, includeDistributions: false });
-                const indivBuffer = new Uint8Array(indivPdf.output('arraybuffer'));
+                const indivBuffer = Buffer.from(indivPdf.output('arraybuffer'));
 
                 console.log(`[Manual Report] Sending to ${email}...`);
                 await resend.emails.send({
                     from: 'Kairos Team <notificaciones@kairoscompany.es>',
                     to: [email],
-                    subject: `📊 Reporte Especial Kairos: CIERRE ANUAL 2025`,
+                    subject: `📊 Tu Resumen Global Kairos 2025`,
                     html: `
                         <p>Hola,</p>
-                        <p>Adjuntamos el resumen de impacto y conocimiento de todo el año 2025:</p>
-                        <ol>
-                            <li><b>Resumen Anual de Equipo:</b> Vista consolidada de 2025.</li>
-                            <li><b>Tus Indicadores Anuales:</b> Tu resumen personal de impacto (CV, LP, CP).</li>
-                            <li><b>Distribución Clockify Anual:</b> Desglose de horas por proyecto durante todo el año.</li>
-                        </ol>
+                        <p>Adjuntamos tus reportes de indicadores y el resumen del equipo correspondientes a todo el año 2025.</p>
                         <p>¡Seguimos haciendo historia!</p>
                     `,
                     attachments: [
-                        { filename: `1_Resumen_Equipo_2025.pdf`, content: teamBuffer as any },
-                        { filename: `2_Tus_Indicadores_2025_${userKey}.pdf`, content: indivBuffer as any },
-                        { filename: `3_Distribucion_Clockify_2025.pdf`, content: clockBuffer as any }
+                        { filename: `1_Resumen_Equipo_2025.pdf`, content: teamBuffer },
+                        { filename: `2_Tus_Indicadores_2025_${userKey}.pdf`, content: indivBuffer },
+                        { filename: `3_Distribucion_Clockify_2025.pdf`, content: clockBuffer }
                     ]
                 });
                 await sleep(500); // Respect Resend rate limits
             } catch (err) {
-                console.error(`[Manual Report] Error for ${email}:`, err);
+                console.error(`[Manual Report] Error sending to ${email}:`, err);
             }
         }
 
         // 5. Corporate report to admins
         const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
-        const corpBuffer = new Uint8Array(corpPdf.output('arraybuffer'));
+        const corpBuffer = Buffer.from(corpPdf.output('arraybuffer'));
 
         await resend.emails.send({
             from: 'Kairos Admin <notificaciones@kairoscompany.es>',
             to: ADMIN_RECIPIENTS,
             subject: `🌎 CIERRE GLOBAL KAIROS 2025`,
             html: `<p>Resumen ejecutivo del año 2025 completo para administradores.</p>`,
-            attachments: [{ filename: 'Control_Global_Anual_2025.pdf', content: corpBuffer as any }]
+            attachments: [{ filename: 'Control_Global_Anual_2025.pdf', content: corpBuffer }]
         });
 
         return new Response(JSON.stringify({ success: true, message: `Reporte 2025 enviado a ${WHITELIST.length} miembros.` }), { status: 200 });
