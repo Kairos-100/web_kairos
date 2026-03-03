@@ -269,19 +269,49 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         };
                     });
 
+                // Group and sum by user and date to avoid "second time" update error
+                const grouped = recordsToInsert.reduce((acc: Record<string, any>, curr) => {
+                    const key = `${curr.user_email}_${curr.date}`;
+                    if (!acc[key]) {
+                        acc[key] = { ...curr };
+                    } else {
+                        acc[key].cv += curr.cv;
+                        acc[key].cp += curr.cp;
+                        acc[key].sharing += curr.sharing;
+                        acc[key].revenue += curr.revenue;
+                        acc[key].profit += curr.profit;
+                        acc[key].bp += curr.bp;
+                        // For metadata, use the one that isn't empty, preferring the new one
+                        if (curr.cv_title) acc[key].cv_title = curr.cv_title;
+                        if (curr.cv_description) acc[key].cv_description = curr.cv_description;
+                        if (curr.cv_pdf_url) acc[key].cv_pdf_url = curr.cv_pdf_url;
+                        if (curr.sharing_title) acc[key].sharing_title = curr.sharing_title;
+                        if (curr.sharing_description) acc[key].sharing_description = curr.sharing_description;
+                        if (curr.sharing_pdf_url) acc[key].sharing_pdf_url = curr.sharing_pdf_url;
+                        if (curr.cp_title) acc[key].cp_title = curr.cp_title;
+                        if (curr.cp_description) acc[key].cp_description = curr.cp_description;
+                        if (curr.cp_pdf_url) acc[key].cp_pdf_url = curr.cp_pdf_url;
+                        if (curr.bp_title) acc[key].bp_title = curr.bp_title;
+                        if (curr.bp_pdf_url) acc[key].bp_pdf_url = curr.bp_pdf_url;
+                    }
+                    return acc;
+                }, {});
+
+                const finalRecordsToInsert = Object.values(grouped);
+
                 // Check for existing records to show a summary
                 const { data: existingRecords } = await supabase
                     .from('metrics')
                     .select('user_email, date')
-                    .in('user_email', Array.from(new Set(recordsToInsert.map(r => r.user_email))))
-                    .in('date', Array.from(new Set(recordsToInsert.map(r => r.date))));
+                    .in('user_email', Array.from(new Set(finalRecordsToInsert.map(r => r.user_email))))
+                    .in('date', Array.from(new Set(finalRecordsToInsert.map(r => r.date))));
 
                 const existingSet = new Set(existingRecords?.map(r => `${r.user_email}_${r.date}`));
-                const updatesCount = recordsToInsert.filter(r => existingSet.has(`${r.user_email}_${r.date}`)).length;
-                const newCount = recordsToInsert.length - updatesCount;
+                const updatesCount = finalRecordsToInsert.filter(r => existingSet.has(`${r.user_email}_${r.date}`)).length;
+                const newCount = finalRecordsToInsert.length - updatesCount;
 
                 if (updatesCount > 0) {
-                    const confirmUpdate = window.confirm(`Se han detectado ${updatesCount} registros que ya existen. Se actualizarán con los nuevos datos. Los otros ${newCount} registros son nuevos. ¿Deseas continuar?`);
+                    const confirmUpdate = window.confirm(`Se han detectado ${updatesCount} registros que ya existen. Se actualizarán con los nuevos datos agregados. Los otros ${newCount} registros son nuevos. ¿Deseas continuar?`);
                     if (!confirmUpdate) {
                         setIsUploading(false);
                         return;
@@ -290,7 +320,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
                 const { error: dbError } = await supabase
                     .from('metrics')
-                    .upsert(recordsToInsert, { onConflict: 'user_email,date' });
+                    .upsert(finalRecordsToInsert, { onConflict: 'user_email,date' });
 
                 if (dbError) throw dbError;
 
