@@ -222,8 +222,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         sharing_description: row.sharing_description || '',
                         cp_title: row.cp_title || '',
                         cp_description: row.cp_description || '',
-                        bp_title: row.bp_title || '',
-                        bp_description: row.bp_description || ''
+                        bp_title: row.bp_title || ''
                     };
                 });
 

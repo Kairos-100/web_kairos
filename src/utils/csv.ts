@@ -54,8 +54,6 @@ export const parseCSV = (text: string) => {
         'categoriacp': 'cp_category',
         'linkcp': 'cp_link',
         'titulobp': 'bp_title',
-        'categoriabp': 'bp_category',
-        'categoriebp': 'bp_category',
         'linkbp': 'bp_link',
         'marcatemporal': 'timestamp',
         'marcastemporales': 'timestamp'
@@ -104,9 +102,6 @@ export const parseCSV = (text: string) => {
         }
         if (row['sharing_link'] || row['sharing_category']) {
             row['sharing_description'] = `${row['sharing_category'] || ''} ${row['sharing_link'] || ''}`.trim();
-        }
-        if (row['bp_link'] || row['bp_category']) {
-            row['bp_description'] = `${row['bp_category'] || ''} ${row['bp_link'] || ''}`.trim();
         }
 
         return row;

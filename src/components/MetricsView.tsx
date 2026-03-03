@@ -119,10 +119,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             if (m.cv_pdf_url && !grouped[user].cv_pdf_urls.includes(m.cv_pdf_url)) grouped[user].cv_pdf_urls.push(m.cv_pdf_url);
             if (m.sharing_pdf_url && !grouped[user].sharing_pdf_urls.includes(m.sharing_pdf_url)) grouped[user].sharing_pdf_urls.push(m.sharing_pdf_url);
             if (m.cp_pdf_url && !grouped[user].cp_pdf_urls.includes(m.cp_pdf_url)) grouped[user].cp_pdf_urls.push(m.cp_pdf_url);
-            if (m.bp_pdf_url && !grouped[user].bp_pdf_urls.includes(m.bp_pdf_url)) {
-                if (!grouped[user].bp_pdf_urls) grouped[user].bp_pdf_urls = [];
-                grouped[user].bp_pdf_urls.push(m.bp_pdf_url);
-            }
 
             logs[user].push(m);
         });
@@ -200,7 +196,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 cv_pdf: m.cv_pdf_url,
                 cp_pdf: m.cp_pdf_url,
                 sharing_pdf: m.sharing_pdf_url,
-                bp_pdf: m.bp_pdf_url,
                 cv_title: m.cv_title,
                 cv_desc: m.cv_description,
                 sharing_title: m.sharing_title,
@@ -208,7 +203,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 cp_title: m.cp_title,
                 cp_desc: m.cp_description,
                 bp_title: m.bp_title,
-                bp_desc: m.bp_description,
                 rawDate: m.date
             })),
             ...userEssays.map(e => ({
