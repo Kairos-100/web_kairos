@@ -92,11 +92,11 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
             ...metrics.map(m => ({
                 id: m.id,
                 title: m.cv_title || m.sharing_title || m.cp_title || m.bp_title || `Métricas - ${m.user_email.split('@')[0]}`,
-                description: m.cv_description || m.sharing_description || m.cp_description || m.bp_description,
+                description: m.cv_description || m.sharing_description || m.cp_description,
                 author: m.user_email,
                 date: m.date,
                 category: m.cv > 0 ? 'Comercial' : m.sharing > 0 ? 'Comunidad' : m.bp > 0 ? 'Aprendizaje' : 'Iniciativa',
-                pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || m.bp_pdf_url || '',
+                pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || '',
                 type: (m.cv > 0 ? 'cv' : m.sharing > 0 ? 'sharing' : m.bp > 0 ? 'bp' : 'cp') as any,
                 isMetric: true,
                 points: m.cv > 0 ? `+${m.cv} CV` : m.sharing > 0 ? `+${m.sharing} SH` : m.bp > 0 ? `+${m.bp} BP` : m.cp > 0 ? `+${m.cp} CP` : undefined
