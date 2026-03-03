@@ -191,40 +191,42 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
             if (activeTab === 'bulk') {
                 if (csvData.length === 0) throw new Error('No hay datos para importar.');
 
-                const recordsToInsert = csvData.map(row => {
-                    const d = row.date?.trim();
-                    let formattedDate = d;
+                const recordsToInsert = csvData
+                    .filter(row => row.date && row.date.trim() !== '' && row.user_email && row.user_email.trim() !== '')
+                    .map(row => {
+                        const d = row.date?.trim();
+                        let formattedDate = d;
 
-                    // Try to normalize date if it's DD/MM/YYYY or DD/MM/YYYY HH:MM:SS
-                    if (d && d.includes('/') && !d.includes('-')) {
-                        const parts = d.split('/');
-                        if (parts.length === 3) {
-                            const day = parts[0];
-                            const month = parts[1];
-                            // If year contains time (e.g. "2025 13:28:54"), take only the year
-                            const yearPart = parts[2].split(' ')[0];
-                            formattedDate = `${yearPart}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                        // Try to normalize date if it's DD/MM/YYYY or DD/MM/YYYY HH:MM:SS
+                        if (d && d.includes('/') && !d.includes('-')) {
+                            const parts = d.split('/');
+                            if (parts.length === 3) {
+                                const day = parts[0];
+                                const month = parts[1];
+                                // If year contains time (e.g. "2025 13:28:54"), take only the year
+                                const yearPart = parts[2].split(' ')[0];
+                                formattedDate = `${yearPart}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            }
                         }
-                    }
 
-                    return {
-                        user_email: row.user_email,
-                        date: formattedDate,
-                        cv: parseInt(row.cv) || 0,
-                        cp: parseInt(row.cp) || 0,
-                        sharing: parseInt(row.sharing) || 0,
-                        revenue: parseFloat(row.revenue) || 0,
-                        profit: parseFloat(row.profit) || 0,
-                        bp: parseInt(row.bp) || 0,
-                        cv_title: row.cv_title || '',
-                        cv_description: row.cv_description || '',
-                        sharing_title: row.sharing_title || '',
-                        sharing_description: row.sharing_description || '',
-                        cp_title: row.cp_title || '',
-                        cp_description: row.cp_description || '',
-                        bp_title: row.bp_title || ''
-                    };
-                });
+                        return {
+                            user_email: row.user_email,
+                            date: formattedDate,
+                            cv: parseInt(row.cv) || 0,
+                            cp: parseInt(row.cp) || 0,
+                            sharing: parseInt(row.sharing) || 0,
+                            revenue: parseFloat(row.revenue) || 0,
+                            profit: parseFloat(row.profit) || 0,
+                            bp: parseInt(row.bp) || 0,
+                            cv_title: row.cv_title || '',
+                            cv_description: row.cv_description || '',
+                            sharing_title: row.sharing_title || '',
+                            sharing_description: row.sharing_description || '',
+                            cp_title: row.cp_title || '',
+                            cp_description: row.cp_description || '',
+                            bp_title: row.bp_title || ''
+                        };
+                    });
 
                 const { error: dbError } = await supabase
                     .from('metrics')
