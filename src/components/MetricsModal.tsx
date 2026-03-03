@@ -197,15 +197,35 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         const d = row.date?.trim();
                         let formattedDate = d;
 
-                        // Try to normalize date if it's DD/MM/YYYY or DD/MM/YYYY HH:MM:SS
+                        // Try to normalize date if it's DD/MM/YYYY, MM/DD/YYYY, or partial DD/MM
                         if (d && d.includes('/') && !d.includes('-')) {
                             const parts = d.split('/');
+                            const currentYear = new Date().getFullYear().toString();
+
                             if (parts.length === 3) {
-                                const day = parts[0];
-                                const month = parts[1];
-                                // If year contains time (e.g. "2025 13:28:54"), take only the year
-                                const yearPart = parts[2].split(' ')[0];
-                                formattedDate = `${yearPart}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                                // Default Spanish: DD/MM/YYYY
+                                let day = parts[0];
+                                let month = parts[1];
+                                let year = parts[2].split(' ')[0];
+
+                                // If month > 12, it must be American MM/DD/YYYY
+                                if (parseInt(month) > 12) {
+                                    day = parts[1];
+                                    month = parts[0];
+                                }
+
+                                formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            } else if (parts.length === 2) {
+                                // Handle DD/MM or MM/DD (assume DD/MM if first part > 12)
+                                let p1 = parts[0];
+                                let p2 = parts[1].split(' ')[0];
+                                if (parseInt(p1) > 12) {
+                                    // p1 is day, p2 is month
+                                    formattedDate = `${currentYear}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
+                                } else {
+                                    // Default to Spanish (p1 is day, p2 is month)
+                                    formattedDate = `${currentYear}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
+                                }
                             }
                         }
 
