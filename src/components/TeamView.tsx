@@ -15,7 +15,7 @@ import {
 import type { MetricEntry, Essay } from '../constants';
 import { DocumentExplorer, type UnifiedDocument } from './DocumentExplorer';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
-import { CLOCKIFY_USER_MAP } from '../constants';
+import { CLOCKIFY_USER_MAP, WHITELIST } from '../constants';
 import { ReportPanel } from './ReportPanel';
 
 interface TeamViewProps {
@@ -67,6 +67,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
         const grouped: Record<string, any> = {};
 
         metrics.forEach(m => {
+            if (!WHITELIST.includes(m.user_email)) return;
             const user = m.user_email.split('@')[0];
             if (!grouped[user]) {
                 grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
@@ -79,6 +80,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
         });
 
         essays.forEach(e => {
+            if (!WHITELIST.includes(e.author)) return;
             const user = e.author.split('@')[0];
             if (!grouped[user]) {
                 grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
