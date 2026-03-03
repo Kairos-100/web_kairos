@@ -92,16 +92,20 @@ export const parseCSV = (text: string) => {
             const cleanHeader = normalizeHeader(rawHeader);
             const value = values[index] || '';
 
+            const isIndicatorCandidate = (h: string) =>
+                h === 'cv' || h === 'cp' || h === 'sh' || h === 'bp' ||
+                h.includes('numero') || h.includes('cant') || h.includes('ptos') || h.includes('puntos');
+
             if (headersMapping[cleanHeader]) {
                 const mappedKey = headersMapping[cleanHeader];
                 row[mappedKey] = value;
-            } else if (cleanHeader.includes('cp') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
+            } else if (isIndicatorCandidate(cleanHeader) && cleanHeader.includes('cp') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalCP += parseInt(value.replace(/[^0-9]/g, '')) || 0;
-            } else if (cleanHeader.includes('cv') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
+            } else if (isIndicatorCandidate(cleanHeader) && cleanHeader.includes('cv') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalCV += parseInt(value.replace(/[^0-9]/g, '')) || 0;
-            } else if ((cleanHeader.includes('sharing') || cleanHeader.includes('sh')) && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
+            } else if (isIndicatorCandidate(cleanHeader) && (cleanHeader.includes('sharing') || cleanHeader.includes('sh')) && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalSH += parseInt(value.replace(/[^0-9]/g, '')) || 0;
-            } else if (cleanHeader.includes('bp') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
+            } else if (isIndicatorCandidate(cleanHeader) && cleanHeader.includes('bp') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalBP += parseInt(value.replace(/[^0-9]/g, '')) || 0;
             } else {
                 row[cleanHeader] = value;
