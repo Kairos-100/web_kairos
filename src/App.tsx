@@ -96,7 +96,8 @@ const App: React.FC = () => {
         const mappedData = data.map((e: any) => ({
           ...e,
           readingTime: e.reading_time,
-          pdfUrl: e.pdf_url
+          pdfUrl: e.pdf_url,
+          category: e.category === 'Otros' ? 'Wellbeing' : e.category
         }));
         setEssays(mappedData);
       }

@@ -169,7 +169,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                     doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' :
                                         doc.type === 'bp' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'
                                 }`}>
-                                {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
+                                {doc.category}
                             </span>
                             <div className="flex items-center space-x-1">
                                 {canManage && (
@@ -264,7 +264,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                             <span className="text-sm font-bold text-kairos-navy group-hover:text-blue-600 transition-colors">{doc.title}</span>
                                             {doc.description && <span className="text-[10px] text-gray-400 font-medium line-clamp-1 italic">{doc.description}</span>}
                                             <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight mt-0.5">
-                                                {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
+                                                {doc.category}
                                             </span>
                                         </div>
                                     </td>
