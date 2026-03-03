@@ -201,6 +201,14 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 cp_pdf: m.cp_pdf_url,
                 sharing_pdf: m.sharing_pdf_url,
                 bp_pdf: m.bp_pdf_url,
+                cv_title: m.cv_title,
+                cv_desc: m.cv_description,
+                sharing_title: m.sharing_title,
+                sharing_desc: m.sharing_description,
+                cp_title: m.cp_title,
+                cp_desc: m.cp_description,
+                bp_title: m.bp_title,
+                bp_desc: m.bp_description,
                 rawDate: m.date
             })),
             ...userEssays.map(e => ({
