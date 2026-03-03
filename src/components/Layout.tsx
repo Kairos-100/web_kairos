@@ -73,7 +73,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
             {/* Sidebar */}
             <aside className={cn(
-                "w-64 geometric-bg text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:translate-x-0 lg:static lg:h-screen",
+                "w-64 geometric-bg text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:translate-x-0 lg:h-screen",
                 isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <div className="p-8 hidden lg:block">
@@ -168,7 +168,7 @@ export const Layout: React.FC<LayoutProps> = ({
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 md:p-8 min-h-screen">
+            <main className="flex-1 lg:ml-64 p-4 md:p-8 min-h-screen">
                 <div className="max-w-6xl mx-auto">
                     {children}
                 </div>
