@@ -23,9 +23,10 @@ export const CLOCKIFY_USER_MAP: Record<string, string> = {
     "jimena.gonzalez-tarr": "Jimenagtleinn",
     "claudia.pinna": "Claudia Pinna Jurado",
     "marc.cano": "Marc Cano",
-    "paula.gascon": "Paula Gascón Escobedo",
+    "paula.gascon": "Paula Gasc?n Escobedo",
     "angela.cuevas": "Angela",
-    "carlos.ortas": "Caorpa"
+    "carlos.ortas": "Caorpa",
+    "carlos.pereza": "Carlos Pérez Aguado"
 };
 
 export const CATEGORIES = [
