@@ -55,6 +55,7 @@ export const parseCSV = (text: string) => {
         'linkcp': 'cp_link',
         'titulobp': 'bp_title',
         'categoriabp': 'bp_category',
+        'categoriebp': 'bp_category',
         'linkbp': 'bp_link',
         'marcatemporal': 'timestamp',
         'marcastemporales': 'timestamp'
