@@ -351,6 +351,7 @@ const App: React.FC = () => {
                 onEditEssay={handleEditEssay}
                 onDeleteEssay={handleDeleteEssay}
                 onDeleteMetric={handleDeleteMetric}
+                onlyWithPdf={true}
               />
             ) : (
               <motion.div key="reader" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto">

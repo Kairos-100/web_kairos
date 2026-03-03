@@ -45,6 +45,7 @@ interface DocumentExplorerProps {
     hideSearch?: boolean;
     title?: string;
     currentUserEmail?: string | null;
+    onlyWithPdf?: boolean;
 }
 
 export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
@@ -60,59 +61,66 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
     onDeleteMetric,
     hideSearch = false,
     title,
-    currentUserEmail
+    currentUserEmail,
+    onlyWithPdf = false
 }) => {
     const [viewMode, setViewMode] = useState<'grid' | 'list' | 'pdf'>('grid');
 
     const allDocuments = useMemo(() => {
+        let docs: UnifiedDocument[] = [];
+
         if (initialDocuments) {
-            return initialDocuments.filter(doc =>
+            docs = initialDocuments;
+        } else {
+            docs = [
+                ...essays.map(e => ({
+                    id: e.id,
+                    title: e.title,
+                    description: e.category,
+                    author: e.author,
+                    date: e.date,
+                    category: e.category,
+                    pdfUrl: e.pdfUrl || '',
+                    type: 'tesis' as const,
+                    rawContent: e.content,
+                    tags: e.tags,
+                    isMetric: false
+                })),
+                ...metrics.map(m => ({
+                    id: m.id,
+                    title: m.cv_title || m.sharing_title || m.cp_title || m.bp_title || `Métricas - ${m.user_email.split('@')[0]}`,
+                    description: m.cv_description || m.sharing_description || m.cp_description,
+                    author: m.user_email,
+                    date: m.date,
+                    category: m.cv > 0 ? 'Comercial' : m.sharing > 0 ? 'Comunidad' : m.bp > 0 ? 'Aprendizaje' : 'Iniciativa',
+                    pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || '',
+                    type: (m.cv > 0 ? 'cv' : m.sharing > 0 ? 'sharing' : m.bp > 0 ? 'bp' : 'cp') as any,
+                    isMetric: true,
+                    points: m.cv > 0 ? `+${m.cv} CV` : m.sharing > 0 ? `+${m.sharing} SH` : m.bp > 0 ? `+${m.bp} BP` : m.cp > 0 ? `+${m.cp} CP` : undefined
+                }))
+            ];
+        }
+
+        // Apply filters
+        return docs.filter(doc => {
+            // Search filter
+            const matchesSearch =
                 doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 doc.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 doc.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (doc.rawContent && doc.rawContent.toLowerCase().includes(searchTerm.toLowerCase()))
-            );
-        }
+                (doc.rawContent && doc.rawContent.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        const unified: UnifiedDocument[] = [
-            ...essays.map(e => ({
-                id: e.id,
-                title: e.title,
-                description: e.category,
-                author: e.author,
-                date: e.date,
-                category: e.category,
-                pdfUrl: e.pdfUrl || '',
-                type: 'tesis' as const,
-                rawContent: e.content,
-                tags: e.tags,
-                isMetric: false
-            })),
-            ...metrics.map(m => ({
-                id: m.id,
-                title: m.cv_title || m.sharing_title || m.cp_title || m.bp_title || `Métricas - ${m.user_email.split('@')[0]}`,
-                description: m.cv_description || m.sharing_description || m.cp_description,
-                author: m.user_email,
-                date: m.date,
-                category: m.cv > 0 ? 'Comercial' : m.sharing > 0 ? 'Comunidad' : m.bp > 0 ? 'Aprendizaje' : 'Iniciativa',
-                pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || '',
-                type: (m.cv > 0 ? 'cv' : m.sharing > 0 ? 'sharing' : m.bp > 0 ? 'bp' : 'cp') as any,
-                isMetric: true,
-                points: m.cv > 0 ? `+${m.cv} CV` : m.sharing > 0 ? `+${m.sharing} SH` : m.bp > 0 ? `+${m.bp} BP` : m.cp > 0 ? `+${m.cp} CP` : undefined
-            }))
-        ];
+            if (!matchesSearch) return false;
 
-        return unified.filter(doc =>
-            doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            doc.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            doc.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (doc.rawContent && doc.rawContent.toLowerCase().includes(searchTerm.toLowerCase()))
-        ).sort((a, b) => {
+            // Evidence filter
+            if (onlyWithPdf && !doc.pdfUrl) return false;
+
+            return true;
+        }).sort((a, b) => {
             return parseDate(b.date).getTime() - parseDate(a.date).getTime();
         });
-    }, [essays, metrics, initialDocuments, searchTerm]);
+    }, [essays, metrics, initialDocuments, searchTerm, onlyWithPdf]);
 
     const isOwner = (authorEmail: string) => {
         if (!currentUserEmail) return false;
