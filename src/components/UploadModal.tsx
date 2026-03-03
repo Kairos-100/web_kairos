@@ -3,7 +3,6 @@ import { X, Search, CheckCircle2, Eye, Edit3, Tag as TagIcon, FileUp, FileText, 
 import { WHITELIST, CATEGORIES, CONTRIBUTION_TYPES } from '../constants';
 import type { Essay, ContributionType } from '../constants';
 import { motion } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
 import { ingestDocument } from '../lib/ai';
 import { notifyNewEssay } from '../lib/notifications';
@@ -22,7 +21,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [error, setError] = useState('');
     const [title, setTitle] = useState(editEssay?.title || '');
     const [category, setCategory] = useState(editEssay?.category || CATEGORIES[0]);
-    const [content, setContent] = useState(editEssay?.content || '');
+    const content = editEssay?.content || '';
     const [tags, setTags] = useState(editEssay?.tags?.join(', ') || '');
     const [pdfUrl, setPdfUrl] = useState<string | undefined>(editEssay?.pdfUrl);
     const [pdfName, setPdfName] = useState<string | undefined>(editEssay?.pdfUrl ? 'PDF Actual' : undefined);
@@ -414,7 +413,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                                 <span className="text-xs font-bold text-kairos-navy text-green-700">PDF Adjunto preparado</span>
                                             </div>
                                         )}
-                                        <ReactMarkdown>{content || '*Sin resumen para previsualizar*'}</ReactMarkdown>
+                                        <p className="text-gray-400 italic text-sm">El resumen ha sido desactivado. Solo se subirán el archivo PDF, el título y sus etiquetas.</p>
                                     </div>
                                 </div>
                             )}
