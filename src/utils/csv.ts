@@ -12,25 +12,41 @@ export const parseCSV = (text: string) => {
 
     const rawHeaders = firstLine.split(delimiter).map(h => h.trim());
 
-    // Fuzzy mapping: remove symbols, spaces and normalize
-    const normalizeHeader = (h: string) => h.toLowerCase().replace(/[¡!¿?\-]/g, '').replace(/\s+/g, '').trim();
+    // Aggressive normalization: remove everything except letters and numbers
+    const normalizeHeader = (h: string) => h.toLowerCase()
+        .replace(/[áäâà]/g, 'a')
+        .replace(/[éëêè]/g, 'e')
+        .replace(/[íïîì]/g, 'i')
+        .replace(/[óöôò]/g, 'o')
+        .replace(/[úüûù]/g, 'u')
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
 
     const headersMapping: Record<string, string> = {
         'fecha': 'date',
-        'díamesaño': 'date',
+        'diamesano': 'date',
         'emails': 'user_email',
         'email': 'user_email',
         'numerocv': 'cv',
+        'cantcv': 'cv',
+        'ncv': 'cv',
         'cvs': 'cv',
         'cv': 'cv',
         'numerodesharings': 'sharing',
         'numerosharing': 'sharing',
+        'cantsharing': 'sharing',
+        'nsharing': 'sharing',
         'sharings': 'sharing',
         'sharing': 'sharing',
+        'sh': 'sharing',
         'numerodecp': 'cp',
+        'cantcp': 'cp',
+        'ncp': 'cp',
         'cps': 'cp',
         'cp': 'cp',
         'numerodebp': 'bp',
+        'cantbp': 'bp',
+        'nbp': 'bp',
         'learningpoints': 'bp',
         'bp': 'bp',
         'facturacion': 'revenue',
@@ -45,9 +61,10 @@ export const parseCSV = (text: string) => {
         'categoriacv': 'cv_category',
         'linkcv': 'cv_link',
         'tituloshering': 'sharing_title',
+        'titulosharing': 'sharing_title',
         'tituloshari': 'sharing_title',
         'titulosh': 'sharing_title',
-        'titulosharing': 'sharing_title',
+        'sharingtitle': 'sharing_title',
         'categoriasharing': 'sharing_category',
         'linksharing': 'sharing_link',
         'titulocp': 'cp_title',
@@ -56,9 +73,11 @@ export const parseCSV = (text: string) => {
         'titulobp': 'bp_title',
         'bptitle': 'bp_title',
         'titulodebp': 'bp_title',
+        'learningpointstitle': 'bp_title',
         'linkbp': 'bp_link',
+        'bplink': 'bp_link',
         'marcatemporal': 'timestamp',
-        'marcastemporales': 'timestamp'
+        'timestamp': 'timestamp'
     };
 
     const data = lines.slice(1).map(line => {
@@ -76,13 +95,13 @@ export const parseCSV = (text: string) => {
             if (headersMapping[cleanHeader]) {
                 const mappedKey = headersMapping[cleanHeader];
                 row[mappedKey] = value;
-            } else if (cleanHeader.includes('cp') && cleanHeader.includes('numero')) {
+            } else if (cleanHeader.includes('cp') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalCP += parseInt(value.replace(/[^0-9]/g, '')) || 0;
-            } else if (cleanHeader.includes('cv') && cleanHeader.includes('numero')) {
+            } else if (cleanHeader.includes('cv') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalCV += parseInt(value.replace(/[^0-9]/g, '')) || 0;
-            } else if ((cleanHeader.includes('sharing') || cleanHeader.includes('sh')) && cleanHeader.includes('numero')) {
+            } else if ((cleanHeader.includes('sharing') || cleanHeader.includes('sh')) && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalSH += parseInt(value.replace(/[^0-9]/g, '')) || 0;
-            } else if (cleanHeader.includes('bp') && cleanHeader.includes('numero')) {
+            } else if (cleanHeader.includes('bp') && !cleanHeader.includes('titul') && !cleanHeader.includes('link')) {
                 totalBP += parseInt(value.replace(/[^0-9]/g, '')) || 0;
             } else {
                 row[cleanHeader] = value;

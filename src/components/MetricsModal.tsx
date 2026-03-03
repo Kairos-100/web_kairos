@@ -229,15 +229,32 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                             }
                         }
 
+                        const cleanNum = (val: any) => {
+                            if (!val) return 0;
+                            // Remove currency symbols and non-numeric except dot/comma
+                            const s = val.toString().replace(/[^\d.,\-]/g, '');
+                            // If it has both comma and dot, or just comma as decimal
+                            if (s.includes(',') && s.includes('.')) {
+                                // Assume thousands separator is comma or dot depending on position
+                                // This is tricky, but let's assume European if comma is last separator
+                                if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                                    return parseFloat(s.replace(/\./g, '').replace(',', '.'));
+                                } else {
+                                    return parseFloat(s.replace(/,/g, ''));
+                                }
+                            }
+                            return parseFloat(s.replace(',', '.')) || 0;
+                        };
+
                         return {
                             user_email: row.user_email,
                             date: formattedDate,
-                            cv: parseInt(row.cv) || 0,
-                            cp: parseInt(row.cp) || 0,
-                            sharing: parseInt(row.sharing) || 0,
-                            revenue: parseFloat(row.revenue) || 0,
-                            profit: parseFloat(row.profit) || 0,
-                            bp: parseInt(row.bp) || 0,
+                            cv: parseInt(row.cv?.toString().replace(/\D/g, '')) || 0,
+                            cp: parseInt(row.cp?.toString().replace(/\D/g, '')) || 0,
+                            sharing: parseInt(row.sharing?.toString().replace(/\D/g, '')) || 0,
+                            revenue: cleanNum(row.revenue),
+                            profit: cleanNum(row.profit),
+                            bp: parseInt(row.bp?.toString().replace(/\D/g, '')) || 0,
                             cv_title: row.cv_title || '',
                             cv_description: row.cv_description || '',
                             cv_pdf_url: row.cv_pdf_url || '',
