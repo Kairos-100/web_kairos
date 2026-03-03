@@ -13,6 +13,7 @@ import { DocumentExplorer } from './components/DocumentExplorer';
 import { KairosAI } from './components/KairosAI';
 import { supabase } from './lib/supabase';
 import type { Essay, Comment, MetricEntry } from './constants';
+import { WHITELIST } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -98,7 +99,7 @@ const App: React.FC = () => {
           readingTime: e.reading_time,
           pdfUrl: e.pdf_url,
           category: e.category === 'Otros' ? 'Wellbeing' : e.category
-        }));
+        })).filter((e: any) => WHITELIST.includes(e.author));
         setEssays(mappedData);
       }
     } catch (err) {
@@ -119,7 +120,10 @@ const App: React.FC = () => {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      if (data) setMetrics(data);
+      if (data) {
+        const filteredData = data.filter((m: any) => WHITELIST.includes(m.user_email));
+        setMetrics(filteredData);
+      }
     } catch (err) {
       console.error('Error fetching metrics from Supabase:', err);
     }
