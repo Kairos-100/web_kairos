@@ -14,7 +14,11 @@ export interface ReportData {
     revenue: number;
     profit: number;
     time: number; // in seconds
-    projects: { name: string, duration: number }[];
+    projects: {
+        name: string,
+        duration: number,
+        entries?: { description: string, duration: number, date: string }[]
+    }[];
 }
 
 export function aggregateDataForRange(
@@ -90,10 +94,23 @@ export function aggregateDataForRange(
             if (u.projects) {
                 u.projects.forEach((p) => {
                     const existing = grouped[matchedUser].projects.find(ep => ep.name === p.projectName);
+                    const formattedEntries = (p.detailedEntries || []).map(de => ({
+                        description: de.description,
+                        duration: de.time,
+                        date: de.date
+                    }));
+
                     if (existing) {
                         existing.duration += p.time || 0;
+                        if (formattedEntries.length > 0) {
+                            existing.entries = [...(existing.entries || []), ...formattedEntries];
+                        }
                     } else {
-                        grouped[matchedUser].projects.push({ name: p.projectName, duration: p.time || 0 });
+                        grouped[matchedUser].projects.push({
+                            name: p.projectName,
+                            duration: p.time || 0,
+                            entries: formattedEntries
+                        });
                     }
                 });
             }
@@ -245,7 +262,42 @@ export const generatePDF = (
                     }
                 });
 
-                y = (doc as any).lastAutoTable.finalY + 10;
+                y = (doc as any).lastAutoTable.finalY + 2;
+
+                // --- Detailed Entries Sub-section ---
+                user.projects
+                    .filter(p => p.entries && p.entries.length > 0)
+                    .forEach(p => {
+                        if (y > 260) { doc.addPage(); y = 20; }
+
+                        const entryData = p.entries!.map(e => [
+                            `  - ${e.description}`,
+                            `${Math.floor(e.duration / 3600)}h ${Math.floor((e.duration % 3600) / 60)}m`,
+                            new Date(e.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+                        ]);
+
+                        doc.setFontSize(6);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(120, 120, 120);
+                        doc.text(`Tareas: ${p.name}`, 25, y + 4);
+                        y += 6;
+
+                        autotableFunc(doc, {
+                            startY: y,
+                            body: entryData,
+                            theme: 'plain',
+                            styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100] },
+                            margin: { left: 30 },
+                            columnStyles: {
+                                0: { cellWidth: 80 },
+                                1: { halign: 'right', cellWidth: 20 },
+                                2: { halign: 'right', cellWidth: 20 }
+                            }
+                        });
+                        y = (doc as any).lastAutoTable.finalY + 4;
+                    });
+
+                y += 5;
             }
         });
     }
