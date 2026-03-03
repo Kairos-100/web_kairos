@@ -106,7 +106,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         metrics.forEach(m => {
             const user = m.user_email.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
             }
             if (!logs[user]) logs[user] = [];
 
@@ -119,6 +119,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             if (m.cv_pdf_url && !grouped[user].cv_pdf_urls.includes(m.cv_pdf_url)) grouped[user].cv_pdf_urls.push(m.cv_pdf_url);
             if (m.sharing_pdf_url && !grouped[user].sharing_pdf_urls.includes(m.sharing_pdf_url)) grouped[user].sharing_pdf_urls.push(m.sharing_pdf_url);
             if (m.cp_pdf_url && !grouped[user].cp_pdf_urls.includes(m.cp_pdf_url)) grouped[user].cp_pdf_urls.push(m.cp_pdf_url);
+            if (m.bp_pdf_url && !grouped[user].bp_pdf_urls.includes(m.bp_pdf_url)) grouped[user].bp_pdf_urls.push(m.bp_pdf_url);
 
             logs[user].push(m);
         });
@@ -126,7 +127,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         essays.forEach(e => {
             const user = e.author.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
             }
             grouped[user].lp += e.points || 0;
         });
@@ -136,7 +137,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             allEssays.forEach(e => {
                 const user = e.author.split('@')[0];
                 if (!grouped[user]) {
-                    grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
+                    grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
                 }
                 if (!grouped[user].totalLp) grouped[user].totalLp = 0;
                 grouped[user].totalLp += e.points || 0;

@@ -220,11 +220,15 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                             bp: parseInt(row.bp) || 0,
                             cv_title: row.cv_title || '',
                             cv_description: row.cv_description || '',
+                            cv_pdf_url: row.cv_pdf_url || '',
                             sharing_title: row.sharing_title || '',
                             sharing_description: row.sharing_description || '',
+                            sharing_pdf_url: row.sharing_pdf_url || '',
                             cp_title: row.cp_title || '',
                             cp_description: row.cp_description || '',
-                            bp_title: row.bp_title || ''
+                            cp_pdf_url: row.cp_pdf_url || '',
+                            bp_title: row.bp_title || '',
+                            bp_pdf_url: row.bp_pdf_url || ''
                         };
                     });
 

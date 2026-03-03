@@ -95,6 +95,12 @@ export const parseCSV = (text: string) => {
         row['sharing'] = (parseInt(row['sharing']) || totalSH).toString();
         row['bp'] = (parseInt(row['bp']) || totalBP).toString();
 
+        // Map links to PDF URLs for evidence display
+        if (row['cv_link']) row['cv_pdf_url'] = row['cv_link'];
+        if (row['sharing_link']) row['sharing_pdf_url'] = row['sharing_link'];
+        if (row['cp_link']) row['cp_pdf_url'] = row['cp_link'];
+        if (row['bp_link']) row['bp_pdf_url'] = row['bp_link'];
+
         // Assemble descriptions from links and categories if present
         if (row['cv_link'] || row['cv_category']) {
             row['cv_description'] = `${row['cv_category'] || ''} ${row['cv_link'] || ''}`.trim();
