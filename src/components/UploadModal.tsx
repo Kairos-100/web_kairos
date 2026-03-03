@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
 import { ingestDocument } from '../lib/ai';
 import { notifyNewEssay } from '../lib/notifications';
+import { getWorkspaceId, getProjects, createTimeEntry } from '../lib/clockify';
 
 interface UploadModalProps {
     onClose: () => void;
@@ -39,6 +40,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
     const [connectionStatus, setConnectionStatus] = useState<'testing' | 'ok' | 'fail'>('testing');
     const [showIncognitoWarning, setShowIncognitoWarning] = useState(false);
 
+    // Clockify states
+    const [syncToClockify, setSyncToClockify] = useState(false);
+    const [availableProjects, setAvailableProjects] = useState<{ id: string, name: string }[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+    const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
@@ -51,6 +59,21 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
             }
         };
         testConnection();
+
+        // Fetch Clockify projects
+        const initClockify = async () => {
+            setIsLoadingProjects(true);
+            const wId = await getWorkspaceId();
+            if (wId) {
+                setWorkspaceId(wId);
+                const projects = await getProjects(wId);
+                if (projects) {
+                    setAvailableProjects(projects);
+                }
+            }
+            setIsLoadingProjects(false);
+        };
+        initClockify();
     }, []);
 
     const handleAuth = (e: React.FormEvent) => {
@@ -176,6 +199,21 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                         ingestDocument(newData[0].id, 'essay', finalPdfUrl).catch(console.error);
                         notifyNewEssay(newEssay).catch(console.error);
                     }
+                }
+
+                // Clockify Sync
+                if (syncToClockify && workspaceId && selectedProjectId) {
+                    const durationInMinutes = Math.max(1, Math.ceil(content.split(/\s+/).length / 200));
+                    const end = new Date();
+                    const start = new Date(end.getTime() - durationInMinutes * 60 * 1000);
+
+                    await createTimeEntry(
+                        workspaceId,
+                        selectedProjectId,
+                        start,
+                        end,
+                        `Tesis: ${title}`
+                    ).catch(err => console.error('Failed to sync to Clockify:', err));
                 }
 
                 if (onSuccess) onSuccess();
@@ -401,6 +439,56 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                             <div className="mt-2 flex items-center space-x-1 text-blue-400">
                                                 <AlertCircle size={10} />
                                                 <span className="text-[9px] font-medium tracking-tight">Debes adjuntar el PDF para poder publicar.</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Clockify Sync Section */}
+                                    <div className="p-6 rounded-2xl bg-kairos-navy/5 border border-kairos-navy/10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center space-x-2">
+                                                <div className="p-2 bg-blue-100 rounded-lg">
+                                                    <img src="https://clockify.me/assets/images/favicon.ico" className="w-4 h-4" alt="Clockify" />
+                                                </div>
+                                                <span className="text-xs font-bold uppercase tracking-widest text-kairos-navy">Sincronizar con Clockify</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSyncToClockify(!syncToClockify)}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${syncToClockify ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                            >
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${syncToClockify ? 'translate-x-6' : 'translate-x-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        {syncToClockify && (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                {isLoadingProjects ? (
+                                                    <div className="flex items-center space-x-2 text-[10px] text-gray-400">
+                                                        <div className="w-3 h-3 border border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                                                        <span>Cargando proyectos...</span>
+                                                    </div>
+                                                ) : availableProjects.length > 0 ? (
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Seleccionar Proyecto</label>
+                                                        <select
+                                                            value={selectedProjectId}
+                                                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all text-sm"
+                                                            required={syncToClockify}
+                                                        >
+                                                            <option value="">-- Elige un proyecto --</option>
+                                                            {availableProjects.map(p => (
+                                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        <p className="mt-2 text-[9px] text-blue-500 italic">
+                                                            Se registrará una duración de {Math.max(1, Math.ceil(content.split(/\s+/).length / 200))} min basada en el tiempo de lectura.
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[10px] text-red-400 font-medium">No se encontraron proyectos en tu cuenta de Clockify.</p>
+                                                )}
                                             </div>
                                         )}
                                     </div>

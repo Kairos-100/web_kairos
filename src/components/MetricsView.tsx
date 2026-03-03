@@ -49,6 +49,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 }) => {
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
     const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+    const [expandedProject, setExpandedProject] = useState<string | null>(null);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -297,20 +298,62 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                             <div className="space-y-4">
                                 {clockifyUser.projects.map((proj, idx) => {
                                     const percentage = (proj.time / clockifyUser.totalTime) * 100;
+                                    const isExpanded = expandedProject === proj.projectName;
+
                                     return (
-                                        <div key={idx}>
-                                            <div className="flex justify-between items-end mb-1">
-                                                <span className="text-xs font-bold text-gray-700">{proj.projectName}</span>
-                                                <span className="text-[10px] font-black text-gray-400">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m ({percentage.toFixed(1)}%)</span>
-                                            </div>
-                                            <div className="h-2 bg-gray-50 rounded-full overflow-hidden">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${percentage}%` }}
-                                                    className="h-full rounded-full"
-                                                    style={{ backgroundColor: proj.color || '#3B82F6' }}
-                                                />
-                                            </div>
+                                        <div key={idx} className="group/project">
+                                            <button
+                                                onClick={() => setExpandedProject(isExpanded ? null : proj.projectName)}
+                                                className="w-full text-left bg-transparent hover:bg-gray-50/50 p-2 -m-2 rounded-xl transition-colors"
+                                            >
+                                                <div className="flex justify-between items-end mb-1">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-xs font-bold text-gray-700">{proj.projectName}</span>
+                                                        <ChevronDown size={12} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-gray-400">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m ({percentage.toFixed(1)}%)</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-50 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${percentage}%` }}
+                                                        className="h-full rounded-full"
+                                                        style={{ backgroundColor: proj.color || '#3B82F6' }}
+                                                    />
+                                                </div>
+                                            </button>
+
+                                            <AnimatePresence>
+                                                {isExpanded && proj.detailedEntries && proj.detailedEntries.length > 0 && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="mt-3 ml-4 space-y-2 border-l-2 border-gray-100 pl-4 mb-4"
+                                                    >
+                                                        {proj.detailedEntries.map((entry, eIdx) => (
+                                                            <div key={eIdx} className="flex justify-between items-start">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] font-bold text-gray-600 leading-tight">{entry.description}</span>
+                                                                    <span className="text-[8px] text-gray-400 font-medium">{new Date(entry.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                                                                </div>
+                                                                <span className="text-[10px] font-black text-blue-600 whitespace-nowrap ml-4">
+                                                                    {Math.floor(entry.time / 3600)}h {Math.floor((entry.time % 3600) / 60)}m
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                                {isExpanded && (!proj.detailedEntries || proj.detailedEntries.length === 0) && (
+                                                    <motion.p
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        className="text-[10px] text-gray-400 italic mt-2 ml-8 mb-4"
+                                                    >
+                                                        No hay registros detallados disponibles.
+                                                    </motion.p>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
                                     );
                                 })}
