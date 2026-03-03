@@ -344,7 +344,7 @@ const App: React.FC = () => {
             {!selectedEssayId ? (
               <DocumentExplorer
                 essays={essays}
-                metrics={metrics.filter(m => m.cv === 0)}
+                metrics={[]}
                 searchTerm={searchTerm}
                 onSelectEssay={setSelectedEssayId}
                 currentUserEmail={loggedInUser}
