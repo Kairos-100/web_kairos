@@ -24,7 +24,7 @@ export interface UnifiedDocument {
     date: string;
     category: string;
     pdfUrl: string;
-    type: 'tesis' | 'cv' | 'sharing' | 'cp';
+    type: 'tesis' | 'cv' | 'sharing' | 'cp' | 'bp';
     rawContent?: string;
     tags?: string[];
     isMetric?: boolean;
@@ -91,15 +91,15 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
             })),
             ...metrics.map(m => ({
                 id: m.id,
-                title: m.cv_title || m.sharing_title || m.cp_title || `Métricas - ${m.user_email.split('@')[0]}`,
-                description: m.cv_description || m.sharing_description || m.cp_description,
+                title: m.cv_title || m.sharing_title || m.cp_title || m.bp_title || `Métricas - ${m.user_email.split('@')[0]}`,
+                description: m.cv_description || m.sharing_description || m.cp_description || m.bp_description,
                 author: m.user_email,
                 date: m.date,
-                category: m.cv > 0 ? 'Comercial' : m.sharing > 0 ? 'Comunidad' : 'Iniciativa',
-                pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || '',
-                type: (m.cv > 0 ? 'cv' : m.sharing > 0 ? 'sharing' : 'cp') as any,
+                category: m.cv > 0 ? 'Comercial' : m.sharing > 0 ? 'Comunidad' : m.bp > 0 ? 'Aprendizaje' : 'Iniciativa',
+                pdfUrl: m.cv_pdf_url || m.sharing_pdf_url || m.cp_pdf_url || m.bp_pdf_url || '',
+                type: (m.cv > 0 ? 'cv' : m.sharing > 0 ? 'sharing' : m.bp > 0 ? 'bp' : 'cp') as any,
                 isMetric: true,
-                points: m.cv > 0 ? `+${m.cv} CV` : m.sharing > 0 ? `+${m.sharing} SH` : m.cp > 0 ? `+${m.cp} CP` : undefined
+                points: m.cv > 0 ? `+${m.cv} CV` : m.sharing > 0 ? `+${m.sharing} SH` : m.bp > 0 ? `+${m.bp} BP` : m.cp > 0 ? `+${m.cp} CP` : undefined
             }))
         ];
 
@@ -158,7 +158,8 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                         <div className="flex justify-between items-start mb-4">
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${doc.type === 'tesis' ? 'bg-kairos-navy text-white' :
                                 doc.type === 'cv' ? 'bg-amber-100 text-amber-600' :
-                                    doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' : 'bg-red-100 text-red-600'
+                                    doc.type === 'sharing' ? 'bg-purple-100 text-purple-600' :
+                                        doc.type === 'bp' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'
                                 }`}>
                                 {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
                             </span>
@@ -244,7 +245,8 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                     <td className="p-6 pl-10">
                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${doc.type === 'tesis' ? 'bg-blue-50 text-blue-600' :
                                             doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
-                                                doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
+                                                doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' :
+                                                    doc.type === 'bp' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-500'
                                             }`}>
                                             {doc.type === 'tesis' ? <BookOpen size={16} /> : <TrendingUp size={16} />}
                                         </div>

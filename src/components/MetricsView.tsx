@@ -59,13 +59,14 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             sharing: acc.sharing + (m.sharing || 0),
             revenue: acc.revenue + (m.revenue || 0),
             profit: acc.profit + (m.profit || 0),
-        }), { cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 });
+            bp: acc.bp + (m.bp || 0),
+        }), { cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, bp: 0 });
 
         const lpTotal = essays.reduce((acc, e) => acc + (e.points || 0), 0);
 
         return {
             ...metricTotals,
-            lp: lpTotal
+            lp: lpTotal + metricTotals.bp
         };
     }, [metrics, essays]);
 
@@ -78,6 +79,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             grouped[m.date].cv += m.cv || 0;
             grouped[m.date].cp += m.cp || 0;
             grouped[m.date].sharing += m.sharing || 0;
+            grouped[m.date].lp += m.bp || 0;
         });
 
         essays.forEach(e => {
@@ -113,9 +115,14 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             grouped[user].sharing += m.sharing || 0;
             grouped[user].revenue += m.revenue || 0;
             grouped[user].profit += m.profit || 0;
+            grouped[user].lp += m.bp || 0;
             if (m.cv_pdf_url && !grouped[user].cv_pdf_urls.includes(m.cv_pdf_url)) grouped[user].cv_pdf_urls.push(m.cv_pdf_url);
             if (m.sharing_pdf_url && !grouped[user].sharing_pdf_urls.includes(m.sharing_pdf_url)) grouped[user].sharing_pdf_urls.push(m.sharing_pdf_url);
             if (m.cp_pdf_url && !grouped[user].cp_pdf_urls.includes(m.cp_pdf_url)) grouped[user].cp_pdf_urls.push(m.cp_pdf_url);
+            if (m.bp_pdf_url && !grouped[user].bp_pdf_urls.includes(m.bp_pdf_url)) {
+                if (!grouped[user].bp_pdf_urls) grouped[user].bp_pdf_urls = [];
+                grouped[user].bp_pdf_urls.push(m.bp_pdf_url);
+            }
 
             logs[user].push(m);
         });
@@ -174,7 +181,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         const stats = {
             cv: userMetrics.reduce((acc, m) => acc + (m.cv || 0), 0),
             cp: userMetrics.reduce((acc, m) => acc + (m.cp || 0), 0),
-            lp: userEssays.reduce((acc, e) => acc + (e.points || 0), 0),
+            lp: userEssays.reduce((acc, e) => acc + (e.points || 0), 0) + userMetrics.reduce((acc, m) => acc + (m.bp || 0), 0),
             sharing: userMetrics.reduce((acc, m) => acc + (m.sharing || 0), 0),
             revenue: userMetrics.reduce((acc, m) => acc + (m.revenue || 0), 0),
             profit: userMetrics.reduce((acc, m) => acc + (m.profit || 0), 0),
@@ -189,9 +196,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 cv: m.cv,
                 cp: m.cp,
                 sharing: m.sharing,
+                bp: m.bp,
                 cv_pdf: m.cv_pdf_url,
                 cp_pdf: m.cp_pdf_url,
                 sharing_pdf: m.sharing_pdf_url,
+                bp_pdf: m.bp_pdf_url,
                 rawDate: m.date
             })),
             ...userEssays.map(e => ({
@@ -392,23 +401,28 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                         title: item.type === 'essay' ? (item as any).title :
                             ((item as any).cv > 0 ? (item as any).cv_title || 'Customer Visit' :
                                 (item as any).sharing > 0 ? (item as any).sharing_title || 'Sharing' :
-                                    (item as any).cp_title || 'Community Point'),
+                                    (item as any).bp > 0 ? (item as any).bp_title || 'Learning Point (BP)' :
+                                        (item as any).cp_title || 'Community Point'),
                         description: item.type === 'essay' ? (item as any).category :
                             ((item as any).cv > 0 ? (item as any).cv_desc :
-                                (item as any).sharing > 0 ? (item as any).sharing_desc : (item as any).cp_desc),
+                                (item as any).sharing > 0 ? (item as any).sharing_desc :
+                                    (item as any).bp > 0 ? (item as any).bp_desc : (item as any).cp_desc),
                         author: selectedUserDetail.name + '@alumni.mondragon.edu', // Standard format
                         date: item.date,
                         category: item.type === 'essay' ? (item as any).category :
                             ((item as any).cv > 0 ? 'Comercial' :
-                                (item as any).sharing > 0 ? 'Comunidad' : 'Iniciativa'),
+                                (item as any).sharing > 0 ? 'Comunidad' :
+                                    (item as any).bp > 0 ? 'Aprendizaje' : 'Iniciativa'),
                         pdfUrl: item.type === 'essay' ? (item as any).pdf :
-                            ((item as any).cv_pdf || (item as any).sharing_pdf || (item as any).cp_pdf || ''),
+                            ((item as any).cv_pdf || (item as any).sharing_pdf || (item as any).bp_pdf || (item as any).cp_pdf || ''),
                         type: item.type === 'essay' ? 'tesis' :
                             ((item as any).cv > 0 ? 'cv' :
-                                (item as any).sharing > 0 ? 'sharing' : 'cp'),
+                                (item as any).sharing > 0 ? 'sharing' :
+                                    (item as any).bp > 0 ? 'bp' : 'cp'),
                         points: item.type === 'essay' ? `${(item as any).points} LP` :
                             ((item as any).cv > 0 ? `+${(item as any).cv} CV` :
-                                (item as any).sharing > 0 ? `+${(item as any).sharing} SH` : `+${(item as any).cp} CP`),
+                                (item as any).sharing > 0 ? `+${(item as any).sharing} SH` :
+                                    (item as any).bp > 0 ? `+${(item as any).bp} BP` : `+${(item as any).cp} CP`),
                         isMetric: item.type !== 'essay'
                     }))}
                 />

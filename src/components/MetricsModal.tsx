@@ -215,12 +215,15 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         sharing: parseInt(row.sharing) || 0,
                         revenue: parseFloat(row.revenue) || 0,
                         profit: parseFloat(row.profit) || 0,
+                        bp: parseInt(row.bp) || 0,
                         cv_title: row.cv_title || '',
                         cv_description: row.cv_description || '',
                         sharing_title: row.sharing_title || '',
                         sharing_description: row.sharing_description || '',
                         cp_title: row.cp_title || '',
-                        cp_description: row.cp_description || ''
+                        cp_description: row.cp_description || '',
+                        bp_title: row.bp_title || '',
+                        bp_description: row.bp_description || ''
                     };
                 });
 
