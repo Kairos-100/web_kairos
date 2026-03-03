@@ -13,7 +13,7 @@ export const parseCSV = (text: string) => {
     const rawHeaders = firstLine.split(delimiter).map(h => h.trim());
 
     // Fuzzy mapping: remove symbols, spaces and normalize
-    const normalizeHeader = (h: string) => h.toLowerCase().replace(/[¡!¿?]/g, '').replace(/\s+/g, '').trim();
+    const normalizeHeader = (h: string) => h.toLowerCase().replace(/[¡!¿?\-]/g, '').replace(/\s+/g, '').trim();
 
     const headersMapping: Record<string, string> = {
         'fecha': 'date',
@@ -54,6 +54,8 @@ export const parseCSV = (text: string) => {
         'categoriacp': 'cp_category',
         'linkcp': 'cp_link',
         'titulobp': 'bp_title',
+        'bptitle': 'bp_title',
+        'titulodebp': 'bp_title',
         'linkbp': 'bp_link',
         'marcatemporal': 'timestamp',
         'marcastemporales': 'timestamp'
