@@ -220,78 +220,80 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
     );
 
     const renderListView = () => (
-        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-            <table className="w-full text-left">
-                <thead className="bg-gray-50 text-[10px] uppercase font-black tracking-widest text-gray-400">
-                    <tr>
-                        <th className="p-6 pl-10">Tipo</th>
-                        <th className="p-6">Documento</th>
-                        <th className="p-6">Autor</th>
-                        <th className="p-6">Fecha</th>
-                        <th className="p-6 text-right pr-10">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                    {allDocuments.map((doc) => {
-                        const canManage = isOwner(doc.author);
-                        return (
-                            <tr
-                                key={doc.id}
-                                className="hover:bg-blue-50/20 transition-colors cursor-pointer group"
-                                onClick={() => doc.type === 'tesis' && onSelectEssay ? onSelectEssay(doc.id) : (doc.pdfUrl && window.open(doc.pdfUrl, '_blank'))}
-                            >
-                                <td className="p-6 pl-10">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${doc.type === 'tesis' ? 'bg-blue-50 text-blue-600' :
-                                        doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
-                                            doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
-                                        }`}>
-                                        {doc.type === 'tesis' ? <BookOpen size={16} /> : <TrendingUp size={16} />}
-                                    </div>
-                                </td>
-                                <td className="p-6">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-kairos-navy group-hover:text-blue-600 transition-colors">{doc.title}</span>
-                                        {doc.description && <span className="text-[10px] text-gray-400 font-medium line-clamp-1 italic">{doc.description}</span>}
-                                        <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight mt-0.5">
-                                            {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="p-6 text-xs font-bold text-gray-500">{doc.author.split('@')[0]}</td>
-                                <td className="p-6">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-gray-300 font-black">{doc.date}</span>
-                                        {doc.points && <span className="text-[9px] font-black text-blue-500">{doc.points}</span>}
-                                    </div>
-                                </td>
-                                <td className="p-6 text-right pr-10">
-                                    <div className="flex items-center justify-end space-x-2">
-                                        {canManage && (
-                                            <>
-                                                <button
-                                                    onClick={(e) => handleEdit(e, doc)}
-                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                >
-                                                    <Edit3 size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => handleDelete(e, doc)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </>
-                                        )}
-                                        <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                            <ExternalLink size={16} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="min-w-[800px] lg:min-w-0">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50 text-[10px] uppercase font-black tracking-widest text-gray-400">
+                        <tr>
+                            <th className="p-6 pl-10">Tipo</th>
+                            <th className="p-6">Documento</th>
+                            <th className="p-6">Autor</th>
+                            <th className="p-6">Fecha</th>
+                            <th className="p-6 text-right pr-10">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                        {allDocuments.map((doc) => {
+                            const canManage = isOwner(doc.author);
+                            return (
+                                <tr
+                                    key={doc.id}
+                                    className="hover:bg-blue-50/20 transition-colors cursor-pointer group"
+                                    onClick={() => doc.type === 'tesis' && onSelectEssay ? onSelectEssay(doc.id) : (doc.pdfUrl && window.open(doc.pdfUrl, '_blank'))}
+                                >
+                                    <td className="p-6 pl-10">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${doc.type === 'tesis' ? 'bg-blue-50 text-blue-600' :
+                                            doc.type === 'cv' ? 'bg-amber-50 text-amber-600' :
+                                                doc.type === 'sharing' ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-500'
+                                            }`}>
+                                            {doc.type === 'tesis' ? <BookOpen size={16} /> : <TrendingUp size={16} />}
+                                        </div>
+                                    </td>
+                                    <td className="p-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-kairos-navy group-hover:text-blue-600 transition-colors">{doc.title}</span>
+                                            {doc.description && <span className="text-[10px] text-gray-400 font-medium line-clamp-1 italic">{doc.description}</span>}
+                                            <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight mt-0.5">
+                                                {doc.category === 'Otros' ? 'Wellbeing' : doc.category}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="p-6 text-xs font-bold text-gray-500">{doc.author.split('@')[0]}</td>
+                                    <td className="p-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-gray-300 font-black">{doc.date}</span>
+                                            {doc.points && <span className="text-[9px] font-black text-blue-500">{doc.points}</span>}
+                                        </div>
+                                    </td>
+                                    <td className="p-6 text-right pr-10">
+                                        <div className="flex items-center justify-end space-x-2">
+                                            {canManage && (
+                                                <>
+                                                    <button
+                                                        onClick={(e) => handleEdit(e, doc)}
+                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    >
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDelete(e, doc)}
+                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </>
+                                            )}
+                                            <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                <ExternalLink size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 
@@ -419,7 +421,7 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
             )}
 
             {!title && hideSearch && (
-                <div className="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-100 w-fit mx-auto lg:mx-0">
+                <div className="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-100 w-fit mx-auto sm:mx-0">
                     <button
                         onClick={() => setViewMode('grid')}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-kairos-navy text-white shadow-md' : 'text-gray-400 hover:text-kairos-navy'}`}

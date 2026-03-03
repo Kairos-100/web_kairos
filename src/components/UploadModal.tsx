@@ -299,7 +299,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
 
                             {viewMode === 'edit' ? (
                                 <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="col-span-2">
                                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 text-[10px]">Título del Ensayo / Tesis</label>
                                             <input
@@ -335,7 +335,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                             </div>
                                         </div>
 
-                                        <div className="col-span-2 grid grid-cols-2 gap-4 bg-kairos-navy/5 p-4 rounded-2xl border border-kairos-navy/10">
+                                        <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-kairos-navy/5 p-4 rounded-2xl border border-kairos-navy/10">
                                             <div>
                                                 <label className="block text-xs font-bold uppercase tracking-widest text-kairos-navy/60 mb-2 text-[10px]">Tipo de Conocimiento</label>
                                                 <div className="flex bg-white rounded-lg p-1 border border-gray-100 shadow-sm">

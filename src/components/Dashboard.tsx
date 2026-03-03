@@ -108,10 +108,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ essays, clockifyData }) =>
                                 <YAxis
                                     dataKey="projectName"
                                     type="category"
-                                    width={150}
+                                    width={window.innerWidth < 768 ? 100 : 150}
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fontSize: 10, fontWeight: 'bold' }}
+                                    tick={{ fontSize: window.innerWidth < 768 ? 8 : 10, fontWeight: 'bold' }}
                                 />
                                 <Tooltip
                                     cursor={{ fill: '#f8f8f8' }}

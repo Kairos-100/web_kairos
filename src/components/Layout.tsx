@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users } from 'lucide-react';
+import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -26,6 +26,8 @@ export const Layout: React.FC<LayoutProps> = ({
     onOpenUpload,
     onOpenMetrics
 }) => {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
     const navGroups = [
         {
             title: 'Conocimiento',
@@ -47,17 +49,46 @@ export const Layout: React.FC<LayoutProps> = ({
     ];
 
     return (
-        <div className="min-h-screen flex bg-kairos-light font-body transition-all duration-300">
+        <div className="min-h-screen flex flex-col lg:flex-row bg-kairos-light font-body transition-all duration-300">
+            {/* Mobile Header */}
+            <header className="lg:hidden h-16 bg-kairos-navy text-white flex items-center justify-between px-6 sticky top-0 z-30 shadow-md">
+                <div className="flex items-center space-x-2">
+                    <h1 className="text-xl font-heading font-bold tracking-tight">KAIROS</h1>
+                </div>
+                <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+            </header>
+
+            {/* Overlay for mobile sidebar */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 geometric-bg text-white flex flex-col fixed h-full z-20">
-                <div className="p-8">
+            <aside className={cn(
+                "w-64 geometric-bg text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:translate-x-0 lg:static lg:h-screen",
+                isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
+                <div className="p-8 hidden lg:block">
                     <h1 className="text-2xl font-heading font-bold tracking-tight text-white">
                         KAIROS <span className="opacity-50">KNOWLEDGE</span>
                     </h1>
                     <p className="text-xs opacity-50 mt-1 uppercase tracking-widest">Knowledge Platform</p>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-8 overflow-y-auto">
+                <div className="p-8 lg:hidden border-b border-white/10 mb-4">
+                    <h1 className="text-xl font-heading font-bold tracking-tight text-white">KAIROS</h1>
+                    <p className="text-[10px] opacity-50 uppercase tracking-widest">Knowledge Platform</p>
+                </div>
+
+                <nav className="flex-1 px-4 space-y-8 overflow-y-auto pt-4 lg:pt-0">
                     {navGroups.map((group) => (
                         <div key={group.title} className="space-y-2">
                             <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">
@@ -66,7 +97,10 @@ export const Layout: React.FC<LayoutProps> = ({
                             {group.items.map((item) => (
                                 <button
                                     key={item.id}
-                                    onClick={() => setActiveTab(item.id)}
+                                    onClick={() => {
+                                        setActiveTab(item.id);
+                                        setIsMobileMenuOpen(false);
+                                    }}
                                     className={cn(
                                         "w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all",
                                         activeTab === item.id
@@ -84,7 +118,10 @@ export const Layout: React.FC<LayoutProps> = ({
 
                 <div className="p-4 border-t border-white/10 space-y-2">
                     <button
-                        onClick={onOpenUpload}
+                        onClick={() => {
+                            onOpenUpload();
+                            setIsMobileMenuOpen(false);
+                        }}
                         className="w-full bg-white text-kairos-navy py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-transform active:scale-95 shadow-xl"
                     >
                         <PlusCircle size={20} />
@@ -92,7 +129,10 @@ export const Layout: React.FC<LayoutProps> = ({
                     </button>
 
                     <button
-                        onClick={onOpenMetrics}
+                        onClick={() => {
+                            onOpenMetrics();
+                            setIsMobileMenuOpen(false);
+                        }}
                         className="w-full bg-kairos-navy text-white border border-white/20 py-2 rounded-xl font-bold flex items-center justify-center space-x-2 transition-transform active:scale-95 hover:bg-white/10"
                     >
                         <TrendingUp size={16} />
@@ -103,7 +143,10 @@ export const Layout: React.FC<LayoutProps> = ({
                         <div className="flex items-center justify-between px-2 text-[10px] text-white/40 pt-2">
                             <span className="truncate max-w-[140px] italic">{user}</span>
                             <button
-                                onClick={onLogout}
+                                onClick={() => {
+                                    onLogout();
+                                    setIsMobileMenuOpen(false);
+                                }}
                                 className="hover:text-white transition-colors"
                                 title="Cerrar Sesión"
                             >
@@ -112,7 +155,10 @@ export const Layout: React.FC<LayoutProps> = ({
                         </div>
                     ) : (
                         <button
-                            onClick={onOpenUpload}
+                            onClick={() => {
+                                onOpenUpload();
+                                setIsMobileMenuOpen(false);
+                            }}
                             className="w-full bg-white/5 text-white/60 py-2 rounded-lg text-[10px] font-bold hover:bg-white/10 hover:text-white transition-all border border-white/10"
                         >
                             ¿No estás identificado?
@@ -122,7 +168,7 @@ export const Layout: React.FC<LayoutProps> = ({
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 p-8 min-h-screen">
+            <main className="flex-1 p-4 md:p-8 min-h-screen">
                 <div className="max-w-6xl mx-auto">
                     {children}
                 </div>

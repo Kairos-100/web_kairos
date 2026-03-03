@@ -392,8 +392,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                         transition={{ delay: i * 0.05 }}
                         className={`card p-4 border-none shadow-sm ${stat.bg} flex flex-col items-center text-center justify-center hover:scale-105 transition-all duration-300`}
                     >
-                        <p className={`text-4xl font-heading font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
-                        <p className="text-[9px] uppercase tracking-widest font-black text-gray-500 mt-2 opacity-60 leading-tight">{stat.label}</p>
+                        <p className={`text-2xl md:text-4xl font-heading font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
+                        <p className="text-[8px] md:text-[9px] uppercase tracking-widest font-black text-gray-500 mt-2 opacity-60 leading-tight">{stat.label}</p>
                     </motion.div>
                 ))}
             </div>
@@ -506,8 +506,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     type="category"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fontSize: 11, fill: '#0F1D42', fontWeight: 800 }}
-                                    width={100}
+                                    tick={{ fontSize: window.innerWidth < 768 ? 9 : 11, fill: '#0F1D42', fontWeight: 800 }}
+                                    width={window.innerWidth < 768 ? 70 : 100}
                                 />
                                 <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '15px' }} />
                                 <Legend iconType="rect" wrapperStyle={{ fontSize: '10px', fontWeight: 'black', paddingTop: '20px' }} />
@@ -535,118 +535,120 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     </div>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-gray-50/50 text-gray-400 text-[10px] uppercase font-black tracking-widest">
-                                <th className="p-6 pl-10 border-b border-gray-100 italic">#</th>
-                                <th className="p-6 border-b border-gray-100">Miembro del Equipo</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-amber-50/30 text-amber-600">Visitas (CV)</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-blue-50/30 text-blue-600">Aprendizaje (LP)</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">Comunidad (CP)</th>
-                                <th className="p-6 text-right border-b border-gray-100">Factu. / Benef.</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-kairos-navy/10 text-kairos-navy font-black">Score Total</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-blue-50/10 text-blue-800">Tiempo</th>
-                                <th className="p-6 text-center border-b border-gray-100">Justificantes</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {userData.map((user, idx) => (
-                                <tr key={user.user} className="hover:bg-blue-50/30 transition-all group">
-                                    <td className="p-6 pl-10">
-                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black transition-all ${idx === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 group-hover:bg-kairos-navy group-hover:text-white'}`}>
-                                            {idx + 1}
-                                        </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <div
-                                            className="flex items-center space-x-4 cursor-pointer group/name"
-                                            onClick={() => setSelectedProfile(user.user)}
-                                        >
-                                            <div className="w-10 h-10 rounded-2xl bg-kairos-navy text-white flex items-center justify-center font-black text-xs shadow-md group-hover:scale-110 transition-transform">
-                                                {user.user[0].toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-kairos-navy leading-none mb-1 group-hover/name:text-blue-600 transition-colors">{user.user}</p>
-                                                <p className="text-[10px] text-gray-400 leading-none">@{user.user}.alumni...</p>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <td className="p-6 text-center">
-                                        <span className="text-lg font-black text-amber-600">{user.cv || '0'}</span>
-                                    </td>
-
-                                    <td className="p-6 text-center">
-                                        <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
-                                    </td>
-
-                                    <td className="p-6 text-center">
-                                        <span className="text-lg font-black text-red-500">{user.cp || '0'}</span>
-                                    </td>
-
-                                    <td className="p-6 text-right">
-                                        <p className="text-xs font-black text-kairos-navy leading-tight">{formatCurrency(user.revenue)}€</p>
-                                        <p className="text-[10px] font-bold text-emerald-600 leading-tight">+{formatCurrency(user.profit)}€ profit</p>
-                                    </td>
-
-                                    <td className="p-6 text-center bg-gray-50/30">
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-xl font-black text-kairos-navy">{user.totalScore || '0'}</span>
-                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">LP+CV+CP</span>
-                                        </div>
-                                    </td>
-
-                                    <td className="p-6 text-center">
-                                        {(() => {
-                                            const target = user.user;
-                                            const clockifyUser = clockifyData?.users.find(u => {
-                                                const expectedClockifyName = CLOCKIFY_USER_MAP[target];
-                                                const uName = u.userName.toLowerCase();
-                                                const uEmail = u.email.toLowerCase();
-
-                                                if (expectedClockifyName) {
-                                                    const expected = expectedClockifyName.toLowerCase();
-                                                    return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
-                                                }
-
-                                                const normalizedTarget = target.toLowerCase();
-                                                return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
-                                            });
-                                            if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
-                                            const hours = Math.floor(clockifyUser.totalTime / 3600);
-                                            const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
-                                            return (
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-blue-800 font-black">{hours}h {mins}m</span>
-                                                </div>
-                                            );
-                                        })()}
-                                    </td>
-
-                                    <td className="p-6">
-                                        <div className="flex items-center justify-center space-x-2 flex-wrap max-w-[200px] gap-y-2">
-                                            {user.cv_pdf_urls?.map((url: string, i: number) => (
-                                                <a key={`cv-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 hover:scale-110 transition-all border border-amber-100" title="Ver Justificante CV">
-                                                    <FileText size={16} />
-                                                </a>
-                                            ))}
-                                            {user.sharing_pdf_urls?.map((url: string, i: number) => (
-                                                <a key={`sh-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 hover:scale-110 transition-all border border-purple-100" title="Ver Justificante Sharing">
-                                                    <FileText size={16} />
-                                                </a>
-                                            ))}
-                                            {user.cp_pdf_urls?.map((url: string, i: number) => (
-                                                <a key={`cp-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-110 transition-all border border-red-100" title="Ver Justificante CP">
-                                                    <FileText size={16} />
-                                                </a>
-                                            ))}
-                                            {!user.cv_pdf_urls?.length && !user.sharing_pdf_urls?.length && !user.cp_pdf_urls?.length && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
-                                        </div>
-                                    </td>
+                    <div className="min-w-[1000px] lg:min-w-0">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50/50 text-gray-400 text-[10px] uppercase font-black tracking-widest">
+                                    <th className="p-6 pl-10 border-b border-gray-100 italic">#</th>
+                                    <th className="p-6 border-b border-gray-100">Miembro del Equipo</th>
+                                    <th className="p-6 text-center border-b border-gray-100 bg-amber-50/30 text-amber-600">Visitas (CV)</th>
+                                    <th className="p-6 text-center border-b border-gray-100 bg-blue-50/30 text-blue-600">Aprendizaje (LP)</th>
+                                    <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">Comunidad (CP)</th>
+                                    <th className="p-6 text-right border-b border-gray-100">Factu. / Benef.</th>
+                                    <th className="p-6 text-center border-b border-gray-100 bg-kairos-navy/10 text-kairos-navy font-black">Score Total</th>
+                                    <th className="p-6 text-center border-b border-gray-100 bg-blue-50/10 text-blue-800">Tiempo</th>
+                                    <th className="p-6 text-center border-b border-gray-100">Justificantes</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {userData.map((user, idx) => (
+                                    <tr key={user.user} className="hover:bg-blue-50/30 transition-all group">
+                                        <td className="p-6 pl-10">
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black transition-all ${idx === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 group-hover:bg-kairos-navy group-hover:text-white'}`}>
+                                                {idx + 1}
+                                            </div>
+                                        </td>
+                                        <td className="p-6">
+                                            <div
+                                                className="flex items-center space-x-4 cursor-pointer group/name"
+                                                onClick={() => setSelectedProfile(user.user)}
+                                            >
+                                                <div className="w-10 h-10 rounded-2xl bg-kairos-navy text-white flex items-center justify-center font-black text-xs shadow-md group-hover:scale-110 transition-transform">
+                                                    {user.user[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-kairos-navy leading-none mb-1 group-hover/name:text-blue-600 transition-colors">{user.user}</p>
+                                                    <p className="text-[10px] text-gray-400 leading-none">@{user.user}.alumni...</p>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="p-6 text-center">
+                                            <span className="text-lg font-black text-amber-600">{user.cv || '0'}</span>
+                                        </td>
+
+                                        <td className="p-6 text-center">
+                                            <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
+                                        </td>
+
+                                        <td className="p-6 text-center">
+                                            <span className="text-lg font-black text-red-500">{user.cp || '0'}</span>
+                                        </td>
+
+                                        <td className="p-6 text-right">
+                                            <p className="text-xs font-black text-kairos-navy leading-tight">{formatCurrency(user.revenue)}€</p>
+                                            <p className="text-[10px] font-bold text-emerald-600 leading-tight">+{formatCurrency(user.profit)}€ profit</p>
+                                        </td>
+
+                                        <td className="p-6 text-center bg-gray-50/30">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xl font-black text-kairos-navy">{user.totalScore || '0'}</span>
+                                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">LP+CV+CP</span>
+                                            </div>
+                                        </td>
+
+                                        <td className="p-6 text-center">
+                                            {(() => {
+                                                const target = user.user;
+                                                const clockifyUser = clockifyData?.users.find(u => {
+                                                    const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                                                    const uName = u.userName.toLowerCase();
+                                                    const uEmail = u.email.toLowerCase();
+
+                                                    if (expectedClockifyName) {
+                                                        const expected = expectedClockifyName.toLowerCase();
+                                                        return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                                                    }
+
+                                                    const normalizedTarget = target.toLowerCase();
+                                                    return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
+                                                });
+                                                if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
+                                                const hours = Math.floor(clockifyUser.totalTime / 3600);
+                                                const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
+                                                return (
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-blue-800 font-black">{hours}h {mins}m</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+
+                                        <td className="p-6">
+                                            <div className="flex items-center justify-center space-x-2 flex-wrap max-w-[200px] gap-y-2">
+                                                {user.cv_pdf_urls?.map((url: string, i: number) => (
+                                                    <a key={`cv-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 hover:scale-110 transition-all border border-amber-100" title="Ver Justificante CV">
+                                                        <FileText size={16} />
+                                                    </a>
+                                                ))}
+                                                {user.sharing_pdf_urls?.map((url: string, i: number) => (
+                                                    <a key={`sh-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 hover:scale-110 transition-all border border-purple-100" title="Ver Justificante Sharing">
+                                                        <FileText size={16} />
+                                                    </a>
+                                                ))}
+                                                {user.cp_pdf_urls?.map((url: string, i: number) => (
+                                                    <a key={`cp-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-110 transition-all border border-red-100" title="Ver Justificante CP">
+                                                        <FileText size={16} />
+                                                    </a>
+                                                ))}
+                                                {!user.cv_pdf_urls?.length && !user.sharing_pdf_urls?.length && !user.cp_pdf_urls?.length && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </motion.div>
 

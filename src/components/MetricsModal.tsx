@@ -249,7 +249,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* CV */}
                                 <div>
                                     <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
@@ -312,7 +312,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 </div>
 
                                 {/* Profit */}
-                                <div className="col-span-2">
+                                <div className="col-span-1 md:col-span-2">
                                     <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                         <Wallet size={14} className="text-emerald-600" />
                                         <span>Beneficio (€)</span>
@@ -328,7 +328,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* CV PDF Upload */}
                                 <div className={`p-4 rounded-2xl border border-dashed transition-all ${cvPdfUrl ? 'bg-green-50/50 border-green-200' : 'bg-blue-50/50 border-blue-200'}`}>
                                     <div className="flex items-center justify-between mb-2">
@@ -420,7 +420,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 </div>
 
                                 {/* CP PDF Upload */}
-                                <div className={`p-4 rounded-2xl border border-dashed transition-all col-span-2 ${cpPdfUrl ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
+                                <div className={`p-4 rounded-2xl border border-dashed transition-all col-span-1 md:col-span-2 ${cpPdfUrl ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest text-red-600">
                                             <span>PDF Community Points (CP)</span>
