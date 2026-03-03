@@ -192,12 +192,19 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 if (csvData.length === 0) throw new Error('No hay datos para importar.');
 
                 const recordsToInsert = csvData.map(row => {
-                    const d = row.date;
+                    const d = row.date?.trim();
                     let formattedDate = d;
-                    // Try to normalize date if it's DD/MM/YYYY
+
+                    // Try to normalize date if it's DD/MM/YYYY or DD/MM/YYYY HH:MM:SS
                     if (d && d.includes('/') && !d.includes('-')) {
-                        const [day, month, year] = d.split('/');
-                        formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                        const parts = d.split('/');
+                        if (parts.length === 3) {
+                            const day = parts[0];
+                            const month = parts[1];
+                            // If year contains time (e.g. "2025 13:28:54"), take only the year
+                            const yearPart = parts[2].split(' ')[0];
+                            formattedDate = `${yearPart}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                        }
                     }
 
                     return {
