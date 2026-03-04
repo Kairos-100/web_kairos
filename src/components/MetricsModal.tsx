@@ -581,7 +581,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                             </div>
 
                                             {/* Profit */}
-                                            <div className="col-span-1 md:col-span-2">
+                                            <div>
                                                 <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                                     <Wallet size={14} className="text-emerald-600" />
                                                     <span>Beneficio (€)</span>
@@ -592,6 +592,21 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                                     onChange={(e) => setProfit(parseFloat(e.target.value) || 0)}
                                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none font-bold text-emerald-700"
                                                     step="0.01"
+                                                    min="0"
+                                                />
+                                            </div>
+
+                                            {/* BP */}
+                                            <div>
+                                                <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                                    <Target size={14} className="text-blue-600" />
+                                                    <span>Learning Points (BP)</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={bp}
+                                                    onChange={(e) => setBp(parseInt(e.target.value) || 0)}
+                                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none font-bold text-blue-700"
                                                     min="0"
                                                 />
                                             </div>
