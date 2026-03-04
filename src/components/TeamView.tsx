@@ -444,8 +444,6 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                 <th className="p-6 pl-10 border-b border-gray-100 italic">#</th>
                                 <th className="p-6 border-b border-gray-100">Miembro</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-amber-50/30 text-amber-600">CV</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-emerald-50/30 text-emerald-600">Fact.</th>
-                                <th className="p-6 text-center border-b border-gray-100 bg-emerald-50/10 text-emerald-800">Benef.</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-blue-50/30 text-blue-600">LP</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">CP</th>
                                 <th className="p-6 text-center border-b border-gray-100 bg-purple-50/30 text-purple-600">SH</th>
@@ -477,14 +475,6 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                         </div>
                                     </td>
                                     <td className="p-6 text-center font-black text-amber-600">{user.cv}</td>
-                                    <td className="p-6 text-center font-black text-emerald-600">
-                                        <span className="text-[10px] opacity-40 mr-0.5">€</span>
-                                        {user.revenue.toLocaleString('es-ES')}
-                                    </td>
-                                    <td className="p-6 text-center font-black text-emerald-800">
-                                        <span className="text-[10px] opacity-40 mr-0.5">€</span>
-                                        {user.profit.toLocaleString('es-ES')}
-                                    </td>
                                     <td className="p-6 text-center font-black text-blue-600">{user.lp}</td>
                                     <td className="p-6 text-center font-black text-red-600">{user.cp}</td>
                                     <td className="p-6 text-center font-black text-purple-600">{user.sharing}</td>
