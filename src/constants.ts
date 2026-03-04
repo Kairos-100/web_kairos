@@ -90,4 +90,5 @@ export interface MetricEntry {
     cp_title?: string;
     cp_description?: string;
     bp_title?: string;
+    bp_description?: string;
 }

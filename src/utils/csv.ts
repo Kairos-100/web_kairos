@@ -124,24 +124,38 @@ export const parseCSV = (text: string) => {
         if (row['cp_link']) row['cp_pdf_url'] = row['cp_link'];
         if (row['bp_link']) row['bp_pdf_url'] = row['bp_link'];
 
-        // Fallsback: If title contains "CV" but cv count is 0, move from others
-        const allTitles = `${row['cv_title'] || ''} ${row['cp_title'] || ''} ${row['sharing_title'] || ''}`.toLowerCase();
-        if (allTitles.includes('cv')) {
+        // Fallsback: If title contains "CV" or keyword but cv count is 0, move from others
+        const allTitles = `${row['cv_title'] || ''} ${row['cp_title'] || ''} ${row['sharing_title'] || ''} ${row['bp_title'] || ''}`.toLowerCase();
+        const hasCVKeyword = allTitles.includes('cv') || allTitles.includes('cliente') || allTitles.includes('comercial') || allTitles.includes('venta') || allTitles.includes('reunion');
+        const hasBPKeyword = allTitles.includes('bp') || allTitles.includes('aprendizaje') || allTitles.includes('hito') || allTitles.includes('learning') || allTitles.includes('tesis');
+        const hasCPKeyword = allTitles.includes('pc') || allTitles.includes('comunidad') || allTitles.includes('desfilarte') || allTitles.includes('iniciativa');
+        const hasSHKeyword = allTitles.includes('sharing') || allTitles.includes('sh ') || allTitles.includes('compartir');
+
+        if (hasCVKeyword) {
             const currentCV = parseInt(row['cv']) || 0;
             if (currentCV === 0) {
-                const movedPoints = (parseInt(row['cp']) || 0) + (parseInt(row['sharing']) || 0);
+                const movedPoints = (parseInt(row['cp']) || 0) + (parseInt(row['sharing']) || 0) + (parseInt(row['bp']) || 0);
                 row['cv'] = (movedPoints || 1).toString();
                 row['cp'] = '0';
                 row['sharing'] = '0';
+                row['bp'] = '0';
             }
-        } else if (allTitles.includes('sharing') || allTitles.includes('sh ')) {
+        } else if (hasBPKeyword) {
+            const currentBP = parseInt(row['bp']) || 0;
+            if (currentBP === 0) {
+                const movedPoints = (parseInt(row['cp']) || 0) + (parseInt(row['sharing']) || 0);
+                row['bp'] = (movedPoints || 1).toString();
+                row['cp'] = '0';
+                row['sharing'] = '0';
+            }
+        } else if (hasSHKeyword) {
             const currentSH = parseInt(row['sharing']) || 0;
             if (currentSH === 0) {
                 const movedPoints = (parseInt(row['cp']) || 0);
                 row['sharing'] = (movedPoints || 1).toString();
                 row['cp'] = '0';
             }
-        } else if (allTitles.includes('pc') || allTitles.includes('comunidad') || allTitles.includes('desfilarte')) {
+        } else if (hasCPKeyword) {
             if ((parseInt(row['cp']) || 0) === 0) {
                 row['cp'] = '1';
             }

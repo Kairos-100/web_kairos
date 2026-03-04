@@ -604,7 +604,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     <th className="p-6 text-center border-b border-gray-100 bg-amber-50/30 text-amber-600">Visitas (CV)</th>
                                     <th className="p-6 text-center border-b border-gray-100 bg-blue-50/30 text-blue-600">Aprendizaje (LP)</th>
                                     <th className="p-6 text-center border-b border-gray-100 bg-red-50/30 text-red-600">Comunidad (CP)</th>
-                                    <th className="p-6 text-right border-b border-gray-100">Factu. / Benef.</th>
                                     <th className="p-6 text-center border-b border-gray-100 bg-kairos-navy/10 text-kairos-navy font-black">Score Total</th>
                                     <th className="p-6 text-center border-b border-gray-100 bg-blue-50/10 text-blue-800">Tiempo</th>
                                     <th className="p-6 text-center border-b border-gray-100">Justificantes</th>
@@ -645,10 +644,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                             <span className="text-lg font-black text-red-500">{user.cp || '0'}</span>
                                         </td>
 
-                                        <td className="p-6 text-right">
-                                            <p className="text-xs font-black text-kairos-navy leading-tight">{formatCurrency(user.revenue)}€</p>
-                                            <p className="text-[10px] font-bold text-emerald-600 leading-tight">+{formatCurrency(user.profit)}€ profit</p>
-                                        </td>
 
                                         <td className="p-6 text-center bg-gray-50/30">
                                             <div className="flex flex-col items-center">

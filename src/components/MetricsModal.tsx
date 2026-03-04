@@ -42,6 +42,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [sharing, setSharing] = useState(0);
     const [revenue, setRevenue] = useState(0);
     const [profit, setProfit] = useState(0);
+    const [bp, setBp] = useState(0);
 
     // Metadata states
     const [cvTitle, setCvTitle] = useState('');
@@ -50,6 +51,8 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [sharingDescription, setSharingDescription] = useState('');
     const [cpTitle, setCpTitle] = useState('');
     const [cpDescription, setCpDescription] = useState('');
+    const [bpTitle, setBpTitle] = useState('');
+    const [bpDescription, setBpDescription] = useState('');
 
     // CV PDF states
     const [cvPdfFile, setCvPdfFile] = useState<File | null>(null);
@@ -66,9 +69,15 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [cpPdfName, setCpPdfName] = useState<string | undefined>(undefined);
     const [cpPdfUrl, setCpPdfUrl] = useState<string | undefined>(undefined);
 
+    // BP PDF states
+    const [bpPdfFile, setBpPdfFile] = useState<File | null>(null);
+    const [bpPdfName, setBpPdfName] = useState<string | undefined>(undefined);
+    const [bpPdfUrl, setBpPdfUrl] = useState<string | undefined>(undefined);
+
     const cvInputRef = useRef<HTMLInputElement>(null);
     const sharingInputRef = useRef<HTMLInputElement>(null);
     const cpInputRef = useRef<HTMLInputElement>(null);
+    const bpInputRef = useRef<HTMLInputElement>(null);
     const csvInputRef = useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
@@ -88,7 +97,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
         initClockify();
     }, []);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cv' | 'sharing' | 'cp' | 'csv') => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cv' | 'sharing' | 'cp' | 'bp' | 'csv') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -137,6 +146,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 setCpPdfFile(file);
                 setCpPdfName(file.name);
                 setCpPdfUrl(url);
+            } else if (type === 'bp') {
+                setBpPdfFile(file);
+                setBpPdfName(file.name);
+                setBpPdfUrl(url);
             }
             return () => URL.revokeObjectURL(url);
         }
@@ -329,6 +342,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 let finalCvUrl = undefined;
                 let finalSharingUrl = undefined;
                 let finalCpUrl = undefined;
+                let finalBpUrl = undefined;
 
                 if (import.meta.env.VITE_SUPABASE_URL) {
                     if (cvPdfFile) {
@@ -339,6 +353,9 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     }
                     if (cpPdfFile) {
                         finalCpUrl = await uploadToSupabase(cpPdfFile, 'cp');
+                    }
+                    if (bpPdfFile) {
+                        finalBpUrl = await uploadToSupabase(bpPdfFile, 'bp');
                     }
                 }
 
@@ -355,12 +372,16 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         cv_pdf_url: finalCvUrl,
                         sharing_pdf_url: finalSharingUrl,
                         cp_pdf_url: finalCpUrl,
+                        bp_pdf_url: finalBpUrl,
                         cv_title: cvTitle,
                         cv_description: cvDescription,
                         sharing_title: sharingTitle,
                         sharing_description: sharingDescription,
                         cp_title: cpTitle,
-                        cp_description: cpDescription
+                        cp_description: cpDescription,
+                        bp_title: bpTitle,
+                        bp_description: bpDescription,
+                        bp: bp
                     }])
                     .select();
 
@@ -373,6 +394,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     if (finalCvUrl) ingestDocument(metricId, 'metric', finalCvUrl).catch(console.error);
                     if (finalSharingUrl) ingestDocument(metricId, 'metric', finalSharingUrl).catch(console.error);
                     if (finalCpUrl) ingestDocument(metricId, 'metric', finalCpUrl).catch(console.error);
+                    if (finalBpUrl) ingestDocument(metricId, 'metric', finalBpUrl).catch(console.error);
 
                     // Notify the team
                     notifyNewMetric(newMetric).catch(console.error);
@@ -388,7 +410,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         selectedProjectId,
                         start,
                         end,
-                        `Registro de Métricas: CV:${cv}, CP:${cp}, SH:${sharing}`
+                        `Registro de Métricas: CV:${cv}, CP:${cp}, SH:${sharing}, BP:${bp}`
                     ).catch(err => console.error('Failed to sync to Clockify:', err));
                 }
             }
@@ -706,6 +728,50 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                                 >
                                                     <FileUp size={20} className={cpPdfUrl ? 'text-green-500' : 'text-red-500'} />
                                                     <span className={`text-[10px] font-bold ${cpPdfUrl ? 'text-green-700' : 'text-red-700'}`}>{cpPdfUrl ? 'Cambiar Justificante' : 'Subir Justificante CP'}</span>
+                                                </button>
+                                            </div>
+
+                                            <div className={`p-4 rounded-2xl border border-dashed transition-all col-span-1 md:col-span-2 ${bpPdfUrl ? 'bg-green-50/50 border-green-200' : 'bg-blue-50/50 border-blue-200'}`}>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest text-blue-700">
+                                                        <span>PDF Learning Points (BP)</span>
+                                                    </label>
+                                                    {bpPdfName && <span className="text-[10px] text-green-600 font-bold flex items-center space-x-1 max-w-[100px] truncate"><CheckCircle2 size={10} /> <span>{bpPdfName}</span></span>}
+                                                </div>
+
+                                                {(bp > 0 || bpPdfFile) && (
+                                                    <div className="mb-3 space-y-2">
+                                                        <input
+                                                            type="text"
+                                                            value={bpTitle}
+                                                            onChange={(e) => setBpTitle(e.target.value)}
+                                                            placeholder="Título del hit de aprendizaje"
+                                                            className="w-full px-3 py-2 bg-white border border-blue-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
+                                                        />
+                                                        <textarea
+                                                            value={bpDescription}
+                                                            onChange={(e) => setBpDescription(e.target.value)}
+                                                            placeholder="¿Qué has aprendido?"
+                                                            className="w-full px-3 py-2 bg-white border border-blue-100 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400 resize-none shadow-sm"
+                                                            rows={2}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <input
+                                                    type="file"
+                                                    accept=".pdf"
+                                                    onChange={(e) => handleFileChange(e, 'bp')}
+                                                    ref={bpInputRef}
+                                                    className="hidden"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => bpInputRef.current?.click()}
+                                                    className={`w-full py-3 flex flex-col items-center justify-center space-y-1 hover:bg-white transition-colors rounded-xl border ${bpPdfUrl ? 'border-green-200' : 'border-blue-200'}`}
+                                                >
+                                                    <FileUp size={20} className={bpPdfUrl ? 'text-green-500' : 'text-blue-500'} />
+                                                    <span className={`text-[10px] font-bold ${bpPdfUrl ? 'text-green-700' : 'text-blue-700'}`}>{bpPdfUrl ? 'Cambiar Justificante' : 'Subir Justificante BP'}</span>
                                                 </button>
                                             </div>
                                         </div>
