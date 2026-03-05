@@ -784,34 +784,65 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                                 }
 
                                                                 return (
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                                                    <div className="space-y-4 max-w-4xl mx-auto">
                                                                         {clockifyUser.projects.map((proj, pIdx) => {
                                                                             const percentage = (proj.time / clockifyUser.totalTime) * 100;
+                                                                            const isExpanded = expandedProject === proj.projectName;
+
                                                                             return (
-                                                                                <div key={pIdx} className="bg-white p-4 rounded-3xl shadow-sm border border-blue-50/80 hover:shadow-md transition-shadow">
-                                                                                    <div className="flex justify-between items-start mb-3">
-                                                                                        <div className="flex items-center space-x-2">
-                                                                                            <div className="w-3 h-3 rounded-full shrink-0 shadow-inner" style={{ backgroundColor: proj.color || '#3B82F6' }}></div>
-                                                                                            <h4 className="text-sm font-black text-kairos-navy max-w-[130px] truncate" title={proj.projectName}>{proj.projectName}</h4>
+                                                                                <div key={pIdx} className="group/project">
+                                                                                    <button
+                                                                                        onClick={() => setExpandedProject(isExpanded ? null : proj.projectName)}
+                                                                                        className="w-full text-left bg-transparent hover:bg-gray-50/50 p-2 -m-2 rounded-xl transition-colors"
+                                                                                    >
+                                                                                        <div className="flex justify-between items-end mb-1">
+                                                                                            <div className="flex items-center space-x-2">
+                                                                                                <span className="text-xs font-bold text-gray-700">{proj.projectName}</span>
+                                                                                                <ChevronDown size={12} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                                            </div>
+                                                                                            <span className="text-[10px] font-black text-gray-400">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m ({percentage.toFixed(1)}%)</span>
                                                                                         </div>
-                                                                                        <div className="text-right shrink-0">
-                                                                                            <span className="text-sm font-black text-blue-600 block leading-tight">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m</span>
-                                                                                            <span className="text-[10px] font-black text-gray-400">{percentage.toFixed(1)}%</span>
+                                                                                        <div className="h-2 bg-gray-50 rounded-full overflow-hidden shrink-0">
+                                                                                            <motion.div
+                                                                                                initial={{ width: 0 }}
+                                                                                                animate={{ width: `${percentage}%` }}
+                                                                                                className="h-full rounded-full"
+                                                                                                style={{ backgroundColor: proj.color || '#3B82F6' }}
+                                                                                            />
                                                                                         </div>
-                                                                                    </div>
-                                                                                    <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden mb-4">
-                                                                                        <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: proj.color || '#3B82F6' }}></div>
-                                                                                    </div>
-                                                                                    {proj.detailedEntries && proj.detailedEntries.length > 0 && (
-                                                                                        <div className="space-y-1.5 mt-2 pt-3 border-t-2 border-dashed border-gray-50 max-h-36 overflow-y-auto pr-2 custom-scrollbar">
-                                                                                            {proj.detailedEntries.map((entry, eIdx) => (
-                                                                                                <div key={eIdx} className="flex justify-between items-center text-[10px] group/entry cursor-default p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
-                                                                                                    <span className="font-bold text-gray-500 truncate mr-2" title={entry.description}>{entry.description || 'Sin descripción'}</span>
-                                                                                                    <span className="font-black text-gray-400 whitespace-nowrap bg-white px-1.5 py-0.5 rounded-md shadow-sm border border-gray-100">{Math.floor(entry.time / 3600)}h {Math.floor((entry.time % 3600) / 60)}m</span>
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    )}
+                                                                                    </button>
+
+                                                                                    <AnimatePresence>
+                                                                                        {isExpanded && proj.detailedEntries && proj.detailedEntries.length > 0 && (
+                                                                                            <motion.div
+                                                                                                initial={{ opacity: 0, height: 0 }}
+                                                                                                animate={{ opacity: 1, height: 'auto' }}
+                                                                                                exit={{ opacity: 0, height: 0 }}
+                                                                                                className="mt-3 ml-4 space-y-2 border-l-2 border-gray-100 pl-4 mb-4"
+                                                                                            >
+                                                                                                {proj.detailedEntries.map((entry, eIdx) => (
+                                                                                                    <div key={eIdx} className="flex justify-between items-start">
+                                                                                                        <div className="flex flex-col">
+                                                                                                            <span className="text-[10px] font-bold text-gray-600 leading-tight">{entry.description || 'Sin descripción'}</span>
+                                                                                                            <span className="text-[8px] text-gray-400 font-medium">{new Date(entry.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                                                                                                        </div>
+                                                                                                        <span className="text-[10px] font-black text-blue-600 whitespace-nowrap ml-4">
+                                                                                                            {Math.floor(entry.time / 3600)}h {Math.floor((entry.time % 3600) / 60)}m
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </motion.div>
+                                                                                        )}
+                                                                                        {isExpanded && (!proj.detailedEntries || proj.detailedEntries.length === 0) && (
+                                                                                            <motion.p
+                                                                                                initial={{ opacity: 0 }}
+                                                                                                animate={{ opacity: 1 }}
+                                                                                                className="text-[10px] text-gray-400 italic mt-2 ml-8 mb-4"
+                                                                                            >
+                                                                                                No hay registros detallados disponibles.
+                                                                                            </motion.p>
+                                                                                        )}
+                                                                                    </AnimatePresence>
                                                                                 </div>
                                                                             );
                                                                         })}
