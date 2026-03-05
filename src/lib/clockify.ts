@@ -218,13 +218,17 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                             )
                             .map((entry: any) => {
                                 let duration = 0;
-                                if (entry.timeInterval?.duration && typeof entry.timeInterval.duration === 'string') {
-                                    const match = entry.timeInterval.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-                                    if (match) {
-                                        const h = parseInt(match[1] || '0', 10);
-                                        const m = parseInt(match[2] || '0', 10);
-                                        const s = parseInt(match[3] || '0', 10);
-                                        duration = (h * 3600) + (m * 60) + s;
+                                if (entry.timeInterval?.duration !== undefined) {
+                                    if (typeof entry.timeInterval.duration === 'number') {
+                                        duration = entry.timeInterval.duration;
+                                    } else if (typeof entry.timeInterval.duration === 'string') {
+                                        const match = entry.timeInterval.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                                        if (match) {
+                                            const h = parseInt(match[1] || '0', 10);
+                                            const m = parseInt(match[2] || '0', 10);
+                                            const s = parseInt(match[3] || '0', 10);
+                                            duration = (h * 3600) + (m * 60) + s;
+                                        }
                                     }
                                 }
                                 return {
