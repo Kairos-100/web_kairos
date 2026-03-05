@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2 } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -675,23 +675,51 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                         </td>
 
                                         <td className="p-6">
-                                            <div className="flex items-center justify-center space-x-2 flex-wrap max-w-[200px] gap-y-2">
-                                                {user.cv_pdf_urls?.map((url: string, i: number) => (
-                                                    <a key={`cv-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 hover:scale-110 transition-all border border-amber-100" title="Ver Justificante CV">
-                                                        <FileText size={16} />
-                                                    </a>
-                                                ))}
-                                                {user.sharing_pdf_urls?.map((url: string, i: number) => (
-                                                    <a key={`sh-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 hover:scale-110 transition-all border border-purple-100" title="Ver Justificante Sharing">
-                                                        <FileText size={16} />
-                                                    </a>
-                                                ))}
-                                                {user.cp_pdf_urls?.map((url: string, i: number) => (
-                                                    <a key={`cp-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-110 transition-all border border-red-100" title="Ver Justificante CP">
-                                                        <FileText size={16} />
-                                                    </a>
-                                                ))}
-                                                {!user.cv_pdf_urls?.length && !user.sharing_pdf_urls?.length && !user.cp_pdf_urls?.length && <span className="text-gray-200 text-xs font-black opacity-20">—</span>}
+                                            <div className="flex flex-col items-center space-y-2">
+                                                {/* Grouped Vouchers Mini-Grid */}
+                                                <div className="flex items-center justify-center -space-x-2">
+                                                    {(() => {
+                                                        const groups = [
+                                                            { type: 'cv', urls: user.cv_pdf_urls || [], bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: <Target size={12} /> },
+                                                            { type: 'sh', urls: user.sharing_pdf_urls || [], bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100', icon: <Share2 size={12} /> },
+                                                            { type: 'cp', urls: user.cp_pdf_urls || [], bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-100', icon: <Award size={12} /> }
+                                                        ].filter(g => g.urls.length > 0);
+
+                                                        if (groups.length === 0) return <span className="text-gray-200 text-xs font-black opacity-20">—</span>;
+
+                                                        return groups.map((group) => {
+                                                            const count = group.urls.length;
+                                                            return (
+                                                                <div key={group.type} className="relative group/voucher">
+                                                                    <a
+                                                                        href={group.urls[0]}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className={`w-9 h-9 flex items-center justify-center ${group.bg} ${group.text} rounded-xl border ${group.border} shadow-sm hover:scale-110 hover:z-20 transition-all relative`}
+                                                                    >
+                                                                        {group.icon}
+                                                                        {count > 1 && (
+                                                                            <span className={`absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black border-2 border-white ${group.bg} ${group.text} shadow-sm`}>
+                                                                                {count}
+                                                                            </span>
+                                                                        )}
+                                                                    </a>
+                                                                    {/* Simple Hover Preview for more links in this category if many */}
+                                                                    {count > 1 && (
+                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover/voucher:flex flex-col bg-white border border-gray-100 rounded-xl shadow-xl p-2 z-50 min-w-[120px] pointer-events-auto">
+                                                                            <p className="text-[8px] font-black uppercase text-gray-400 mb-1 px-1">Justificantes {group.type.toUpperCase()}</p>
+                                                                            {group.urls.map((url: string, uidx: number) => (
+                                                                                <a key={uidx} href={url} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg truncate block">
+                                                                                    Documento {uidx + 1}
+                                                                                </a>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        });
+                                                    })()}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -750,82 +778,104 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-50">
-                                                        {(auditLog[user.user] || []).map((entry) => (
-                                                            <React.Fragment key={entry.id}>
-                                                                {/* CV Row */}
-                                                                {entry.cv > 0 && (
-                                                                    <tr className="hover:bg-amber-50/30 transition-colors">
-                                                                        <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
-                                                                        <td className="p-4">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-amber-600">
-                                                                                    <Target size={12} />
-                                                                                    <span>Customer Visit (CV)</span>
-                                                                                </span>
-                                                                                {entry.cv_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.cv_title}</span>}
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cv}</td>
-                                                                        <td className="p-4 text-right pr-6">
-                                                                            {entry.cv_pdf_url ? (
-                                                                                <a href={entry.cv_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
-                                                                                    <span>VER PDF</span>
-                                                                                    <ExternalLink size={10} />
-                                                                                </a>
-                                                                            ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                                {/* Sharing Row */}
-                                                                {entry.sharing > 0 && (
-                                                                    <tr className="hover:bg-purple-50/30 transition-colors">
-                                                                        <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
-                                                                        <td className="p-4">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-purple-600">
-                                                                                    <Users size={12} />
-                                                                                    <span>Sharing</span>
-                                                                                </span>
-                                                                                {entry.sharing_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.sharing_title}</span>}
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.sharing}</td>
-                                                                        <td className="p-4 text-right pr-6">
-                                                                            {entry.sharing_pdf_url ? (
-                                                                                <a href={entry.sharing_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
-                                                                                    <span>VER PDF</span>
-                                                                                    <ExternalLink size={10} />
-                                                                                </a>
-                                                                            ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                                {/* CP Row */}
-                                                                {entry.cp > 0 && (
-                                                                    <tr className="hover:bg-red-50/30 transition-colors">
-                                                                        <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
-                                                                        <td className="p-4">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-red-500">
-                                                                                    <Award size={12} />
-                                                                                    <span>Community Points (CP)</span>
-                                                                                </span>
-                                                                                {entry.cp_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.cp_title}</span>}
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cp}</td>
-                                                                        <td className="p-4 text-right pr-6">
-                                                                            {entry.cp_pdf_url ? (
-                                                                                <a href={entry.cp_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
-                                                                                    <span>VER PDF</span>
-                                                                                    <ExternalLink size={10} />
-                                                                                </a>
-                                                                            ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                            </React.Fragment>
-                                                        ))}
+                                                        {(() => {
+                                                            const userEntries = auditLog[user.user] || [];
+                                                            let currentMonth = '';
+
+                                                            return userEntries.map((entry) => {
+                                                                const dateParts = entry.date.split('/');
+                                                                const monthYear = dateParts.length === 3 ?
+                                                                    new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) :
+                                                                    'Fecha desconocida';
+
+                                                                const showHeader = monthYear !== currentMonth;
+                                                                currentMonth = monthYear;
+
+                                                                return (
+                                                                    <React.Fragment key={entry.id}>
+                                                                        {showHeader && (
+                                                                            <tr className="bg-gray-50/30">
+                                                                                <td colSpan={4} className="px-6 py-2 text-[10px] font-black uppercase tracking-widest text-kairos-navy/40">
+                                                                                    {monthYear}
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                        {/* CV Row */}
+                                                                        {entry.cv > 0 && (
+                                                                            <tr className="hover:bg-amber-50/30 transition-colors">
+                                                                                <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                                <td className="p-4">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-amber-600">
+                                                                                            <Target size={12} />
+                                                                                            <span>Customer Visit (CV)</span>
+                                                                                        </span>
+                                                                                        {entry.cv_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.cv_title}</span>}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cv}</td>
+                                                                                <td className="p-4 text-right pr-6">
+                                                                                    {entry.cv_pdf_url ? (
+                                                                                        <a href={entry.cv_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                            <span>VER PDF</span>
+                                                                                            <ExternalLink size={10} />
+                                                                                        </a>
+                                                                                    ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                        {/* Sharing Row */}
+                                                                        {entry.sharing > 0 && (
+                                                                            <tr className="hover:bg-purple-50/30 transition-colors">
+                                                                                <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                                <td className="p-4">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-purple-600">
+                                                                                            <Users size={12} />
+                                                                                            <span>Sharing</span>
+                                                                                        </span>
+                                                                                        {entry.sharing_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.sharing_title}</span>}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.sharing}</td>
+                                                                                <td className="p-4 text-right pr-6">
+                                                                                    {entry.sharing_pdf_url ? (
+                                                                                        <a href={entry.sharing_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                            <span>VER PDF</span>
+                                                                                            <ExternalLink size={10} />
+                                                                                        </a>
+                                                                                    ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                        {/* CP Row */}
+                                                                        {entry.cp > 0 && (
+                                                                            <tr className="hover:bg-red-50/30 transition-colors">
+                                                                                <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                                <td className="p-4">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-red-500">
+                                                                                            <Award size={12} />
+                                                                                            <span>Community Points (CP)</span>
+                                                                                        </span>
+                                                                                        {entry.cp_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.cp_title}</span>}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.cp}</td>
+                                                                                <td className="p-4 text-right pr-6">
+                                                                                    {entry.cp_pdf_url ? (
+                                                                                        <a href={entry.cp_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                            <span>VER PDF</span>
+                                                                                            <ExternalLink size={10} />
+                                                                                        </a>
+                                                                                    ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </React.Fragment>
+                                                                );
+                                                            });
+                                                        })()}
                                                         {auditLog[user.user]?.length === 0 && (
                                                             <tr>
                                                                 <td colSpan={4} className="p-10 text-center text-gray-300 italic text-sm">
