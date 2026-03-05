@@ -42,7 +42,6 @@ export const Layout: React.FC<LayoutProps> = ({
             items: [
                 { id: 'team', label: 'Miembros', icon: Users },
                 { id: 'commercial', label: 'Kairos Métricas', icon: TrendingUp },
-                { id: 'clockify', label: 'Distribución', icon: Clock },
                 { id: 'score', label: 'Puntuación', icon: Trophy },
                 { id: 'history', label: 'Historial', icon: History },
             ]
