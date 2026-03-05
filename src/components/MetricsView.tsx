@@ -160,9 +160,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         return { userData: sortedUsers, auditLog: logs };
     }, [metrics, essays]);
 
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('es-ES', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
-    };
 
     const topPerformers = useMemo(() => userData.slice(0, 3), [userData]);
 
@@ -442,8 +439,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     { label: 'LEARNING POINTS (LP)', value: totals.lp, color: 'text-blue-500', bg: 'bg-blue-50' },
                     { label: 'COMMUNITY POINTS (CP)', value: totals.cp, color: 'text-red-500', bg: 'bg-red-50' },
                     { label: 'NUMERO SHARING', value: totals.sharing, color: 'text-purple-500', bg: 'bg-purple-50' },
-                    { label: 'FACTURACIÓN', value: formatCurrency(totals.revenue) + '€', color: 'text-green-600', bg: 'bg-green-50' },
-                    { label: 'BENEFICIO', value: formatCurrency(totals.profit) + '€', color: 'text-emerald-700', bg: 'bg-emerald-50' },
                 ].map((stat, i) => (
                     <motion.div
                         key={stat.label}
