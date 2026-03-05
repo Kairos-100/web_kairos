@@ -139,6 +139,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             // Create a pseudo-metric entry for the audit log
             logs[user].push({
                 id: e.id,
+                created_at: new Date().toISOString(),
                 user_email: e.author,
                 date: e.date,
                 cv: 0,
