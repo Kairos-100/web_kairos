@@ -823,10 +823,19 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                                                                 {proj.detailedEntries.map((entry, eIdx) => (
                                                                                                     <div key={eIdx} className="flex justify-between items-start">
                                                                                                         <div className="flex flex-col">
-                                                                                                            <span className="text-[10px] font-bold text-gray-600 leading-tight">{entry.description || 'Sin descripción'}</span>
+                                                                                                            <div className="flex items-center space-x-2">
+                                                                                                                <span className="text-[10px] font-bold text-gray-600 leading-tight">{entry.description || 'Sin descripción'}</span>
+                                                                                                                {entry.tags && entry.tags.length > 0 && (
+                                                                                                                    <div className="flex gap-1">
+                                                                                                                        {entry.tags.map(tag => (
+                                                                                                                            <span key={tag} className="px-1.5 py-0.5 bg-gray-100 text-[8px] font-bold text-gray-500 rounded uppercase tracking-widest">{tag}</span>
+                                                                                                                        ))}
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                            </div>
                                                                                                             <span className="text-[8px] text-gray-400 font-medium">{new Date(entry.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
                                                                                                         </div>
-                                                                                                        <span className="text-[10px] font-black text-blue-600 whitespace-nowrap ml-4">
+                                                                                                        <span className="text-[10px] font-black text-blue-600 whitespace-nowrap ml-4 mt-0.5">
                                                                                                             {Math.floor(entry.time / 3600)}h {Math.floor((entry.time % 3600) / 60)}m
                                                                                                         </span>
                                                                                                     </div>

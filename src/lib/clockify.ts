@@ -17,6 +17,7 @@ export interface ClockifyDetailedEntry {
     description: string;
     time: number; // in seconds
     date: string;
+    tags?: string[];
 }
 
 export interface ClockifyUserTime {
@@ -215,11 +216,24 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                                 (entry.userName === userName || entry.userEmail === userEmail) &&
                                 (entry.projectName === projName)
                             )
-                            .map((entry: any) => ({
-                                description: entry.description || '(Sin descripción)',
-                                time: entry.timeInterval?.duration || 0,
-                                date: entry.timeInterval?.start || ''
-                            }));
+                            .map((entry: any) => {
+                                let duration = 0;
+                                if (entry.timeInterval?.duration && typeof entry.timeInterval.duration === 'string') {
+                                    const match = entry.timeInterval.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                                    if (match) {
+                                        const h = parseInt(match[1] || '0', 10);
+                                        const m = parseInt(match[2] || '0', 10);
+                                        const s = parseInt(match[3] || '0', 10);
+                                        duration = (h * 3600) + (m * 60) + s;
+                                    }
+                                }
+                                return {
+                                    description: entry.description || '(Sin descripción)',
+                                    time: duration,
+                                    date: entry.timeInterval?.start || '',
+                                    tags: entry.tags ? entry.tags.map((t: any) => t.name) : []
+                                };
+                            });
 
                         userMap[userEmail].projects.push({
                             projectName: projName,
