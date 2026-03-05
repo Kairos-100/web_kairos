@@ -50,6 +50,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
     const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
     const [expandedProject, setExpandedProject] = useState<string | null>(null);
+    const [expandedTimeUser, setExpandedTimeUser] = useState<string | null>(null);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -628,124 +629,201 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {userData.map((user, idx) => (
-                                    <tr key={user.user} className="hover:bg-blue-50/30 transition-all group">
-                                        <td className="p-6 pl-10">
-                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black transition-all ${idx === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 group-hover:bg-kairos-navy group-hover:text-white'}`}>
-                                                {idx + 1}
-                                            </div>
-                                        </td>
-                                        <td className="p-6">
-                                            <div
-                                                className="flex items-center space-x-4 cursor-pointer group/name"
-                                                onClick={() => setSelectedProfile(user.user)}
-                                            >
-                                                <div className="w-10 h-10 rounded-2xl bg-kairos-navy text-white flex items-center justify-center font-black text-xs shadow-md group-hover:scale-110 transition-transform">
-                                                    {user.user[0].toUpperCase()}
+                                    <React.Fragment key={user.user}>
+                                        <tr className="hover:bg-blue-50/30 transition-all group">
+                                            <td className="p-6 pl-10">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black transition-all ${idx === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 group-hover:bg-kairos-navy group-hover:text-white'}`}>
+                                                    {idx + 1}
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-black text-kairos-navy leading-none mb-1 group-hover/name:text-blue-600 transition-colors">{user.user}</p>
-                                                    <p className="text-[10px] text-gray-400 leading-none">@{user.user}.alumni...</p>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td className="p-6 text-center">
-                                            <span className="text-lg font-black text-amber-600">{user.cv || '0'}</span>
-                                        </td>
-
-                                        <td className="p-6 text-center">
-                                            <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
-                                        </td>
-
-                                        <td className="p-6 text-center">
-                                            <span className="text-lg font-black text-red-500">{user.cp || '0'}</span>
-                                        </td>
-
-
-                                        <td className="p-6 text-center bg-gray-50/30">
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-xl font-black text-kairos-navy">{user.totalScore || '0'}</span>
-                                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">LP+CV+CP</span>
-                                            </div>
-                                        </td>
-
-                                        <td className="p-6 text-center">
-                                            {(() => {
-                                                const target = user.user;
-                                                const clockifyUser = clockifyData?.users.find(u => {
-                                                    const expectedClockifyName = CLOCKIFY_USER_MAP[target];
-                                                    const uName = u.userName.toLowerCase();
-                                                    const uEmail = u.email.toLowerCase();
-
-                                                    if (expectedClockifyName) {
-                                                        const expected = expectedClockifyName.toLowerCase();
-                                                        return uName === expected || uName.includes(expected) || expected.includes(uName);
-                                                    }
-
-                                                    const normalizedTarget = target.toLowerCase();
-                                                    return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
-                                                });
-                                                if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
-                                                const hours = Math.floor(clockifyUser.totalTime / 3600);
-                                                const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
-                                                return (
-                                                    <div className="flex flex-col items-center">
-                                                        <span className="text-blue-800 font-black">{hours}h {mins}m</span>
+                                            </td>
+                                            <td className="p-6">
+                                                <div
+                                                    className="flex items-center space-x-4 cursor-pointer group/name"
+                                                    onClick={() => setSelectedProfile(user.user)}
+                                                >
+                                                    <div className="w-10 h-10 rounded-2xl bg-kairos-navy text-white flex items-center justify-center font-black text-xs shadow-md group-hover:scale-110 transition-transform">
+                                                        {user.user[0].toUpperCase()}
                                                     </div>
-                                                );
-                                            })()}
-                                        </td>
-
-                                        <td className="p-6">
-                                            <div className="flex flex-col items-center space-y-2">
-                                                {/* Grouped Vouchers Mini-Grid */}
-                                                <div className="flex items-center justify-center -space-x-2">
-                                                    {(() => {
-                                                        const groups = [
-                                                            { type: 'cv', urls: user.cv_pdf_urls || [], bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: <Target size={12} /> },
-                                                            { type: 'sh', urls: user.sharing_pdf_urls || [], bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100', icon: <Share2 size={12} /> },
-                                                            { type: 'cp', urls: user.cp_pdf_urls || [], bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-100', icon: <Award size={12} /> },
-                                                            { type: 'lp', urls: user.bp_pdf_urls || [], bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100', icon: <BookOpen size={12} /> }
-                                                        ].filter(g => g.urls.length > 0);
-
-                                                        if (groups.length === 0) return <span className="text-gray-200 text-xs font-black opacity-20">—</span>;
-
-                                                        return groups.map((group) => {
-                                                            const count = group.urls.length;
-                                                            return (
-                                                                <div key={group.type} className="relative group/voucher">
-                                                                    <a
-                                                                        href={group.urls[0]}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className={`w-9 h-9 flex items-center justify-center ${group.bg} ${group.text} rounded-xl border ${group.border} shadow-sm hover:scale-110 hover:z-20 transition-all relative`}
-                                                                    >
-                                                                        {group.icon}
-                                                                        {count > 1 && (
-                                                                            <span className={`absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black border-2 border-white ${group.bg} ${group.text} shadow-sm`}>
-                                                                                {count}
-                                                                            </span>
-                                                                        )}
-                                                                    </a>
-                                                                    {/* Simple Hover Preview for more links in this category if many */}
-                                                                    {count > 1 && (
-                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover/voucher:flex flex-col bg-white border border-gray-100 rounded-xl shadow-xl p-2 z-50 min-w-[120px] pointer-events-auto">
-                                                                            <p className="text-[8px] font-black uppercase text-gray-400 mb-1 px-1">Justificantes {group.type.toUpperCase()}</p>
-                                                                            {group.urls.map((url: string, uidx: number) => (
-                                                                                <a key={uidx} href={url} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg truncate block">
-                                                                                    Documento {uidx + 1}
-                                                                                </a>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        });
-                                                    })()}
+                                                    <div>
+                                                        <p className="text-sm font-black text-kairos-navy leading-none mb-1 group-hover/name:text-blue-600 transition-colors">{user.user}</p>
+                                                        <p className="text-[10px] text-gray-400 leading-none">@{user.user}.alumni...</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </td>
+
+                                            <td className="p-6 text-center">
+                                                <span className="text-lg font-black text-amber-600">{user.cv || '0'}</span>
+                                            </td>
+
+                                            <td className="p-6 text-center">
+                                                <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
+                                            </td>
+
+                                            <td className="p-6 text-center">
+                                                <span className="text-lg font-black text-red-500">{user.cp || '0'}</span>
+                                            </td>
+
+
+                                            <td className="p-6 text-center bg-gray-50/30">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xl font-black text-kairos-navy">{user.totalScore || '0'}</span>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">LP+CV+CP</span>
+                                                </div>
+                                            </td>
+
+                                            <td className="p-6 text-center">
+                                                {(() => {
+                                                    const target = user.user;
+                                                    const clockifyUser = clockifyData?.users.find(u => {
+                                                        const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                                                        const uName = u.userName.toLowerCase();
+                                                        const uEmail = u.email.toLowerCase();
+
+                                                        if (expectedClockifyName) {
+                                                            const expected = expectedClockifyName.toLowerCase();
+                                                            return uName === expected || uName.includes(expected) || expected.includes(uName);
+                                                        }
+
+                                                        const normalizedTarget = target.toLowerCase();
+                                                        return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
+                                                    });
+                                                    if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
+                                                    const hours = Math.floor(clockifyUser.totalTime / 3600);
+                                                    const mins = Math.floor((clockifyUser.totalTime % 3600) / 60);
+                                                    return (
+                                                        <div
+                                                            className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                                                            onClick={(e) => { e.stopPropagation(); setExpandedTimeUser(expandedTimeUser === user.user ? null : user.user); }}
+                                                        >
+                                                            <span className="text-xl font-black text-blue-600">{hours}h {mins}m</span>
+                                                            <span className="flex items-center space-x-1 mt-1 justify-center bg-blue-50 px-2 py-0.5 rounded-full">
+                                                                <span className="text-[9px] uppercase font-black tracking-widest text-blue-500">Clockify</span>
+                                                                {expandedTimeUser === user.user ? <ChevronUp size={10} className="text-blue-500" /> : <ChevronDown size={10} className="text-blue-500" />}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+
+                                            <td className="p-6">
+                                                <div className="flex flex-col items-center space-y-2">
+                                                    {/* Grouped Vouchers Mini-Grid */}
+                                                    <div className="flex items-center justify-center -space-x-2">
+                                                        {(() => {
+                                                            const groups = [
+                                                                { type: 'cv', urls: user.cv_pdf_urls || [], bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: <Target size={12} /> },
+                                                                { type: 'sh', urls: user.sharing_pdf_urls || [], bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100', icon: <Share2 size={12} /> },
+                                                                { type: 'cp', urls: user.cp_pdf_urls || [], bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-100', icon: <Award size={12} /> },
+                                                                { type: 'lp', urls: user.bp_pdf_urls || [], bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100', icon: <BookOpen size={12} /> }
+                                                            ].filter(g => g.urls.length > 0);
+
+                                                            if (groups.length === 0) return <span className="text-gray-200 text-xs font-black opacity-20">—</span>;
+
+                                                            return groups.map((group) => {
+                                                                const count = group.urls.length;
+                                                                return (
+                                                                    <div key={group.type} className="relative group/voucher">
+                                                                        <a
+                                                                            href={group.urls[0]}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={`w-9 h-9 flex items-center justify-center ${group.bg} ${group.text} rounded-xl border ${group.border} shadow-sm hover:scale-110 hover:z-20 transition-all relative`}
+                                                                        >
+                                                                            {group.icon}
+                                                                            {count > 1 && (
+                                                                                <span className={`absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black border-2 border-white ${group.bg} ${group.text} shadow-sm`}>
+                                                                                    {count}
+                                                                                </span>
+                                                                            )}
+                                                                        </a>
+                                                                        {/* Simple Hover Preview for more links in this category if many */}
+                                                                        {count > 1 && (
+                                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover/voucher:flex flex-col bg-white border border-gray-100 rounded-xl shadow-xl p-2 z-50 min-w-[120px] pointer-events-auto">
+                                                                                <p className="text-[8px] font-black uppercase text-gray-400 mb-1 px-1">Justificantes {group.type.toUpperCase()}</p>
+                                                                                {group.urls.map((url: string, uidx: number) => (
+                                                                                    <a key={uidx} href={url} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg truncate block">
+                                                                                        Documento {uidx + 1}
+                                                                                    </a>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            });
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <AnimatePresence>
+                                            {expandedTimeUser === user.user && (
+                                                <tr>
+                                                    <td colSpan={8} className="p-0 border-b border-gray-100 bg-blue-50/10 overflow-hidden">
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="p-6 md:p-8"
+                                                        >
+                                                            {(() => {
+                                                                const target = user.user;
+                                                                const clockifyUser = clockifyData?.users.find(u => {
+                                                                    const expectedClockifyName = CLOCKIFY_USER_MAP[target];
+                                                                    const uName = u.userName.toLowerCase();
+                                                                    const uEmail = u.email.toLowerCase();
+                                                                    if (expectedClockifyName) {
+                                                                        const expected = expectedClockifyName.toLowerCase();
+                                                                        return uName === expected || uName.includes(expected) || expected.includes(uName);
+                                                                    }
+                                                                    const normalizedTarget = target.toLowerCase();
+                                                                    return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
+                                                                });
+
+                                                                if (!clockifyUser || clockifyUser.projects.length === 0) {
+                                                                    return <p className="text-sm text-gray-500 italic text-center">No hay registros detallados de Clockify disponibles.</p>;
+                                                                }
+
+                                                                return (
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                                                        {clockifyUser.projects.map((proj, pIdx) => {
+                                                                            const percentage = (proj.time / clockifyUser.totalTime) * 100;
+                                                                            return (
+                                                                                <div key={pIdx} className="bg-white p-4 rounded-3xl shadow-sm border border-blue-50/80 hover:shadow-md transition-shadow">
+                                                                                    <div className="flex justify-between items-start mb-3">
+                                                                                        <div className="flex items-center space-x-2">
+                                                                                            <div className="w-3 h-3 rounded-full shrink-0 shadow-inner" style={{ backgroundColor: proj.color || '#3B82F6' }}></div>
+                                                                                            <h4 className="text-sm font-black text-kairos-navy max-w-[130px] truncate" title={proj.projectName}>{proj.projectName}</h4>
+                                                                                        </div>
+                                                                                        <div className="text-right shrink-0">
+                                                                                            <span className="text-sm font-black text-blue-600 block leading-tight">{Math.floor(proj.time / 3600)}h {Math.floor((proj.time % 3600) / 60)}m</span>
+                                                                                            <span className="text-[10px] font-black text-gray-400">{percentage.toFixed(1)}%</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden mb-4">
+                                                                                        <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: proj.color || '#3B82F6' }}></div>
+                                                                                    </div>
+                                                                                    {proj.detailedEntries && proj.detailedEntries.length > 0 && (
+                                                                                        <div className="space-y-1.5 mt-2 pt-3 border-t-2 border-dashed border-gray-50 max-h-36 overflow-y-auto pr-2 custom-scrollbar">
+                                                                                            {proj.detailedEntries.map((entry, eIdx) => (
+                                                                                                <div key={eIdx} className="flex justify-between items-center text-[10px] group/entry cursor-default p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
+                                                                                                    <span className="font-bold text-gray-500 truncate mr-2" title={entry.description}>{entry.description || 'Sin descripción'}</span>
+                                                                                                    <span className="font-black text-gray-400 whitespace-nowrap bg-white px-1.5 py-0.5 rounded-md shadow-sm border border-gray-100">{Math.floor(entry.time / 3600)}h {Math.floor((entry.time % 3600) / 60)}m</span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </motion.div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </AnimatePresence>
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
