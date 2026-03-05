@@ -121,7 +121,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             if (m.cp_pdf_url && !grouped[user].cp_pdf_urls.includes(m.cp_pdf_url)) grouped[user].cp_pdf_urls.push(m.cp_pdf_url);
             if (m.bp_pdf_url && !grouped[user].bp_pdf_urls.includes(m.bp_pdf_url)) grouped[user].bp_pdf_urls.push(m.bp_pdf_url);
 
-            logs[user].push(m);
+            logs[user].push({ ...m, bp: m.bp || 0 });
         });
 
         essays.forEach(e => {
@@ -129,11 +129,32 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             if (!grouped[user]) {
                 grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
             }
+            if (!logs[user]) logs[user] = [];
+
             grouped[user].lp += e.points || 0;
+            if (e.pdfUrl && !grouped[user].bp_pdf_urls.includes(e.pdfUrl)) {
+                grouped[user].bp_pdf_urls.push(e.pdfUrl);
+            }
+
+            // Create a pseudo-metric entry for the audit log
+            logs[user].push({
+                id: e.id,
+                user_email: e.author,
+                date: e.date,
+                cv: 0,
+                cp: 0,
+                sharing: 0,
+                revenue: 0,
+                profit: 0,
+                bp: e.points || 0,
+                bp_title: e.title,
+                bp_description: e.category,
+                bp_pdf_url: e.pdfUrl
+            });
         });
 
         // Add all-time LP if provided
-        if (allEssays.length > 0) {
+        if (allEssays && allEssays.length > 0) {
             allEssays.forEach(e => {
                 const user = e.author.split('@')[0];
                 if (!grouped[user]) {
@@ -866,6 +887,30 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                                                 <td className="p-4 text-right pr-6">
                                                                                     {entry.cp_pdf_url ? (
                                                                                         <a href={entry.cp_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
+                                                                                            <span>VER PDF</span>
+                                                                                            <ExternalLink size={10} />
+                                                                                        </a>
+                                                                                    ) : <span className="text-gray-200 text-[10px]">Sin adjunto</span>}
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                        {/* LP/BP Row */}
+                                                                        {entry.bp > 0 && (
+                                                                            <tr className="hover:bg-blue-50/30 transition-colors">
+                                                                                <td className="p-4 pl-6 text-xs text-gray-400 font-bold">{entry.date}</td>
+                                                                                <td className="p-4">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="flex items-center space-x-2 text-[10px] font-black uppercase text-blue-600">
+                                                                                            <BookOpen size={12} />
+                                                                                            <span>Learning Points (LP)</span>
+                                                                                        </span>
+                                                                                        {entry.bp_title && <span className="text-[10px] font-bold text-gray-700 mt-1">{entry.bp_title}</span>}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="p-4 text-center text-xs font-black text-kairos-navy">{entry.bp}</td>
+                                                                                <td className="p-4 text-right pr-6">
+                                                                                    {entry.bp_pdf_url ? (
+                                                                                        <a href={entry.bp_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-700 font-black text-[10px]">
                                                                                             <span>VER PDF</span>
                                                                                             <ExternalLink size={10} />
                                                                                         </a>
