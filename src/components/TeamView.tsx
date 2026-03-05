@@ -237,7 +237,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                         }
 
                         const normalizedTarget = target.toLowerCase();
-                        return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
+                        return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
                     });
                     if (!clockifyUser || clockifyUser.projects.length === 0) return null;
 
@@ -492,7 +492,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                                 }
 
                                                 const normalizedTarget = target.toLowerCase();
-                                                return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget);
+                                                return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
                                             });
                                             if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
                                             const hours = Math.floor(clockifyUser.totalTime / 3600);
