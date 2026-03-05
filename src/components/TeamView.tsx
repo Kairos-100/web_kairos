@@ -233,7 +233,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                         if (expectedClockifyName) {
                             const expected = expectedClockifyName.toLowerCase();
-                            return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                            return uName === expected || uName.includes(expected) || expected.includes(uName);
                         }
 
                         const normalizedTarget = target.toLowerCase();
@@ -488,7 +488,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                                                 if (expectedClockifyName) {
                                                     const expected = expectedClockifyName.toLowerCase();
-                                                    return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                                                    return uName === expected || uName.includes(expected) || expected.includes(uName);
                                                 }
 
                                                 const normalizedTarget = target.toLowerCase();

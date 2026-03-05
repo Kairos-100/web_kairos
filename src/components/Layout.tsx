@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X } from 'lucide-react';
+import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X, Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -42,6 +42,7 @@ export const Layout: React.FC<LayoutProps> = ({
             items: [
                 { id: 'team', label: 'Miembros', icon: Users },
                 { id: 'commercial', label: 'Kairos Métricas', icon: TrendingUp },
+                { id: 'clockify', label: 'Distribución', icon: Clock },
                 { id: 'score', label: 'Puntuación', icon: Trophy },
                 { id: 'history', label: 'Historial', icon: History },
             ]

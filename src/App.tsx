@@ -343,6 +343,20 @@ const App: React.FC = () => {
             onDeleteMetric={handleDeleteMetric}
           />
         );
+      case 'clockify':
+        return (
+          <div className="space-y-8">
+            <Dashboard essays={[]} clockifyData={clockifyData} />
+            <TeamView
+              essays={[]}
+              metrics={[]}
+              allEssays={[]}
+              allMetrics={[]}
+              clockifyData={clockifyData}
+              currentUserEmail={loggedInUser}
+            />
+          </div>
+        );
       default:
         return (
           <AnimatePresence mode="wait">
@@ -408,7 +422,8 @@ const App: React.FC = () => {
                     activeTab === 'commercial' ? 'Kairos Métricas' :
                       activeTab === 'history' ? 'Historial de Actividad' :
                         activeTab === 'team' ? 'Miembros del Equipo' :
-                          activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
+                          activeTab === 'clockify' ? 'Distribución de Tiempo' :
+                            activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
               </h2>
               <p className="text-gray-500 font-medium">
                 {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'Todo el conocimiento y documentos de Kairos en un solo lugar.') :
@@ -416,7 +431,8 @@ const App: React.FC = () => {
                     activeTab === 'commercial' ? 'Seguimiento de actividad comercial y financiera.' :
                       activeTab === 'history' ? 'Registro detallado de todas las aportaciones y métricas.' :
                         activeTab === 'team' ? 'Actividad detallada de cada integrante de Kairos.' :
-                          activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
+                          activeTab === 'clockify' ? 'Seguimiento de tiempos y proyectos en Clockify.' :
+                            activeTab === 'score' ? 'Reconocimiento y evolución de tus aportaciones.' : 'Todas las tesis consolidadas en un solo libro digital.'}
               </p>
             </div>
             <div className="flex items-center space-x-6">

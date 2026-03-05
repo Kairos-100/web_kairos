@@ -279,7 +279,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
                         if (expectedClockifyName) {
                             const expected = expectedClockifyName.toLowerCase();
-                            return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                            return uName === expected || uName.includes(expected) || expected.includes(uName);
                         }
 
                         const normalizedTarget = target.toLowerCase();
@@ -662,7 +662,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
                                                     if (expectedClockifyName) {
                                                         const expected = expectedClockifyName.toLowerCase();
-                                                        return uName === expected || uName.includes(expected) || expected.includes(uName) || uEmail.includes(expected);
+                                                        return uName === expected || uName.includes(expected) || expected.includes(uName);
                                                     }
 
                                                     const normalizedTarget = target.toLowerCase();
