@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2 } from 'lucide-react';
+import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -682,7 +682,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                         const groups = [
                                                             { type: 'cv', urls: user.cv_pdf_urls || [], bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: <Target size={12} /> },
                                                             { type: 'sh', urls: user.sharing_pdf_urls || [], bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100', icon: <Share2 size={12} /> },
-                                                            { type: 'cp', urls: user.cp_pdf_urls || [], bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-100', icon: <Award size={12} /> }
+                                                            { type: 'cp', urls: user.cp_pdf_urls || [], bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-100', icon: <Award size={12} /> },
+                                                            { type: 'lp', urls: user.bp_pdf_urls || [], bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100', icon: <BookOpen size={12} /> }
                                                         ].filter(g => g.urls.length > 0);
 
                                                         if (groups.length === 0) return <span className="text-gray-200 text-xs font-black opacity-20">—</span>;
