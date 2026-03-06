@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Legend, BarChart, Bar,
+    ResponsiveContainer, Legend, BarChart, Bar, Cell
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen } from 'lucide-react';
+import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -50,6 +50,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [expandedProject, setExpandedProject] = useState<string | null>(null);
     const [expandedTimeUser, setExpandedTimeUser] = useState<string | null>(null);
     const [expandedLpUser, setExpandedLpUser] = useState<string | null>(null);
+    const [evolutionUser, setEvolutionUser] = useState<string>('team');
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -75,6 +76,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         const grouped: Record<string, any> = {};
 
         metrics.forEach(m => {
+            const user = m.user_email.split('@')[0];
+            if (evolutionUser !== 'team' && user !== evolutionUser) return;
+
             if (!grouped[m.date]) grouped[m.date] = { date: m.date, cv: 0, lp: 0, cp: 0, sharing: 0 };
             grouped[m.date].cv += m.cv || 0;
             grouped[m.date].cp += m.cp || 0;
@@ -83,6 +87,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         });
 
         essays.forEach(e => {
+            const user = e.author.split('@')[0];
+            if (evolutionUser !== 'team' && user !== evolutionUser) return;
+
             if (!grouped[e.date]) grouped[e.date] = { date: e.date, cv: 0, lp: 0, cp: 0, sharing: 0 };
             grouped[e.date].lp += e.points || 0;
         });
@@ -96,7 +103,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 chartDate: dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
             };
         });
-    }, [metrics, essays]);
+    }, [metrics, essays, evolutionUser]);
 
     // 3. User Aggregated Data & Audit Log
     const { userData, auditLog } = useMemo(() => {
@@ -502,14 +509,42 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
             {/* 3. Charts Area */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-8 bg-white border-none shadow-xl">
-                    <div className="flex items-center justify-between mb-8">
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-8 bg-white border-none shadow-xl evolution-card">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                         <div>
-                            <h3 className="text-xl font-heading font-black text-kairos-navy">Evolución del Equipo</h3>
-                            <p className="text-xs text-gray-400 font-medium">Trayectoria detallada de nuestras métricas principales.</p>
+                            <h3 className="text-xl font-heading font-black text-kairos-navy">
+                                {evolutionUser === 'team' ? 'Evolución del Equipo' : `Trayectoria: ${evolutionUser}`}
+                            </h3>
+                            <p className="text-xs text-gray-400 font-medium">
+                                {evolutionUser === 'team'
+                                    ? 'Impacto colectivo acumulado por categorías.'
+                                    : `Seguimiento individual de aportaciones.`}
+                            </p>
                         </div>
-                        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                            <TrendingUp size={20} />
+
+                        <div className="flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm">
+                            <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[200px] md:max-w-none px-1">
+                                <button
+                                    onClick={() => setEvolutionUser('team')}
+                                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${evolutionUser === 'team' ? 'bg-kairos-navy text-white shadow-lg' : 'text-gray-400 hover:text-kairos-navy hover:bg-white'}`}
+                                >
+                                    Global
+                                </button>
+                                <div className="w-[1px] h-4 bg-gray-200 mx-1 flex-shrink-0" />
+                                {userData.map((user) => (
+                                    <button
+                                        key={user.user}
+                                        onClick={() => setEvolutionUser(user.user)}
+                                        className={`flex-shrink-0 w-9 h-9 rounded-xl text-[11px] font-black uppercase transition-all duration-300 flex items-center justify-center relative ${evolutionUser === user.user ? 'bg-blue-600 text-white shadow-lg scale-110 z-10' : 'text-gray-400 hover:bg-white hover:text-blue-500'}`}
+                                        title={user.user}
+                                    >
+                                        {user.user[0]}
+                                        {evolutionUser === user.user && (
+                                            <motion.div layoutId="activeBubble" className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                     <div className="h-72 w-full">
@@ -549,6 +584,32 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
+                    {/* Visual hint for "passing" members */}
+                    <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-50">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-black uppercase text-gray-300 tracking-tighter">Pasa por el equipo</span>
+                            <div className="flex items-center space-x-1">
+                                {userData.map((_, i) => (
+                                    <div key={i} className={`h-1 rounded-full transition-all duration-500 ${evolutionUser === userData[i].user ? 'w-4 bg-blue-500' : 'w-1 bg-gray-100'}`} />
+                                ))}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const currentIndex = userData.findIndex(u => u.user === evolutionUser);
+                                if (currentIndex === -1) {
+                                    setEvolutionUser(userData[0].user);
+                                } else if (currentIndex < userData.length - 1) {
+                                    setEvolutionUser(userData[currentIndex + 1].user);
+                                } else {
+                                    setEvolutionUser('team');
+                                }
+                            }}
+                            className="text-[10px] font-black text-blue-600 border border-blue-100 px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                            Siguiente →
+                        </button>
+                    </div>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="card p-8 bg-white border-none shadow-xl">
@@ -563,7 +624,19 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     </div>
                     <div className="h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={userData} layout="vertical">
+                            <BarChart
+                                data={userData}
+                                layout="vertical"
+                                onClick={(data) => {
+                                    if (data && data.activeLabel) {
+                                        setEvolutionUser(String(data.activeLabel));
+                                        // Scroll to evolution chart if on mobile
+                                        if (window.innerWidth < 1024) {
+                                            document.querySelector('.evolution-card')?.scrollIntoView({ behavior: 'smooth' });
+                                        }
+                                    }
+                                }}
+                            >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                                 <XAxis type="number" hide />
                                 <YAxis
@@ -574,11 +647,26 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     tick={{ fontSize: window.innerWidth < 768 ? 9 : 11, fill: '#0F1D42', fontWeight: 800 }}
                                     width={window.innerWidth < 768 ? 70 : 100}
                                 />
-                                <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '15px' }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '15px' }}
+                                    cursor={{ fill: '#f8fafc', radius: 10 }}
+                                />
                                 <Legend iconType="rect" wrapperStyle={{ fontSize: '10px', fontWeight: 'black', paddingTop: '20px' }} />
-                                <Bar dataKey="lp" name="LP (Conocimiento)" stackId="a" fill={COLORS.lp} radius={[4, 0, 0, 4]} />
+                                <Bar dataKey="lp" name="LP (Conocimiento)" stackId="a" fill={COLORS.lp} radius={evolutionUser === 'team' ? [4, 0, 0, 4] : 0} />
                                 <Bar dataKey="cp" name="CP (Comunidad)" stackId="a" fill={COLORS.cp} />
-                                <Bar dataKey="cv" name="CV (Visitas)" stackId="a" fill={COLORS.cv} radius={[0, 4, 4, 0]} />
+                                <Bar dataKey="cv" name="CV (Visitas)" stackId="a" fill={COLORS.cv} radius={evolutionUser === 'team' ? [0, 4, 4, 0] : 0} />
+                                {evolutionUser !== 'team' && (
+                                    <Bar dataKey="totalScore" fill="transparent">
+                                        {userData.map((entry, index) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                stroke={entry.user === evolutionUser ? '#3B82F6' : 'transparent'}
+                                                strokeWidth={3}
+                                                fill="transparent"
+                                            />
+                                        ))}
+                                    </Bar>
+                                )}
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
