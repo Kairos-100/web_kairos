@@ -361,7 +361,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
                 const { data: newData, error: dbError } = await supabase
                     .from('metrics')
-                    .insert([{
+                    .upsert([{
                         user_email: email,
                         date: date,
                         cv,
@@ -382,7 +382,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         bp_title: bpTitle,
                         bp_description: bpDescription,
                         bp: bp
-                    }])
+                    }], { onConflict: 'user_email,date' })
                     .select();
 
                 if (dbError) throw dbError;
