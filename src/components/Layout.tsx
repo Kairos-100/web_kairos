@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X } from 'lucide-react';
+import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -27,6 +28,7 @@ export const Layout: React.FC<LayoutProps> = ({
     onOpenMetrics
 }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+    const [isActionExpanded, setIsActionExpanded] = React.useState(false);
 
     const navGroups = [
         {
@@ -116,40 +118,68 @@ export const Layout: React.FC<LayoutProps> = ({
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-white/10">
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-white/5 border border-white/10 group">
-                        <button
-                            onClick={() => {
-                                onOpenUpload();
-                                setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 group/btn"
-                        >
-                            <div className="bg-kairos-navy/5 p-2 rounded-lg group-hover/btn:scale-110 transition-transform text-kairos-navy">
-                                <PlusCircle size={18} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-black text-kairos-navy leading-none">Subir Ensayo</p>
-                                <p className="text-[10px] text-gray-400 mt-1">Nuevas moléculas</p>
-                            </div>
-                        </button>
+                <div className="p-4 border-t border-white/10 relative">
+                    <AnimatePresence>
+                        {isActionExpanded && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: -8, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                                className="absolute bottom-[calc(100%-8px)] left-4 right-4 bg-white rounded-2xl overflow-hidden shadow-2xl border border-gray-100 z-50 origin-bottom"
+                            >
+                                <button
+                                    onClick={() => {
+                                        onOpenUpload();
+                                        setIsActionExpanded(false);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 group/btn"
+                                >
+                                    <div className="bg-kairos-navy/5 p-2 rounded-lg group-hover/btn:scale-110 transition-transform text-kairos-navy">
+                                        <PlusCircle size={18} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black text-kairos-navy leading-none">Subir Ensayo</p>
+                                        <p className="text-[10px] text-gray-400 mt-1">Nuevas moléculas</p>
+                                    </div>
+                                </button>
 
-                        <button
-                            onClick={() => {
-                                onOpenMetrics();
-                                setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors text-left group/btn"
-                        >
-                            <div className="bg-kairos-navy/5 p-2 rounded-lg group-hover/btn:scale-110 transition-transform text-kairos-navy">
-                                <TrendingUp size={18} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-black text-kairos-navy leading-none">Act. Métricas</p>
-                                <p className="text-[10px] text-gray-400 mt-1">Comercial y CP</p>
-                            </div>
-                        </button>
-                    </div>
+                                <button
+                                    onClick={() => {
+                                        onOpenMetrics();
+                                        setIsActionExpanded(false);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors text-left group/btn"
+                                >
+                                    <div className="bg-kairos-navy/5 p-2 rounded-lg group-hover/btn:scale-110 transition-transform text-kairos-navy">
+                                        <TrendingUp size={18} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black text-kairos-navy leading-none">Act. Métricas</p>
+                                        <p className="text-[10px] text-gray-400 mt-1">Comercial y CP</p>
+                                    </div>
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <button
+                        onClick={() => setIsActionExpanded(!isActionExpanded)}
+                        className={cn(
+                            "w-full py-3 px-4 rounded-xl font-bold flex items-center justify-between transition-all active:scale-95 shadow-xl group",
+                            isActionExpanded
+                                ? "bg-kairos-navy text-white ring-2 ring-white/20"
+                                : "bg-white text-kairos-navy hover:shadow-2xl hover:-translate-y-0.5"
+                        )}
+                    >
+                        <div className="flex items-center space-x-2">
+                            <PlusCircle size={20} className={cn("transition-transform duration-300", isActionExpanded ? "rotate-45" : "group-hover:rotate-90")} />
+                            <span>{isActionExpanded ? "Cerrar" : "Nueva Aportación"}</span>
+                        </div>
+                        <ChevronUp size={16} className={cn("transition-transform duration-300 opacity-50", isActionExpanded ? "rotate-180" : "")} />
+                    </button>
 
                     {user ? (
                         <div className="flex items-center justify-between px-2 text-[10px] text-white/40 pt-4">
