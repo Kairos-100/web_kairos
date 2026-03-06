@@ -548,9 +548,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                             </p>
                         </div>
 
-                        <div className="flex items-center space-x-3">
-                            <div className="flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm overflow-hidden">
-                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[200px] sm:max-w-[300px] md:max-w-none px-1">
+                        <div className="flex items-center space-x-3 min-w-0 max-w-full">
+                            <div className="flex-1 min-w-0 flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm overflow-hidden">
+                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar px-1">
                                     <button
                                         onClick={() => setEvolutionUser('team')}
                                         className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${evolutionUser === 'team' ? 'bg-kairos-navy text-white shadow-lg' : 'text-gray-400 hover:text-kairos-navy hover:bg-white'}`}
@@ -636,9 +636,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                         <h2 className="text-4xl font-heading font-black text-kairos-navy mb-2">
                                             {evolutionUser === 'team' ? 'Análisis Global' : `Foco: ${evolutionUser}`}
                                         </h2>
-                                        <div className="flex items-center space-x-2">
-                                            <div className="flex items-center bg-gray-100/50 p-1 rounded-xl overflow-hidden">
-                                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[200px] sm:max-w-[400px] md:max-w-none px-1">
+                                        <div className="flex items-center space-x-2 min-w-0 max-w-full">
+                                            <div className="flex-1 min-w-0 flex items-center bg-gray-100/50 p-1 rounded-xl overflow-hidden">
+                                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar px-1">
                                                     <button
                                                         onClick={() => setEvolutionUser('team')}
                                                         className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${evolutionUser === 'team' ? 'bg-black text-white' : 'text-gray-400 hover:text-black'}`}
@@ -656,8 +656,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                     ))}
                                                 </div>
                                             </div>
-                                            <span className="text-gray-300 mx-2">|</span>
-                                            <p className="text-gray-400 font-medium">Filtra y analiza tendencias detalladas.</p>
+                                            <span className="text-gray-300 mx-2 flex-shrink-0">|</span>
+                                            <p className="text-gray-400 font-medium truncate">Filtra y analiza tendencias detalladas.</p>
                                         </div>
                                     </div>
                                     <button
