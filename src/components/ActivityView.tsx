@@ -91,18 +91,20 @@ export const ActivityView: React.FC<ActivityViewProps> = ({
                     id: item.id,
                     title: item.title,
                     description: item.type === 'tesis' ? (item.data as any).category :
-                        ((item.data as any).cv_title || (item.data as any).sharing_title || (item.data as any).cp_title),
+                        ((item.data as any).cv_title || (item.data as any).sharing_title || (item.data as any).cp_title || (item.data as any).bp_title),
                     author: item.author,
                     date: item.refDate,
                     category: item.type === 'tesis' ? (item.data as any).category : 'Actividad',
                     pdfUrl: item.type === 'tesis' ? (item.data as any).pdfUrl :
-                        ((item.data as any).cv_pdf_url || (item.data as any).sharing_pdf_url || (item.data as any).cp_pdf_url || ''),
+                        ((item.data as any).cv_pdf_url || (item.data as any).sharing_pdf_url || (item.data as any).cp_pdf_url || (item.data as any).bp_pdf_url || ''),
                     type: item.type === 'tesis' ? 'tesis' :
                         ((item.data as any).cv > 0 ? 'cv' :
-                            (item.data as any).sharing > 0 ? 'sharing' : 'cp'),
+                            (item.data as any).sharing > 0 ? 'sharing' :
+                                (item.data as any).bp > 0 ? 'bp' : 'cp'),
                     points: item.type === 'tesis' ? `${(item.data as any).points} LP` :
                         ((item.data as any).cv > 0 ? `+${(item.data as any).cv} CV` :
-                            (item.data as any).sharing > 0 ? `+${(item.data as any).sharing} SH` : `+${(item.data as any).cp} CP`),
+                            (item.data as any).sharing > 0 ? `+${(item.data as any).sharing} SH` :
+                                (item.data as any).bp > 0 ? `+${(item.data as any).bp} LP` : `+${(item.data as any).cp} CP`),
                     isMetric: item.type === 'metrica'
                 }))}
             />

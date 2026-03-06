@@ -77,6 +77,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
             grouped[user].sharing += m.sharing || 0;
             grouped[user].revenue += m.revenue || 0;
             grouped[user].profit += m.profit || 0;
+            grouped[user].lp += m.bp || 0;
         });
 
         essays.forEach(e => {

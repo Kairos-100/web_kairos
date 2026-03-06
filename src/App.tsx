@@ -306,7 +306,6 @@ const App: React.FC = () => {
           <MetricsView
             metrics={filteredMetrics}
             essays={filteredByDateEssays}
-            allEssays={essays}
             clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
@@ -334,8 +333,8 @@ const App: React.FC = () => {
           <TeamView
             essays={filteredByDateEssays}
             metrics={filteredMetrics}
-            allEssays={essays}
             allMetrics={metrics}
+            allEssays={essays}
             clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
