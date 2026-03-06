@@ -51,6 +51,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
     const [expandedProject, setExpandedProject] = useState<string | null>(null);
     const [expandedTimeUser, setExpandedTimeUser] = useState<string | null>(null);
+    const [expandedLpUser, setExpandedLpUser] = useState<string | null>(null);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -656,7 +657,24 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                             </td>
 
                                             <td className="p-6 text-center">
-                                                <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
+                                                <div
+                                                    className={`flex flex-col items-center justify-center ${user.finalLp > 0 ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                                                    onClick={(e) => {
+                                                        if (user.finalLp > 0) {
+                                                            e.stopPropagation();
+                                                            setExpandedLpUser(expandedLpUser === user.user ? null : user.user);
+                                                            setExpandedTimeUser(null);
+                                                        }
+                                                    }}
+                                                >
+                                                    <span className="text-lg font-black text-blue-600">{user.finalLp || '0'}</span>
+                                                    {user.finalLp > 0 && (
+                                                        <span className="flex items-center space-x-1 mt-1 justify-center bg-blue-50 px-2 py-0.5 rounded-full">
+                                                            <span className="text-[9px] uppercase font-black tracking-widest text-blue-500">Detalles</span>
+                                                            {expandedLpUser === user.user ? <ChevronUp size={10} className="text-blue-500" /> : <ChevronDown size={10} className="text-blue-500" />}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
 
                                             <td className="p-6 text-center">
@@ -693,7 +711,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                     return (
                                                         <div
                                                             className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
-                                                            onClick={(e) => { e.stopPropagation(); setExpandedTimeUser(expandedTimeUser === user.user ? null : user.user); }}
+                                                            onClick={(e) => { e.stopPropagation(); setExpandedTimeUser(expandedTimeUser === user.user ? null : user.user); setExpandedLpUser(null); }}
                                                         >
                                                             <span className="text-xl font-black text-blue-600">{hours}h {mins}m</span>
                                                             <span className="flex items-center space-x-1 mt-1 justify-center bg-blue-50 px-2 py-0.5 rounded-full">
@@ -855,6 +873,57 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                                                 </div>
                                                                             );
                                                                         })}
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </motion.div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </AnimatePresence>
+                                        <AnimatePresence>
+                                            {expandedLpUser === user.user && (
+                                                <tr>
+                                                    <td colSpan={8} className="p-0 border-b border-gray-100 bg-blue-50/10 overflow-hidden">
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="p-6 md:p-8"
+                                                        >
+                                                            {(() => {
+                                                                const userLogs = auditLog[user.user] || [];
+                                                                const lpEntries = userLogs.filter(log => log.bp > 0);
+
+                                                                if (lpEntries.length === 0) {
+                                                                    return <p className="text-sm text-gray-500 italic text-center">No hay registros detallados de LP disponibles.</p>;
+                                                                }
+
+                                                                return (
+                                                                    <div className="space-y-4 max-w-4xl mx-auto">
+                                                                        <h4 className="text-sm font-black text-blue-800 mb-4 px-2">Desglose de APRENDIZAJE (LP)</h4>
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            {lpEntries.map((log, idx) => (
+                                                                                <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 flex flex-col justify-between">
+                                                                                    <div>
+                                                                                        <div className="flex justify-between items-start mb-2">
+                                                                                            <span className="text-xs font-black text-kairos-navy leading-tight pr-2">{log.bp_title || 'Registro LP'}</span>
+                                                                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 font-black text-xs rounded-lg whitespace-nowrap">+{log.bp} LP</span>
+                                                                                        </div>
+                                                                                        <p className="text-[10px] text-gray-500 line-clamp-2 md:line-clamp-3 leading-relaxed">{log.bp_description || 'Sin descripción'}</p>
+                                                                                    </div>
+                                                                                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-50">
+                                                                                        <span className="text-[9px] font-bold text-gray-400">{new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                                                                        {log.bp_pdf_url && (
+                                                                                            <a href={log.bp_pdf_url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center space-x-1 bg-blue-50 px-2 py-1 rounded-md">
+                                                                                                <BookOpen size={10} />
+                                                                                                <span>Ver Documento</span>
+                                                                                            </a>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
                                                                     </div>
                                                                 );
                                                             })()}
