@@ -14,6 +14,8 @@ import { CLOCKIFY_USER_MAP } from '../constants';
 interface MetricsViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
+    allMetrics?: MetricEntry[];
+    allEssays?: Essay[];
     clockifyData: {
         users: ClockifyUserTime[];
         projects: ClockifyProjectSummary[];
@@ -38,6 +40,8 @@ const COLORS = {
 export const MetricsView: React.FC<MetricsViewProps> = ({
     metrics,
     essays,
+    allMetrics = [],
+    allEssays = [],
     clockifyData,
     currentUserEmail,
     onEditEssay,
@@ -154,10 +158,27 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             });
         });
 
+        // Compute all-time LP if `allMetrics` and `allEssays` are provided.
+        // The table must ALWAYS show the all-time BP+LP score regardless of date filter.
+        if (allMetrics.length > 0 || allEssays.length > 0) {
+            allMetrics.forEach(m => {
+                const user = m.user_email.split('@')[0];
+                if (!grouped[user]) return;
+                if (grouped[user].totalLp === undefined) grouped[user].totalLp = 0;
+                grouped[user].totalLp += m.bp || 0;
+            });
+            allEssays.forEach(e => {
+                const user = e.author.split('@')[0];
+                if (!grouped[user]) return;
+                if (grouped[user].totalLp === undefined) grouped[user].totalLp = 0;
+                grouped[user].totalLp += e.points || 0;
+            });
+        }
+
         const sortedUsers = Object.values(grouped).map((u: any) => ({
             ...u,
-            finalLp: u.lp,
-            totalScore: u.lp + u.cp + u.cv + u.sharing
+            finalLp: u.totalLp !== undefined ? u.totalLp : u.lp,
+            totalScore: (u.totalLp !== undefined ? u.totalLp : u.lp) + u.cp + u.cv + u.sharing
         })).sort((a: any, b: any) => b.totalScore - a.totalScore);
 
         // Sort each user's log by date descending
