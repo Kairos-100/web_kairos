@@ -74,15 +74,26 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         };
     }, [metrics, essays]);
 
+
     // 2. Evolution Data
     const evolutionData = useMemo(() => {
         const grouped: Record<string, any> = {};
         const now = new Date();
         const rangeDate = timeRange === '7d'
-            ? new Date(now.setDate(now.getDate() - 7))
+            ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
             : timeRange === '30d'
-                ? new Date(now.setDate(now.getDate() - 30))
+                ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30)
                 : null;
+
+        // Fill gaps if range is limited
+        if (rangeDate) {
+            let temp = new Date(rangeDate);
+            while (temp <= new Date()) {
+                const ds = temp.toISOString().split('T')[0];
+                grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
+                temp.setDate(temp.getDate() + 1);
+            }
+        }
 
         metrics.forEach(m => {
             const mDate = parseDate(m.date);
@@ -91,11 +102,12 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             const user = m.user_email.split('@')[0];
             if (evolutionUser !== 'team' && user !== evolutionUser) return;
 
-            if (!grouped[m.date]) grouped[m.date] = { date: m.date, cv: 0, lp: 0, cp: 0, sharing: 0 };
-            grouped[m.date].cv += m.cv || 0;
-            grouped[m.date].cp += m.cp || 0;
-            grouped[m.date].sharing += m.sharing || 0;
-            grouped[m.date].lp += m.bp || 0;
+            const ds = m.date;
+            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
+            grouped[ds].cv += m.cv || 0;
+            grouped[ds].cp += m.cp || 0;
+            grouped[ds].sharing += m.sharing || 0;
+            grouped[ds].lp += m.bp || 0;
         });
 
         essays.forEach(e => {
@@ -105,8 +117,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             const user = e.author.split('@')[0];
             if (evolutionUser !== 'team' && user !== evolutionUser) return;
 
-            if (!grouped[e.date]) grouped[e.date] = { date: e.date, cv: 0, lp: 0, cp: 0, sharing: 0 };
-            grouped[e.date].lp += e.points || 0;
+            const ds = e.date;
+            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
+            grouped[ds].lp += e.points || 0;
         });
 
         return Object.values(grouped).sort((a: any, b: any) => {
@@ -119,8 +132,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             };
         });
     }, [metrics, essays, evolutionUser, timeRange]);
-
-    // 3. User Aggregated Data & Audit Log
     const { userData, auditLog } = useMemo(() => {
         const grouped: Record<string, any> = {};
         const logs: Record<string, MetricEntry[]> = {};
