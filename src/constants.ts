@@ -49,7 +49,7 @@ export interface Comment {
 export type ContributionType = 'molecula' | 'libro';
 
 export const CONTRIBUTION_TYPES = [
-    { id: 'molecula', label: 'Molécula', minPoints: 4, maxPoints: 13 },
+    { id: 'molecula', label: 'Molécula', minPoints: 4, maxPoints: 11 },
     { id: 'libro', label: 'Libro', minPoints: 1, maxPoints: 3 }
 ];
 
