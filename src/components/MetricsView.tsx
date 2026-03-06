@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen } from 'lucide-react';
+import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -51,6 +51,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [expandedTimeUser, setExpandedTimeUser] = useState<string | null>(null);
     const [expandedLpUser, setExpandedLpUser] = useState<string | null>(null);
     const [evolutionUser, setEvolutionUser] = useState<string>('team');
+    const [isChartExpanded, setIsChartExpanded] = useState(false);
+    const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('all');
+    const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv']);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -74,8 +77,17 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     // 2. Evolution Data
     const evolutionData = useMemo(() => {
         const grouped: Record<string, any> = {};
+        const now = new Date();
+        const rangeDate = timeRange === '7d'
+            ? new Date(now.setDate(now.getDate() - 7))
+            : timeRange === '30d'
+                ? new Date(now.setDate(now.getDate() - 30))
+                : null;
 
         metrics.forEach(m => {
+            const mDate = parseDate(m.date);
+            if (rangeDate && mDate < rangeDate) return;
+
             const user = m.user_email.split('@')[0];
             if (evolutionUser !== 'team' && user !== evolutionUser) return;
 
@@ -87,6 +99,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         });
 
         essays.forEach(e => {
+            const eDate = parseDate(e.date);
+            if (rangeDate && eDate < rangeDate) return;
+
             const user = e.author.split('@')[0];
             if (evolutionUser !== 'team' && user !== evolutionUser) return;
 
@@ -103,7 +118,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 chartDate: dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
             };
         });
-    }, [metrics, essays, evolutionUser]);
+    }, [metrics, essays, evolutionUser, timeRange]);
 
     // 3. User Aggregated Data & Audit Log
     const { userData, auditLog } = useMemo(() => {
@@ -522,32 +537,41 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                             </p>
                         </div>
 
-                        <div className="flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm">
-                            <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[200px] md:max-w-none px-1">
-                                <button
-                                    onClick={() => setEvolutionUser('team')}
-                                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${evolutionUser === 'team' ? 'bg-kairos-navy text-white shadow-lg' : 'text-gray-400 hover:text-kairos-navy hover:bg-white'}`}
-                                >
-                                    Global
-                                </button>
-                                <div className="w-[1px] h-4 bg-gray-200 mx-1 flex-shrink-0" />
-                                {userData.map((user) => (
+                        <div className="flex items-center space-x-3">
+                            <div className="flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm">
+                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[150px] md:max-w-none px-1">
                                     <button
-                                        key={user.user}
-                                        onClick={() => setEvolutionUser(user.user)}
-                                        className={`flex-shrink-0 w-9 h-9 rounded-xl text-[11px] font-black uppercase transition-all duration-300 flex items-center justify-center relative ${evolutionUser === user.user ? 'bg-blue-600 text-white shadow-lg scale-110 z-10' : 'text-gray-400 hover:bg-white hover:text-blue-500'}`}
-                                        title={user.user}
+                                        onClick={() => setEvolutionUser('team')}
+                                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${evolutionUser === 'team' ? 'bg-kairos-navy text-white shadow-lg' : 'text-gray-400 hover:text-kairos-navy hover:bg-white'}`}
                                     >
-                                        {user.user[0]}
-                                        {evolutionUser === user.user && (
-                                            <motion.div layoutId="activeBubble" className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
-                                        )}
+                                        Global
                                     </button>
-                                ))}
+                                    <div className="w-[1px] h-4 bg-gray-200 mx-1 flex-shrink-0" />
+                                    {userData.map((user) => (
+                                        <button
+                                            key={user.user}
+                                            onClick={() => setEvolutionUser(user.user)}
+                                            className={`flex-shrink-0 w-9 h-9 rounded-xl text-[11px] font-black uppercase transition-all duration-300 flex items-center justify-center relative ${evolutionUser === user.user ? 'bg-blue-600 text-white shadow-lg scale-110 z-10' : 'text-gray-400 hover:bg-white hover:text-blue-500'}`}
+                                            title={user.user}
+                                        >
+                                            {user.user[0]}
+                                            {evolutionUser === user.user && (
+                                                <motion.div layoutId="activeBubble" className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
+                            <button
+                                onClick={() => setIsChartExpanded(true)}
+                                className="p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-kairos-navy hover:text-white transition-all shadow-sm flex-shrink-0"
+                                title="Expandir gráfico"
+                            >
+                                <Maximize2 size={18} />
+                            </button>
                         </div>
                     </div>
-                    <div className="h-72 w-full">
+                    <div className="h-72 w-full cursor-zoom-in" onClick={() => setIsChartExpanded(true)}>
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={evolutionData}>
                                 <defs>
@@ -578,39 +602,180 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                     itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
                                 />
                                 <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'black', paddingTop: '20px' }} />
-                                <Area type="monotone" dataKey="lp" name="LEARNING POINTS" stroke={COLORS.lp} strokeWidth={3} fillOpacity={1} fill="url(#colorLP)" />
-                                <Area type="monotone" dataKey="cp" name="COMMUNITY POINTS" stroke={COLORS.cp} strokeWidth={3} fillOpacity={1} fill="url(#colorCP)" />
-                                <Area type="monotone" dataKey="cv" name="CUSTOMER VISITS" stroke={COLORS.cv} strokeWidth={3} fillOpacity={1} fill="url(#colorCV)" />
+                                <Area type="monotone" dataKey="lp" name="LEARNING POINTS" stroke={COLORS.lp} strokeWidth={3} fillOpacity={1} fill="url(#colorLP)" hide={!visibleMetrics.includes('lp')} />
+                                <Area type="monotone" dataKey="cp" name="COMMUNITY POINTS" stroke={COLORS.cp} strokeWidth={3} fillOpacity={1} fill="url(#colorCP)" hide={!visibleMetrics.includes('cp')} />
+                                <Area type="monotone" dataKey="cv" name="CUSTOMER VISITS" stroke={COLORS.cv} strokeWidth={3} fillOpacity={1} fill="url(#colorCV)" hide={!visibleMetrics.includes('cv')} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                    {/* Visual hint for "passing" members */}
-                    <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-50">
-                        <div className="flex items-center space-x-2">
-                            <span className="text-[10px] font-black uppercase text-gray-300 tracking-tighter">Pasa por el equipo</span>
-                            <div className="flex items-center space-x-1">
-                                {userData.map((_, i) => (
-                                    <div key={i} className={`h-1 rounded-full transition-all duration-500 ${evolutionUser === userData[i].user ? 'w-4 bg-blue-500' : 'w-1 bg-gray-100'}`} />
-                                ))}
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => {
-                                const currentIndex = userData.findIndex(u => u.user === evolutionUser);
-                                if (currentIndex === -1) {
-                                    setEvolutionUser(userData[0].user);
-                                } else if (currentIndex < userData.length - 1) {
-                                    setEvolutionUser(userData[currentIndex + 1].user);
-                                } else {
-                                    setEvolutionUser('team');
-                                }
-                            }}
-                            className="text-[10px] font-black text-blue-600 border border-blue-100 px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
-                        >
-                            Siguiente →
-                        </button>
-                    </div>
                 </motion.div>
+
+                {/* Focus Mode Overlay */}
+                <AnimatePresence>
+                    {isChartExpanded && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-xl p-4 md:p-12 overflow-y-auto"
+                        >
+                            <div className="max-w-7xl mx-auto h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-12">
+                                    <div>
+                                        <h2 className="text-4xl font-heading font-black text-kairos-navy mb-2">
+                                            {evolutionUser === 'team' ? 'Análisis Global' : `Foco: ${evolutionUser}`}
+                                        </h2>
+                                        <div className="flex items-center space-x-2">
+                                            <div className="flex items-center bg-gray-100/50 p-1 rounded-xl">
+                                                <button
+                                                    onClick={() => setEvolutionUser('team')}
+                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${evolutionUser === 'team' ? 'bg-black text-white' : 'text-gray-400 hover:text-black'}`}
+                                                >
+                                                    Global
+                                                </button>
+                                                {userData.map(user => (
+                                                    <button
+                                                        key={user.user}
+                                                        onClick={() => setEvolutionUser(user.user)}
+                                                        className={`w-7 h-7 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center ${evolutionUser === user.user ? 'bg-blue-600 text-white scale-110' : 'text-gray-400 hover:text-blue-500'}`}
+                                                    >
+                                                        {user.user[0]}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <span className="text-gray-300 mx-2">|</span>
+                                            <p className="text-gray-400 font-medium">Filtra y analiza tendencias detalladas.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsChartExpanded(false)}
+                                        className="p-4 bg-gray-100 text-gray-600 rounded-3xl hover:bg-black hover:text-white transition-all shadow-xl"
+                                    >
+                                        <Minimize2 size={24} />
+                                    </button>
+                                </div>
+
+                                {/* Advanced Filters Bar */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                                    {/* Time Range */}
+                                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                        <label className="flex items-center space-x-2 text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">
+                                            <Calendar size={12} />
+                                            <span>Rango Temporal</span>
+                                        </label>
+                                        <div className="flex space-x-2">
+                                            {(['all', '30d', '7d'] as const).map(range => (
+                                                <button
+                                                    key={range}
+                                                    onClick={() => setTimeRange(range)}
+                                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${timeRange === range ? 'bg-black text-white' : 'bg-white text-gray-400 hover:text-black shadow-sm'}`}
+                                                >
+                                                    {range === 'all' ? 'Todo' : range === '30d' ? '30 días' : '7 días'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Metrics Toggle */}
+                                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 md:col-span-2">
+                                        <label className="flex items-center space-x-2 text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">
+                                            <Filter size={12} />
+                                            <span>Métricas Visibles</span>
+                                        </label>
+                                        <div className="flex flex-wrap gap-3">
+                                            {[
+                                                { id: 'lp', name: 'Learning Points', color: COLORS.lp },
+                                                { id: 'cp', name: 'Community Points', color: COLORS.cp },
+                                                { id: 'cv', name: 'Customer Visits', color: COLORS.cv }
+                                            ].map(m => (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => setVisibleMetrics(prev =>
+                                                        prev.includes(m.id) ? prev.filter(x => x !== m.id) : [...prev, m.id]
+                                                    )}
+                                                    className={`px-6 py-3 rounded-2xl text-xs font-bold transition-all border-2 flex items-center space-x-2 ${visibleMetrics.includes(m.id) ? 'bg-white shadow-md' : 'bg-transparent border-gray-100 text-gray-300'}`}
+                                                    style={{ borderColor: visibleMetrics.includes(m.id) ? m.color : 'transparent', color: visibleMetrics.includes(m.id) ? '#0F1D42' : undefined }}
+                                                >
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
+                                                    <span>{m.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Expanded Chart */}
+                                <div className="flex-grow min-h-[450px] bg-white rounded-[40px] p-8 shadow-2xl border border-gray-50 relative overflow-hidden">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={evolutionData}>
+                                            <defs>
+                                                <linearGradient id="colorLP_exp" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={COLORS.lp} stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor={COLORS.lp} stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorCP_exp" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={COLORS.cp} stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor={COLORS.cp} stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorCV_exp" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={COLORS.cv} stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor={COLORS.cv} stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="chartDate"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }}
+                                                padding={{ left: 20, right: 20 }}
+                                            />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }} />
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '30px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.12)', padding: '25px' }}
+                                                itemStyle={{ fontSize: '14px', fontWeight: 'bold' }}
+                                            />
+                                            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: '900', paddingTop: '30px' }} />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="lp"
+                                                name="LEARNING POINTS"
+                                                stroke={COLORS.lp}
+                                                strokeWidth={4}
+                                                fillOpacity={1}
+                                                fill="url(#colorLP_exp)"
+                                                hide={!visibleMetrics.includes('lp')}
+                                                animationDuration={1000}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="cp"
+                                                name="COMMUNITY POINTS"
+                                                stroke={COLORS.cp}
+                                                strokeWidth={4}
+                                                fillOpacity={1}
+                                                fill="url(#colorCP_exp)"
+                                                hide={!visibleMetrics.includes('cp')}
+                                                animationDuration={1000}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="cv"
+                                                name="CUSTOMER VISITS"
+                                                stroke={COLORS.cv}
+                                                strokeWidth={4}
+                                                fillOpacity={1}
+                                                fill="url(#colorCV_exp)"
+                                                hide={!visibleMetrics.includes('cv')}
+                                                animationDuration={1000}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="card p-8 bg-white border-none shadow-xl">
                     <div className="flex items-center justify-between mb-8">
