@@ -538,8 +538,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                         </div>
 
                         <div className="flex items-center space-x-3">
-                            <div className="flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm">
-                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[150px] md:max-w-none px-1">
+                            <div className="flex items-center bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100/50 backdrop-blur-sm overflow-hidden">
+                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[200px] sm:max-w-[300px] md:max-w-none px-1">
                                     <button
                                         onClick={() => setEvolutionUser('team')}
                                         className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${evolutionUser === 'team' ? 'bg-kairos-navy text-white shadow-lg' : 'text-gray-400 hover:text-kairos-navy hover:bg-white'}`}
@@ -626,22 +626,24 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                             {evolutionUser === 'team' ? 'Análisis Global' : `Foco: ${evolutionUser}`}
                                         </h2>
                                         <div className="flex items-center space-x-2">
-                                            <div className="flex items-center bg-gray-100/50 p-1 rounded-xl">
-                                                <button
-                                                    onClick={() => setEvolutionUser('team')}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${evolutionUser === 'team' ? 'bg-black text-white' : 'text-gray-400 hover:text-black'}`}
-                                                >
-                                                    Global
-                                                </button>
-                                                {userData.map(user => (
+                                            <div className="flex items-center bg-gray-100/50 p-1 rounded-xl overflow-hidden">
+                                                <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide no-scrollbar max-w-[200px] sm:max-w-[400px] md:max-w-none px-1">
                                                     <button
-                                                        key={user.user}
-                                                        onClick={() => setEvolutionUser(user.user)}
-                                                        className={`w-7 h-7 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center ${evolutionUser === user.user ? 'bg-blue-600 text-white scale-110' : 'text-gray-400 hover:text-blue-500'}`}
+                                                        onClick={() => setEvolutionUser('team')}
+                                                        className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${evolutionUser === 'team' ? 'bg-black text-white' : 'text-gray-400 hover:text-black'}`}
                                                     >
-                                                        {user.user[0]}
+                                                        Global
                                                     </button>
-                                                ))}
+                                                    {userData.map(user => (
+                                                        <button
+                                                            key={user.user}
+                                                            onClick={() => setEvolutionUser(user.user)}
+                                                            className={`flex-shrink-0 w-7 h-7 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center ${evolutionUser === user.user ? 'bg-blue-600 text-white scale-110' : 'text-gray-400 hover:text-blue-500'}`}
+                                                        >
+                                                            {user.user[0]}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                             <span className="text-gray-300 mx-2">|</span>
                                             <p className="text-gray-400 font-medium">Filtra y analiza tendencias detalladas.</p>
