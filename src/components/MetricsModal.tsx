@@ -81,6 +81,89 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const csvInputRef = useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
+        // Fetch existing metrics for the selected date and user
+        const fetchExistingMetrics = async () => {
+            if (!isAuth || !email || !date || activeTab === 'bulk') return;
+
+            try {
+                const { data, error } = await supabase
+                    .from('metrics')
+                    .select('*')
+                    .eq('user_email', email.toLowerCase())
+                    .eq('date', date)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+                    console.error('Error fetching existing metrics:', error);
+                    return;
+                }
+
+                if (data) {
+                    setCv(data.cv || 0);
+                    setCp(data.cp || 0);
+                    setSharing(data.sharing || 0);
+                    setRevenue(data.revenue || 0);
+                    setProfit(data.profit || 0);
+                    setBp(data.bp || 0);
+                    setCvTitle(data.cv_title || '');
+                    setCvDescription(data.cv_description || '');
+                    setSharingTitle(data.sharing_title || '');
+                    setSharingDescription(data.sharing_description || '');
+                    setCpTitle(data.cp_title || '');
+                    setCpDescription(data.cp_description || '');
+                    setBpTitle(data.bp_title || '');
+                    setBpDescription(data.bp_description || '');
+                    setCvPdfUrl(data.cv_pdf_url || undefined);
+                    setSharingPdfUrl(data.sharing_pdf_url || undefined);
+                    setCpPdfUrl(data.cp_pdf_url || undefined);
+                    setBpPdfUrl(data.bp_pdf_url || undefined);
+                    // Clear files since we are loading existing ones
+                    setCvPdfFile(null);
+                    setSharingPdfFile(null);
+                    setCpPdfFile(null);
+                    setBpPdfFile(null);
+                    setCvPdfName(data.cv_pdf_url ? 'PDF Existente' : undefined);
+                    setSharingPdfName(data.sharing_pdf_url ? 'PDF Existente' : undefined);
+                    setCpPdfName(data.cp_pdf_url ? 'PDF Existente' : undefined);
+                    setBpPdfName(data.bp_pdf_url ? 'PDF Existente' : undefined);
+                } else {
+                    // Reset fields if no data found for this date
+                    setCv(0);
+                    setCp(0);
+                    setSharing(0);
+                    setRevenue(0);
+                    setProfit(0);
+                    setBp(0);
+                    setCvTitle('');
+                    setCvDescription('');
+                    setSharingTitle('');
+                    setSharingDescription('');
+                    setCpTitle('');
+                    setCpDescription('');
+                    setBpTitle('');
+                    setBpDescription('');
+                    setCvPdfUrl(undefined);
+                    setSharingPdfUrl(undefined);
+                    setCpPdfUrl(undefined);
+                    setBpPdfUrl(undefined);
+                    setCvPdfFile(null);
+                    setSharingPdfFile(null);
+                    setCpPdfFile(null);
+                    setBpPdfFile(null);
+                    setCvPdfName(undefined);
+                    setSharingPdfName(undefined);
+                    setCpPdfName(undefined);
+                    setBpPdfName(undefined);
+                }
+            } catch (err) {
+                console.error('Exception fetching existing metrics:', err);
+            }
+        };
+
+        fetchExistingMetrics();
+    }, [isAuth, email, date, activeTab]);
+
+    React.useEffect(() => {
         // Fetch Clockify projects
         const initClockify = async () => {
             setIsLoadingProjects(true);

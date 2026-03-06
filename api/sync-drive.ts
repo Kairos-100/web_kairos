@@ -127,28 +127,53 @@ export default async function handler(req: Request) {
         const arrayBuffer = await fileResponse.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // 3. Upload directly to the target folder
+        // 3. Search for existing file with same name in same folder
+        const existingFiles: any = await drive.files.list({
+            q: `name = '${fileName}' and '${targetFolderId}' in parents and trashed = false`,
+            fields: 'files(id, name)',
+            spaces: 'drive',
+        });
+
+        const existingFile = existingFiles.data.files[0];
+
+        // 4. Upload or Update directly to the target folder
         const { Readable } = await import('stream');
         const stream = new Readable();
         stream.push(buffer);
         stream.push(null);
 
-        const uploadResponse: any = await drive.files.create({
-            requestBody: {
-                name: fileName,
-                parents: [targetFolderId],
-            },
-            media: {
-                mimeType: 'application/pdf',
-                body: stream,
-            },
-            fields: 'id, webViewLink'
-        } as any);
+        let uploadResponse: any;
+
+        if (existingFile) {
+            console.log(`Updating existing file: ${fileName} (${existingFile.id})`);
+            uploadResponse = await drive.files.update({
+                fileId: existingFile.id,
+                media: {
+                    mimeType: 'application/pdf',
+                    body: stream,
+                },
+                fields: 'id, webViewLink'
+            } as any);
+        } else {
+            console.log(`Creating new file: ${fileName}`);
+            uploadResponse = await drive.files.create({
+                requestBody: {
+                    name: fileName,
+                    parents: [targetFolderId],
+                },
+                media: {
+                    mimeType: 'application/pdf',
+                    body: stream,
+                },
+                fields: 'id, webViewLink'
+            } as any);
+        }
 
         return new Response(JSON.stringify({
             success: true,
             driveFileId: uploadResponse.data.id,
-            link: uploadResponse.data.webViewLink
+            link: uploadResponse.data.webViewLink,
+            action: existingFile ? 'updated' : 'created'
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
