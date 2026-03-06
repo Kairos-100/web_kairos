@@ -52,7 +52,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [expandedLpUser, setExpandedLpUser] = useState<string | null>(null);
     const [evolutionUser, setEvolutionUser] = useState<string>('team');
     const [isChartExpanded, setIsChartExpanded] = useState(false);
-    const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('all');
+    const [timeRange, setTimeRange] = useState<'all' | '7d' | '30d' | '90d' | 'custom'>('all');
+    const [customStartDate, setCustomStartDate] = useState<string>('');
+    const [customEndDate, setCustomEndDate] = useState<string>('');
     const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv']);
 
     // 1. Summary Stats
@@ -79,16 +81,25 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const evolutionData = useMemo(() => {
         const grouped: Record<string, any> = {};
         const now = new Date();
-        const rangeDate = timeRange === '7d'
-            ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
-            : timeRange === '30d'
-                ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30)
-                : null;
+
+        let rangeStartDate: Date | null = null;
+        let rangeEndDate: Date | null = new Date();
+
+        if (timeRange === '7d') {
+            rangeStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        } else if (timeRange === '30d') {
+            rangeStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+        } else if (timeRange === '90d') {
+            rangeStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
+        } else if (timeRange === 'custom' && customStartDate) {
+            rangeStartDate = parseDate(customStartDate);
+            if (customEndDate) rangeEndDate = parseDate(customEndDate);
+        }
 
         // Fill gaps if range is limited
-        if (rangeDate) {
-            let temp = new Date(rangeDate);
-            while (temp <= new Date()) {
+        if (rangeStartDate && rangeEndDate) {
+            let temp = new Date(rangeStartDate);
+            while (temp <= rangeEndDate) {
                 const ds = temp.toISOString().split('T')[0];
                 grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
                 temp.setDate(temp.getDate() + 1);
@@ -97,7 +108,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
         metrics.forEach(m => {
             const mDate = parseDate(m.date);
-            if (rangeDate && mDate < rangeDate) return;
+            if (rangeStartDate && mDate < rangeStartDate) return;
+            if (rangeEndDate && mDate > rangeEndDate) return;
 
             const user = m.user_email.split('@')[0];
             if (evolutionUser !== 'team' && user !== evolutionUser) return;
@@ -112,7 +124,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
         essays.forEach(e => {
             const eDate = parseDate(e.date);
-            if (rangeDate && eDate < rangeDate) return;
+            if (rangeStartDate && eDate < rangeStartDate) return;
+            if (rangeEndDate && eDate > rangeEndDate) return;
 
             const user = e.author.split('@')[0];
             if (evolutionUser !== 'team' && user !== evolutionUser) return;
@@ -131,7 +144,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 chartDate: dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
             };
         });
-    }, [metrics, essays, evolutionUser, timeRange]);
+    }, [metrics, essays, evolutionUser, timeRange, customStartDate, customEndDate]);
     const { userData, auditLog } = useMemo(() => {
         const grouped: Record<string, any> = {};
         const logs: Record<string, MetricEntry[]> = {};
@@ -671,22 +684,58 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                 {/* Advanced Filters Bar */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                                     {/* Time Range */}
-                                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 md:col-span-1">
                                         <label className="flex items-center space-x-2 text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">
                                             <Calendar size={12} />
                                             <span>Rango Temporal</span>
                                         </label>
-                                        <div className="flex space-x-2">
-                                            {(['all', '30d', '7d'] as const).map(range => (
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { id: 'all', label: 'Todo' },
+                                                { id: '7d', label: '7D' },
+                                                { id: '30d', label: '30D' },
+                                                { id: '90d', label: '90D' },
+                                                { id: 'custom', label: 'Personalizado' }
+                                            ].map(range => (
                                                 <button
-                                                    key={range}
-                                                    onClick={() => setTimeRange(range)}
-                                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${timeRange === range ? 'bg-black text-white' : 'bg-white text-gray-400 hover:text-black shadow-sm'}`}
+                                                    key={range.id}
+                                                    onClick={() => setTimeRange(range.id as any)}
+                                                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${timeRange === range.id ? 'bg-black text-white' : 'bg-white text-gray-400 hover:text-black shadow-sm'}`}
                                                 >
-                                                    {range === 'all' ? 'Todo' : range === '30d' ? '30 días' : '7 días'}
+                                                    {range.label}
                                                 </button>
                                             ))}
                                         </div>
+
+                                        <AnimatePresence>
+                                            {timeRange === 'custom' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3"
+                                                >
+                                                    <div className="space-y-1">
+                                                        <span className="text-[9px] font-black text-gray-400 uppercase">Inicio</span>
+                                                        <input
+                                                            type="date"
+                                                            value={customStartDate}
+                                                            onChange={(e) => setCustomStartDate(e.target.value)}
+                                                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-kairos-navy focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-[9px] font-black text-gray-400 uppercase">Fin</span>
+                                                        <input
+                                                            type="date"
+                                                            value={customEndDate}
+                                                            onChange={(e) => setCustomEndDate(e.target.value)}
+                                                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-kairos-navy focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
 
                                     {/* Metrics Toggle */}
