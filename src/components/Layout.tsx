@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X } from 'lucide-react';
+import { BookOpen, BarChart3, Library, PlusCircle, LogOut, Trophy, TrendingUp, History, Users, Menu, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -27,6 +28,7 @@ export const Layout: React.FC<LayoutProps> = ({
     onOpenMetrics
 }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+    const [isActionExpanded, setIsActionExpanded] = React.useState(false);
 
     const navGroups = [
         {
@@ -116,53 +118,90 @@ export const Layout: React.FC<LayoutProps> = ({
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-white/10 space-y-2">
-                    <button
-                        onClick={() => {
-                            onOpenUpload();
-                            setIsMobileMenuOpen(false);
-                        }}
-                        className="w-full bg-white text-kairos-navy py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-transform active:scale-95 shadow-xl"
-                    >
-                        <PlusCircle size={20} />
-                        <span>Subir Ensayo</span>
-                    </button>
+                <div className="p-4 border-t border-white/10 relative">
+                    <AnimatePresence>
+                        {isActionExpanded && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: -8, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                transition={{ duration: 0.2 }}
+                                className="absolute bottom-full left-4 right-4 bg-white/10 backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-white/20 overflow-hidden z-50 origin-bottom"
+                            >
+                                <button
+                                    onClick={() => {
+                                        onOpenUpload();
+                                        setIsActionExpanded(false);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center space-x-3 p-3 hover:bg-white/10 rounded-xl transition-colors text-left group"
+                                >
+                                    <div className="bg-white text-kairos-navy p-2 rounded-lg group-hover:scale-110 transition-transform shadow-sm">
+                                        <BookOpen size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Subir Ensayo</p>
+                                        <p className="text-[10px] text-white/60">Añadir moléculas de conocimiento</p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onOpenMetrics();
+                                        setIsActionExpanded(false);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center space-x-3 p-3 hover:bg-white/10 rounded-xl transition-colors text-left group mt-1"
+                                >
+                                    <div className="bg-kairos-navy text-white p-2 rounded-lg group-hover:scale-110 transition-transform border border-white/20 shadow-sm">
+                                        <TrendingUp size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Actualizar Métricas</p>
+                                        <p className="text-[10px] text-white/60">Aportar comerciales o visualizaciones</p>
+                                    </div>
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <button
-                        onClick={() => {
-                            onOpenMetrics();
-                            setIsMobileMenuOpen(false);
-                        }}
-                        className="w-full bg-kairos-navy text-white border border-white/20 py-2 rounded-xl font-bold flex items-center justify-center space-x-2 transition-transform active:scale-95 hover:bg-white/10"
+                        onClick={() => setIsActionExpanded(!isActionExpanded)}
+                        className="w-full bg-white text-kairos-navy py-3 px-4 rounded-xl font-bold flex items-center justify-between transition-all active:scale-95 shadow-xl group hover:shadow-2xl"
                     >
-                        <TrendingUp size={16} />
-                        <span className="text-sm">Actualizar Métricas</span>
+                        <div className="flex items-center space-x-2">
+                            <PlusCircle size={20} className={cn("transition-transform duration-300", isActionExpanded ? "rotate-45 text-red-500" : "group-hover:rotate-90")} />
+                            <span>{isActionExpanded ? "Cerrar" : "Nueva Aportación"}</span>
+                        </div>
+                        <ChevronUp size={16} className={cn("transition-transform duration-300 opacity-50", isActionExpanded ? "rotate-180" : "")} />
                     </button>
 
                     {user ? (
-                        <div className="flex items-center justify-between px-2 text-[10px] text-white/40 pt-2">
+                        <div className="flex items-center justify-between px-2 text-[10px] text-white/40 pt-4">
                             <span className="truncate max-w-[140px] italic">{user}</span>
                             <button
                                 onClick={() => {
                                     onLogout();
                                     setIsMobileMenuOpen(false);
                                 }}
-                                className="hover:text-white transition-colors"
+                                className="hover:text-white transition-colors flex items-center space-x-1 bg-white/5 px-2 py-1 rounded"
                                 title="Cerrar Sesión"
                             >
-                                <LogOut size={16} />
+                                <span>Salir</span>
+                                <LogOut size={12} />
                             </button>
                         </div>
                     ) : (
-                        <button
-                            onClick={() => {
-                                onOpenUpload();
-                                setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full bg-white/5 text-white/60 py-2 rounded-lg text-[10px] font-bold hover:bg-white/10 hover:text-white transition-all border border-white/10"
-                        >
-                            ¿No estás identificado?
-                        </button>
+                        <div className="pt-4 text-center">
+                            <button
+                                onClick={() => {
+                                    onOpenUpload();
+                                    setIsMobileMenuOpen(false);
+                                }}
+                                className="text-[10px] text-white/40 hover:text-white transition-colors underline decoration-white/20 underline-offset-4"
+                            >
+                                ¿No estás identificado? Haz clic aquí
+                            </button>
+                        </div>
                     )}
                 </div>
             </aside>
