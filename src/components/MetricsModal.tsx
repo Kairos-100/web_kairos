@@ -396,6 +396,25 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     if (finalCpUrl) ingestDocument(metricId, 'metric', finalCpUrl).catch(console.error);
                     if (finalBpUrl) ingestDocument(metricId, 'metric', finalBpUrl).catch(console.error);
 
+                    // Trigger Google Drive Sync for each document
+                    const syncToDrive = (url: string, title: string, type: string) => {
+                        fetch('/api/sync-drive', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userEmail: email,
+                                pdfUrl: url,
+                                fileName: `${title || type}.pdf`,
+                                type
+                            })
+                        }).catch(err => console.error(`Failed to sync ${type} to Drive:`, err));
+                    };
+
+                    if (finalCvUrl) syncToDrive(finalCvUrl, cvTitle, 'cv');
+                    if (finalSharingUrl) syncToDrive(finalSharingUrl, sharingTitle, 'sharing');
+                    if (finalCpUrl) syncToDrive(finalCpUrl, cpTitle, 'cp');
+                    if (finalBpUrl) syncToDrive(finalBpUrl, bpTitle, 'bp');
+
                     // Notify the team
                     notifyNewMetric(newMetric).catch(console.error);
                 }

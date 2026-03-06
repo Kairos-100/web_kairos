@@ -164,6 +164,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                         } as any;
                         ingestDocument(newData[0].id, 'essay', finalPdfUrl).catch(console.error);
                         notifyNewEssay(newEssay).catch(console.error);
+
+                        // Trigger Google Drive Sync
+                        fetch('/api/sync-drive', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userEmail: email,
+                                pdfUrl: finalPdfUrl,
+                                fileName: `${title}.pdf`,
+                                type: contributionType // 'molecula' or 'libro'
+                            })
+                        }).catch(err => console.error('Failed to sync to Drive:', err));
                     }
                 }
 
