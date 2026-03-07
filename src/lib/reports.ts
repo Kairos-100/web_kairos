@@ -143,6 +143,7 @@ export interface ReportOptions {
     includeTable?: boolean;
     includeDistributions?: boolean;
     includeCorporate?: boolean;
+    includeDetails?: boolean; // New option to control granular task logs
     highlightUserKey?: string;
 }
 
@@ -150,9 +151,11 @@ export const generatePDF = (
     title: string,
     period: string,
     data: ReportData[],
-    options: ReportOptions = { includeTable: true, includeDistributions: true }
+    options: ReportOptions = { includeTable: true, includeDistributions: true, includeDetails: true }
 ): jsPDF => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+        compress: true // Enable automatic PDF compression
+    });
     const autotableFunc = (autoTable as any).default || autoTable;
 
     // Header
@@ -372,38 +375,40 @@ export const generatePDF = (
                     currentY = (doc as any).lastAutoTable.finalY + 5;
                 }
 
-                // --- Detailed Entries Sub-section ---
-                user.projects
-                    .filter(p => p.entries && p.entries.length > 0)
-                    .forEach(p => {
-                        if (currentY > 260) { doc.addPage(); currentY = 20; }
+                // --- Detailed Entries Sub-section (SKIP if includeDetails is false) ---
+                if (options.includeDetails !== false) {
+                    user.projects
+                        .filter(p => p.entries && p.entries.length > 0)
+                        .forEach(p => {
+                            if (currentY > 260) { doc.addPage(); currentY = 20; }
 
-                        const entryData = p.entries!.map(e => [
-                            `  - ${e.description}${e.tags && e.tags.length > 0 ? ` [${e.tags.join(', ')}]` : ''}`,
-                            `${Math.floor(e.duration / 3600)}h ${Math.floor((e.duration % 3600) / 60)}m`,
-                            new Date(e.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
-                        ]);
+                            const entryData = p.entries!.map(e => [
+                                `  - ${e.description}${e.tags && e.tags.length > 0 ? ` [${e.tags.join(', ')}]` : ''}`,
+                                `${Math.floor(e.duration / 3600)}h ${Math.floor((e.duration % 3600) / 60)}m`,
+                                new Date(e.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+                            ]);
 
-                        doc.setFontSize(6);
-                        doc.setFont('helvetica', 'normal');
-                        doc.setTextColor(120, 120, 120);
-                        doc.text(`Tareas: ${p.name}`, 25, currentY + 4);
-                        currentY += 6;
+                            doc.setFontSize(6);
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(120, 120, 120);
+                            doc.text(`Tareas: ${p.name}`, 25, currentY + 4);
+                            currentY += 6;
 
-                        autotableFunc(doc, {
-                            startY: currentY,
-                            body: entryData,
-                            theme: 'plain',
-                            styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100], overflow: 'linebreak' },
-                            margin: { left: 30 },
-                            columnStyles: {
-                                0: { cellWidth: 80 },
-                                1: { halign: 'right', cellWidth: 20 },
-                                2: { halign: 'right', cellWidth: 20 }
-                            }
+                            autotableFunc(doc, {
+                                startY: currentY,
+                                body: entryData,
+                                theme: 'plain',
+                                styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100], overflow: 'linebreak' },
+                                margin: { left: 30 },
+                                columnStyles: {
+                                    0: { cellWidth: 80 },
+                                    1: { halign: 'right', cellWidth: 20 },
+                                    2: { halign: 'right', cellWidth: 20 }
+                                }
+                            });
+                            currentY = (doc as any).lastAutoTable.finalY + 4;
                         });
-                        currentY = (doc as any).lastAutoTable.finalY + 4;
-                    });
+                }
 
                 currentY += 5;
             }

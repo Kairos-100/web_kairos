@@ -67,8 +67,14 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         const aggregatedArray = Object.values(aggregated);
 
         try {
-            const clockPdf = generatePDF(`Distribución Clockify Equipo - ${type}`, period, aggregatedArray, { includeTable: false, includeDistributions: true });
+            console.time('PDF_Generation');
+            const clockPdf = generatePDF(`Distribución Clockify Equipo - ${type}`, period, aggregatedArray, {
+                includeTable: false,
+                includeDistributions: true,
+                includeDetails: false // Don't include every single task entry in the team PDF
+            });
             const clockBase64 = clockPdf.output('datauristring').split(',')[1];
+            console.log(`Clockify PDF Size: ${(clockBase64.length / 1024).toFixed(2)} KB`);
 
             const usersToSend = WHITELIST.map(email => ({
                 email,
@@ -84,14 +90,17 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                 setSendingStatus({ current: i + 1, total: usersToSend.length, user: u.userKey });
 
                 try {
-                    // Generate TEAM summary but highlighting THIS specific user
+                    // Generate TEAM summary but highlighting THIS specific user (No details for speed)
                     console.log(`Generating highlighted Team PDF for ${u.userKey}...`);
                     const highlightedTeamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, {
                         includeTable: true,
                         includeDistributions: false,
+                        includeDetails: false, // Keep team summary lightweight
                         highlightUserKey: u.userKey
                     });
                     const highlightedTeamBase64 = highlightedTeamPdf.output('datauristring').split(',')[1];
+                    console.log(`Team PDF Size: ${(highlightedTeamBase64.length / 1024).toFixed(2)} KB`);
+                    console.timeEnd('PDF_Generation');
 
                     let attempts = 0;
                     const maxAttempts = 3;
@@ -104,11 +113,13 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                                 console.log(`Retrying report for ${u.userKey} (Attempt ${attempts}/${maxAttempts})...`);
                             }
 
+                            console.time('Email_Send');
                             console.log(`Sending email to ${u.email}...`);
                             await notifyReport(u.email, `Reporte ${type}`, highlightedTeamBase64, period, [
                                 { filename: `1_Resumen_Equipo_${type}.pdf`, content: highlightedTeamBase64 },
                                 { filename: `2_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
                             ]);
+                            console.timeEnd('Email_Send');
                             success = true;
                             console.log(`Email sent successfully to ${u.email}`);
                         } catch (err) {
