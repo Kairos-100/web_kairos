@@ -335,8 +335,8 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
 
         for (const essay of essays || []) {
             if (essay.pdf_url) {
-                if (essay.pdf_url.includes('drive.google.com')) {
-                    if (onProgress) onProgress(`Saltando Tesis Drive: ${essay.id}`);
+                if (essay.pdf_url.includes('google.com')) {
+                    if (onProgress) onProgress(`Saltando Tesis Google/Drive: ${essay.id}`);
                     continue;
                 }
                 try {
@@ -350,8 +350,8 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
 
         for (const metric of metrics || []) {
             const processUrl = async (url: string, label: string) => {
-                if (url.includes('drive.google.com')) {
-                    if (onProgress) onProgress(`Saltando ${label} Drive: ${metric.id}`);
+                if (url.includes('google.com')) {
+                    if (onProgress) onProgress(`Saltando ${label} Google/Drive: ${metric.id}`);
                     return;
                 }
                 try {
