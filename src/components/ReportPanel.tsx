@@ -18,8 +18,11 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
     const [isSending, setIsSending] = useState<string | null>(null);
     const [showSuccess, setShowSuccess] = useState<string | null>(null);
 
+    const [sendingStatus, setSendingStatus] = useState<{ current: number, total: number, user: string } | null>(null);
+
     const handleSendReports = async (type: 'Semanal' | 'Mensual') => {
         setIsSending(type);
+        setSendingStatus(null);
 
         const now = new Date();
         now.setHours(23, 59, 59, 999);
@@ -28,7 +31,6 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         let reportEnd = now;
 
         if (type === 'Semanal') {
-            // Manual report: Show this current week (Monday to Sunday)
             const day = now.getDay();
             const daysSinceMonday = (day === 0 ? 6 : day - 1);
             start = new Date(now);
@@ -40,17 +42,14 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
             end.setHours(23, 59, 59, 999);
 
             period = `${start.toLocaleDateString('es-ES')} - ${end.toLocaleDateString('es-ES')}`;
-            // Use 'now' as the end bound for aggregation if we haven't reached Sunday yet
             reportEnd = now < end ? now : end;
         } else {
-            // This month up to now
             start = new Date(now.getFullYear(), now.getMonth(), 1);
             start.setHours(0, 0, 0, 0);
             period = `${start.toLocaleString('es-ES', { month: 'long' })} ${now.getFullYear()}`;
             reportEnd = now;
         }
 
-        // Fetch fresh Clockify data for the EXACT report range
         let freshClockifyUsers = clockifyUsers;
         try {
             const wsId = await getWorkspaceId();
@@ -66,40 +65,51 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
 
         const aggregated = aggregateDataForRange(metrics, essays, freshClockifyUsers, start, reportEnd);
         const aggregatedArray = Object.values(aggregated);
-        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
         try {
-            // Pre-generate SHARED reports for everyone
             const teamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, { includeTable: true, includeDistributions: false });
             const clockPdf = generatePDF(`Distribución Clockify Equipo - ${type}`, period, aggregatedArray, { includeTable: false, includeDistributions: true });
 
             const teamBase64 = teamPdf.output('datauristring').split(',')[1];
             const clockBase64 = clockPdf.output('datauristring').split(',')[1];
 
-            for (const email of WHITELIST) {
-                const userKey = email.split('@')[0];
-                const userData = aggregated[userKey];
+            const usersToSend = WHITELIST.map(email => ({
+                email,
+                userKey: email.split('@')[0],
+                userData: aggregated[email.split('@')[0]]
+            })).filter(u => !!u.userData);
 
-                if (userData) {
-                    // Generate only the personal Indicators PDF (no distribution to keep it small)
-                    const indivPdf = generatePDF(`Tus Indicadores ${type}`, period, [userData], { includeTable: true, includeDistributions: false });
+            setSendingStatus({ current: 0, total: usersToSend.length, user: '' });
+
+            // Send in chunks of 3 to speed up but respect Resend rate limits
+            const chunkSize = 3;
+            for (let i = 0; i < usersToSend.length; i += chunkSize) {
+                const chunk = usersToSend.slice(i, i + chunkSize);
+
+                await Promise.all(chunk.map(async (u, idx) => {
+                    const progressIndex = i + idx + 1;
+                    setSendingStatus(prev => prev ? { ...prev, current: progressIndex, user: u.userKey } : null);
+
+                    const indivPdf = generatePDF(`Tus Indicadores ${type}`, period, [u.userData!], { includeTable: true, includeDistributions: false });
                     const indivBase64 = indivPdf.output('datauristring').split(',')[1];
 
-                    // Send the 3 attachments
                     try {
-                        await notifyReport(email, `Reporte ${type}`, indivBase64, period, [
+                        await notifyReport(u.email, `Reporte ${type}`, indivBase64, period, [
                             { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
-                            { filename: `2_Tus_Indicadores_${type}_${userKey}.pdf`, content: indivBase64 },
+                            { filename: `2_Tus_Indicadores_${type}_${u.userKey}.pdf`, content: indivBase64 },
                             { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
                         ]);
-                    } catch (err: any) {
-                        console.error(`Failed to send report to ${email}:`, err);
-                        // Continue to next user even if one fails
+                    } catch (err) {
+                        console.error(`Error sending to ${u.email}:`, err);
                     }
+                }));
+
+                // Short delay between chunks to be safe with Resend rate limits (2 req/s)
+                if (i + chunkSize < usersToSend.length) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-                // Add a small delay to avoid Resend's rate limit (2 req/s)
-                await sleep(800);
             }
+
             setShowSuccess(type);
             setTimeout(() => setShowSuccess(null), 5000);
         } catch (error: any) {
@@ -107,6 +117,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
             alert(`Error enviando reportes: ${error.message || 'Error desconocido'}`);
         } finally {
             setIsSending(null);
+            setSendingStatus(null);
         }
     };
 
@@ -182,7 +193,11 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                         </div>
 
                         <h4 className="text-lg font-black text-kairos-navy mb-1">{item.title}</h4>
-                        <p className="text-xs text-gray-400 font-bold">{item.desc}</p>
+                        <p className="text-xs text-gray-400 font-bold">
+                            {isSending === item.type && sendingStatus
+                                ? `Enviando ${sendingStatus.current}/${sendingStatus.total} (${sendingStatus.user})...`
+                                : item.desc}
+                        </p>
 
                         <AnimatePresence>
                             {showSuccess === item.type && (
