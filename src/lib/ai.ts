@@ -43,16 +43,8 @@ export async function extractTextFromPDF(source: string | Blob): Promise<string>
     try {
         let loadingTask;
         if (typeof source === 'string') {
-            let finalUrl = source;
-            // Transformation for Google Drive links (view -> download)
-            if (source.includes('drive.google.com')) {
-                const match = source.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                    finalUrl = `/api/proxy-drive?id=${match[1]}`;
-                }
-            }
             loadingTask = pdfjs.getDocument({
-                url: finalUrl,
+                url: source,
                 withCredentials: true // Try to send cookies if available
             });
         } else {
@@ -343,24 +335,36 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
 
         for (const essay of essays || []) {
             if (essay.pdf_url) {
-                if (onProgress) onProgress(`Indexando Tesis: ${essay.id}...`);
-                await ingestDocument(essay.id, 'essay', essay.pdf_url, key);
+                if (essay.pdf_url.includes('drive.google.com')) {
+                    if (onProgress) onProgress(`Saltando Tesis Drive: ${essay.id}`);
+                    continue;
+                }
+                try {
+                    if (onProgress) onProgress(`Indexando Tesis: ${essay.id}...`);
+                    await ingestDocument(essay.id, 'essay', essay.pdf_url, key);
+                } catch (err) {
+                    console.error(`Error indexando tesis ${essay.id}:`, err);
+                }
             }
         }
 
         for (const metric of metrics || []) {
-            if (metric.cv_pdf_url) {
-                if (onProgress) onProgress(`Indexando CV: ${metric.id}...`);
-                await ingestDocument(metric.id, 'metric', metric.cv_pdf_url, key);
-            }
-            if (metric.sharing_pdf_url) {
-                if (onProgress) onProgress(`Indexando Sharing: ${metric.id}...`);
-                await ingestDocument(metric.id, 'metric', metric.sharing_pdf_url, key);
-            }
-            if (metric.cp_pdf_url) {
-                if (onProgress) onProgress(`Indexando CP: ${metric.id}...`);
-                await ingestDocument(metric.id, 'metric', metric.cp_pdf_url, key);
-            }
+            const processUrl = async (url: string, label: string) => {
+                if (url.includes('drive.google.com')) {
+                    if (onProgress) onProgress(`Saltando ${label} Drive: ${metric.id}`);
+                    return;
+                }
+                try {
+                    if (onProgress) onProgress(`Indexando ${label}: ${metric.id}...`);
+                    await ingestDocument(metric.id, 'metric', url, key);
+                } catch (err) {
+                    console.error(`Error indexando ${label} ${metric.id}:`, err);
+                }
+            };
+
+            if (metric.cv_pdf_url) await processUrl(metric.cv_pdf_url, 'CV');
+            if (metric.sharing_pdf_url) await processUrl(metric.sharing_pdf_url, 'Sharing');
+            if (metric.cp_pdf_url) await processUrl(metric.cp_pdf_url, 'CP');
         }
 
         // Marcar todos los essays como indexados después de la ingesta batch
