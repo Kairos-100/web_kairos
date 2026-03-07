@@ -22,16 +22,17 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             let errorMessage = `Server Error: ${response.status}`;
+
             try {
-                const errorData = await response.json() as any;
+                const errorData = JSON.parse(errorText);
                 errorMessage = typeof errorData.error === 'string'
                     ? errorData.error
                     : (errorData.error?.message || JSON.stringify(errorData.error || errorData));
             } catch (jsonErr) {
-                // If it's not JSON, get the text body (likely a Vercel error page)
-                const textError = await response.text();
-                errorMessage = textError.substring(0, 200) || response.statusText;
+                // Not JSON, use the raw text (truncated)
+                errorMessage = errorText.substring(0, 300) || response.statusText;
             }
             throw new Error(errorMessage);
         }
