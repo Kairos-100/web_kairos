@@ -305,6 +305,14 @@ ${clockifySummary}
 }
 
 /**
+ * Validates if a string is a proper absolute HTTP(S) URL.
+ */
+function isAbsoluteUrl(url: string): boolean {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+}
+
+/**
  * Runs a full batch ingestion of all existing documents in Supabase.
  */
 export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
@@ -335,30 +343,31 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
 
         for (const essay of essays || []) {
             if (essay.pdf_url) {
-                if (essay.pdf_url.includes('google.com')) {
-                    if (onProgress) onProgress(`Saltando Tesis Google/Drive: ${essay.id}`);
+                if (!isAbsoluteUrl(essay.pdf_url) || essay.pdf_url.includes('google.com')) {
+                    if (onProgress) onProgress(`Saltando Tesis no válida/Google: ${essay.id}`);
                     continue;
                 }
                 try {
                     if (onProgress) onProgress(`Indexando Tesis: ${essay.id}...`);
                     await ingestDocument(essay.id, 'essay', essay.pdf_url, key);
                 } catch (err) {
-                    console.error(`Error indexando tesis ${essay.id}:`, err);
+                    // Mute console error to keep it clean, progress log is enough
+                    if (onProgress) onProgress(`Fallo al indexar tesis ${essay.id}`);
                 }
             }
         }
 
         for (const metric of metrics || []) {
             const processUrl = async (url: string, label: string) => {
-                if (url.includes('google.com')) {
-                    if (onProgress) onProgress(`Saltando ${label} Google/Drive: ${metric.id}`);
+                if (!isAbsoluteUrl(url) || url.includes('google.com')) {
+                    if (onProgress) onProgress(`Saltando ${label} no válido/Google: ${metric.id}`);
                     return;
                 }
                 try {
                     if (onProgress) onProgress(`Indexando ${label}: ${metric.id}...`);
                     await ingestDocument(metric.id, 'metric', url, key);
                 } catch (err) {
-                    console.error(`Error indexando ${label} ${metric.id}:`, err);
+                    if (onProgress) onProgress(`Fallo al indexar ${label} ${metric.id}`);
                 }
             };
 
