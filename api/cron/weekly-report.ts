@@ -82,63 +82,96 @@ export default async function handler(req: Request) {
         const aggregated = aggregateDataForRange(rawMetrics || [], rawEssays || [], clockifyUsers, startDate, endDate);
         const aggregatedArray = Object.values(aggregated);
 
-        // 3. Pre-generate shared reports
-        const teamPdf = generatePDF('RESUMEN SEMANAL DE EQUIPO', periodStr, aggregatedArray, { includeTable: true, includeDistributions: false });
-        const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY (EQUIPO)', periodStr, aggregatedArray, { includeTable: false, includeDistributions: true });
+        // 3. Pre-generate shared reports (Optimized size)
+        const teamPdf = generatePDF('RESUMEN SEMANAL DE EQUIPO', periodStr, aggregatedArray, {
+            includeTable: true,
+            includeDistributions: false,
+            includeDetails: false
+        });
+        const clockPdf = generatePDF('DISTRIBUCIÓN CLOCKIFY (EQUIPO)', periodStr, aggregatedArray, {
+            includeTable: false,
+            includeDistributions: true,
+            includeDetails: false
+        });
 
         const teamBuffer = Buffer.from(teamPdf.output('arraybuffer'));
         const clockBuffer = Buffer.from(clockPdf.output('arraybuffer'));
 
         const resend = new Resend(RESEND_API_KEY);
 
-        // 4. Send to everyone
-        const emailPromises = WHITELIST.map(async (email) => {
-            try {
-                const userKey = email.split('@')[0];
-                const userData = aggregated[userKey];
+        // 4. Send to everyone in Batches of 2 (Rate limit: 2 req/sec)
+        const batchSize = 2;
+        for (let i = 0; i < WHITELIST.length; i += batchSize) {
+            const batch = WHITELIST.slice(i, i + batchSize);
 
-                if (!userData) {
-                    console.warn(`[Cron] No data found for ${email}, skipping...`);
-                    return;
+            await Promise.all(batch.map(async (email) => {
+                try {
+                    const userKey = email.split('@')[0];
+                    const userData = aggregated[userKey];
+
+                    if (!userData) {
+                        console.warn(`[Cron] No data found for ${email}, skipping...`);
+                        return;
+                    }
+
+                    const indivPdf = generatePDF('TUS INDICADORES SEMANALES', periodStr, [userData], {
+                        includeTable: true,
+                        includeDistributions: false,
+                        includeDetails: true
+                    });
+                    const indivBuffer = Buffer.from(indivPdf.output('arraybuffer'));
+
+                    let attempts = 0;
+                    const maxAttempts = 3;
+                    let success = false;
+
+                    while (attempts < maxAttempts && !success) {
+                        try {
+                            attempts++;
+                            const { data: resendData, error: resendError } = await resend.emails.send({
+                                from: 'Kairos Team <notificaciones@kairoscompany.es>',
+                                to: [email],
+                                subject: `📊 Reportes Semanales Kairos: ${periodStr}`,
+                                html: `
+                                    <p>Hola,</p>
+                                    <p>Adjuntamos tus reportes correspondientes a la semana pasada (${periodStr}):</p>
+                                    <ol>
+                                        <li><b>Resumen de Equipo:</b> Vista conjunta de indicadores de todos los miembros.</li>
+                                        <li><b>Tus Indicadores:</b> Tus métricas individuales (CV, LP, CP, etc.).</li>
+                                        <li><b>Distribución Clockify Equipo:</b> Desglose de las horas de TODO el equipo por proyecto.</li>
+                                    </ol>
+                                    <p>¡Buen inicio de semana!</p>
+                                `,
+                                attachments: [
+                                    { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer },
+                                    { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer },
+                                    { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer }
+                                ]
+                            });
+
+                            if (resendError) throw resendError;
+                            success = true;
+                            console.log(`[Cron] Success for ${email}. ID: ${resendData?.id}`);
+                        } catch (err: any) {
+                            console.error(`[Cron] Error for ${email} (Attempt ${attempts}):`, err.message || err);
+                            if (attempts < maxAttempts) await new Promise(r => setTimeout(r, 2500));
+                        }
+                    }
+                } catch (err) {
+                    console.error(`[Cron] Fatal for ${email}:`, err);
                 }
+            }));
 
-                // Generate ONLY the individual indicators
-                const indivPdf = generatePDF('TUS INDICADORES SEMANALES', periodStr, [userData], { includeTable: true, includeDistributions: false });
-                const indivBuffer = Buffer.from(indivPdf.output('arraybuffer'));
-
-                console.log(`[Cron] Sending reports to ${email}...`);
-                const { data: resendData, error: resendError } = await resend.emails.send({
-                    from: 'Kairos Team <notificaciones@kairoscompany.es>',
-                    to: [email],
-                    subject: `📊 Reportes Semanales Kairos: ${periodStr}`,
-                    html: `
-                        <p>Hola,</p>
-                        <p>Adjuntamos tus reportes correspondientes a la semana pasada (${periodStr}):</p>
-                        <ol>
-                            <li><b>Resumen de Equipo:</b> Vista conjunta de indicadores de todos los miembros.</li>
-                            <li><b>Tus Indicadores:</b> Tus métricas individuales (CV, LP, CP, etc.).</li>
-                            <li><b>Distribución Clockify Equipo:</b> Desglose detallado de las horas de TODO el equipo por proyecto.</li>
-                        </ol>
-                        <p>¡Buen inicio de semana!</p>
-                    `,
-                    attachments: [
-                        { filename: `1_Resumen_Equipo_Kairos.pdf`, content: teamBuffer },
-                        { filename: `2_Tus_Indicadores_${userKey}.pdf`, content: indivBuffer },
-                        { filename: `3_Distribucion_Clockify_Equipo.pdf`, content: clockBuffer }
-                    ]
-                });
-
-                if (resendError) console.error(`[Error] Failed for ${email}:`, resendError);
-                else console.log(`[Success] Sent to ${email}. ID: ${resendData?.id}`);
-            } catch (err) {
-                console.error(`[Fatal] Unexpected error for ${email}:`, err);
-            }
-        });
-
-        await Promise.all(emailPromises);
+            if (i + batchSize < WHITELIST.length) await new Promise(r => setTimeout(r, 1200));
+        }
 
         // 5. Send Corporate report only to admins
-        const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN', periodStr, aggregatedArray, { includeTable: true, includeDistributions: true, includeCorporate: true });
+        const corpPdf = generatePDF('REPORTE CORPORATIVO DE GESTIÓN', periodStr, aggregatedArray, {
+            includeTable: true,
+            includeDistributions: true,
+            includeCorporate: true,
+            includeDetails: true
+        });
         const corpBuffer = Buffer.from(corpPdf.output('arraybuffer'));
 
         await resend.emails.send({
