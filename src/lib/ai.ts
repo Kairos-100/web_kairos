@@ -48,7 +48,7 @@ export async function extractTextFromPDF(source: string | Blob): Promise<string>
             if (source.includes('drive.google.com')) {
                 const match = source.match(/\/d\/([a-zA-Z0-9_-]+)/);
                 if (match && match[1]) {
-                    finalUrl = `https://drive.google.com/uc?id=${match[1]}&export=download`;
+                    finalUrl = `/api/proxy-drive?id=${match[1]}`;
                 }
             }
             loadingTask = pdfjs.getDocument({

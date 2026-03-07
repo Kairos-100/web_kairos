@@ -243,9 +243,9 @@ export const generatePDF = (
             headStyles: { fillColor: [40, 80, 200], textColor: [255, 255, 255], fontStyle: 'bold' },
             styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
             columnStyles: {
-                0: { cellWidth: 100 },
-                1: { halign: 'right', cellWidth: 40 },
-                2: { halign: 'right', cellWidth: 30 }
+                0: { cellWidth: 90 },
+                1: { halign: 'right', cellWidth: 35 },
+                2: { halign: 'right', cellWidth: 25 }
             }
         });
 
@@ -282,9 +282,9 @@ export const generatePDF = (
                 headStyles: { fillColor: [80, 160, 120], textColor: [255, 255, 255], fontStyle: 'bold' },
                 styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
                 columnStyles: {
-                    0: { cellWidth: 100 },
-                    1: { halign: 'right', cellWidth: 40 },
-                    2: { halign: 'right', cellWidth: 30 }
+                    0: { cellWidth: 90 },
+                    1: { halign: 'right', cellWidth: 35 },
+                    2: { halign: 'right', cellWidth: 25 }
                 }
             });
 
@@ -325,9 +325,9 @@ export const generatePDF = (
                     styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
                     margin: { left: 20 },
                     columnStyles: {
-                        0: { cellWidth: 90 },
-                        1: { halign: 'right', cellWidth: 30 },
-                        2: { halign: 'right', cellWidth: 30 }
+                        0: { cellWidth: 80 },
+                        1: { halign: 'right', cellWidth: 25 },
+                        2: { halign: 'right', cellWidth: 25 }
                     }
                 });
 
@@ -353,9 +353,9 @@ export const generatePDF = (
                         styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak' },
                         margin: { left: 30 },
                         columnStyles: {
-                            0: { cellWidth: 80 },
-                            1: { halign: 'right', cellWidth: 25 },
-                            2: { halign: 'right', cellWidth: 25 }
+                            0: { cellWidth: 70 },
+                            1: { halign: 'right', cellWidth: 20 },
+                            2: { halign: 'right', cellWidth: 20 }
                         }
                     });
                     currentY = (doc as any).lastAutoTable.finalY + 5;
@@ -386,9 +386,9 @@ export const generatePDF = (
                             styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100], overflow: 'linebreak' },
                             margin: { left: 30 },
                             columnStyles: {
-                                0: { cellWidth: 100 },
-                                1: { halign: 'right', cellWidth: 25 },
-                                2: { halign: 'right', cellWidth: 25 }
+                                0: { cellWidth: 80 },
+                                1: { halign: 'right', cellWidth: 20 },
+                                2: { halign: 'right', cellWidth: 20 }
                             }
                         });
                         currentY = (doc as any).lastAutoTable.finalY + 4;
