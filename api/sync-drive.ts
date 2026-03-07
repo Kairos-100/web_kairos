@@ -78,14 +78,6 @@ const USER_FOLDER_MAP: Record<string, Record<string, string>> = {
         "bp": "1dE8dt_1wIVGAfIL9SXGhrE0f0djlO-D0",
         "cp": "1Rsfg5Gg7pzYA0TLAnxdW4v30wKtHUwlF",
         "sharing": "1-2TgKoBf4k5AZuI37KkLSrWTXA5cz9Qm"
-    },
-    "eviela@mondragon.edu": {
-        "cv": "",
-        "molecula": "",
-        "libro": "",
-        "bp": "",
-        "cp": "",
-        "sharing": ""
     }
 };
 
