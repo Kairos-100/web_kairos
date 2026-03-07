@@ -64,6 +64,7 @@ export interface Essay {
     pdfUrl?: string; // Base64 or local blob URL
     type?: ContributionType;
     points?: number;
+    is_indexed?: boolean;
 }
 export interface MetricEntry {
     id: string;

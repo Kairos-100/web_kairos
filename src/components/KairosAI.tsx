@@ -137,9 +137,9 @@ export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics, clockifyDat
                                         <button type="submit" className="w-full btn-primary py-4 rounded-2xl font-bold shadow-lg shadow-blue-900/10">Guardar Localmente</button>
                                         <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="inline-block text-[10px] text-blue-600 font-bold uppercase hover:underline tracking-wider">¿No tienes una? Consíguela aquí</a>
                                     </form>
-                                    <div className="pt-4 border-t border-gray-100 w-full">
-                                        <p className="text-[10px] text-gray-400 font-medium leading-tight">
-                                            <b>Nota:</b> Si estás en producción (Vercel), añade <code>VITE_OPENAI_API_KEY</code> en los Ajustes de Vercel para que se guarde de forma permanente para todo el equipo.
+                                    <div className="pt-4 border-t border-gray-100 w-full flex flex-col space-y-3">
+                                        <p className="text-[10px] text-gray-400 font-medium leading-tight text-center">
+                                            <b>Nota:</b> Si estás en producción (Vercel), añade <code>VITE_OPENAI_API_KEY</code> para que se guarde para todo el equipo.
                                         </p>
                                     </div>
                                 </div>
@@ -151,7 +151,9 @@ export const KairosAI: React.FC<KairosAIProps> = ({ essays, metrics, clockifyDat
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-kairos-navy opacity-80 uppercase tracking-widest">¿En qué puedo ayudarte?</p>
-                                        <p className="text-xs text-gray-400 mt-3 leading-relaxed max-w-[200px]">Pregúntame sobre tesis, métricas comerciales o actividad del equipo.</p>
+                                        <p className="text-xs text-gray-400 mt-3 leading-relaxed max-w-[200px]">
+                                            Pregúntame sobre tesis, métricas comerciales o <strong>el contenido de los PDFs subidos</strong>.
+                                        </p>
                                     </div>
                                     <div className="grid grid-cols-1 gap-2 w-full">
                                         {['¿Qué documentos hay sobre IA?', 'Resumen de métricas este mes', '¿Quién ha subido más tesis?'].map((suggestion) => (

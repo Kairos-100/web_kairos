@@ -10,7 +10,8 @@ import {
     BookOpen,
     TrendingUp,
     Edit3,
-    Trash2
+    Trash2,
+    Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Essay, MetricEntry } from '../constants';
@@ -29,6 +30,7 @@ export interface UnifiedDocument {
     tags?: string[];
     isMetric?: boolean;
     points?: string;
+    is_indexed?: boolean;
 }
 
 interface DocumentExplorerProps {
@@ -84,7 +86,8 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                     type: 'tesis' as const,
                     rawContent: e.content,
                     tags: e.tags,
-                    isMetric: false
+                    isMetric: false,
+                    is_indexed: e.is_indexed
                 })),
                 ...metrics.map(m => ({
                     id: m.id,
@@ -188,7 +191,12 @@ export const DocumentExplorer: React.FC<DocumentExplorerProps> = ({
                                         </button>
                                     </>
                                 )}
-                                <div className="text-blue-500 p-1">
+                                <div className="text-blue-500 p-1 flex items-center space-x-1">
+                                    {doc.is_indexed && (
+                                        <div className="text-blue-400" title="IA-Ready: Este documento ha sido leído por la IA">
+                                            <Sparkles size={14} className="animate-pulse" />
+                                        </div>
+                                    )}
                                     <FileText size={16} />
                                 </div>
                             </div>

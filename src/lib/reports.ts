@@ -17,7 +17,11 @@ export interface ReportData {
     projects: {
         name: string,
         duration: number,
-        entries?: { description: string, duration: number, date: string }[]
+        entries?: { description: string, duration: number, date: string, tags?: string[] }[]
+    }[];
+    tags: {
+        name: string,
+        duration: number
     }[];
 }
 
@@ -39,7 +43,7 @@ export function aggregateDataForRange(
     // Initialize with all whitelist users
     WHITELIST.forEach(email => {
         const user = email.split('@')[0];
-        grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0, projects: [] };
+        grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, time: 0, projects: [], tags: [] };
     });
 
 
@@ -97,7 +101,8 @@ export function aggregateDataForRange(
                     const formattedEntries = (p.detailedEntries || []).map(de => ({
                         description: de.description,
                         duration: de.time,
-                        date: de.date
+                        date: de.date,
+                        tags: de.tags
                     }));
 
                     if (existing) {
@@ -112,6 +117,20 @@ export function aggregateDataForRange(
                             entries: formattedEntries
                         });
                     }
+
+                    // Aggregate tags for the user
+                    formattedEntries.forEach(entry => {
+                        if (entry.tags) {
+                            entry.tags.forEach(tagName => {
+                                const existingTag = grouped[matchedUser].tags.find(t => t.name === tagName);
+                                if (existingTag) {
+                                    existingTag.duration += entry.duration;
+                                } else {
+                                    grouped[matchedUser].tags.push({ name: tagName, duration: entry.duration });
+                                }
+                            });
+                        }
+                    });
                 });
             }
         }
@@ -147,6 +166,8 @@ export const generatePDF = (
     doc.setTextColor(100);
     doc.text(`Periodo: ${period}`, 105, 38, { align: 'center' });
 
+    let currentY = 45;
+
     if (options.includeTable) {
         const tableData = data.map((row, idx) => [
             idx + 1,
@@ -161,7 +182,7 @@ export const generatePDF = (
         ]);
 
         autotableFunc(doc, {
-            startY: 45,
+            startY: currentY,
             head: [['#', 'Miembro', 'CV', 'Fact.', 'Benef.', 'LP', 'CP', 'SH', 'Tiempo']],
             body: tableData,
             theme: 'striped',
@@ -179,6 +200,7 @@ export const generatePDF = (
                 8: { halign: 'right' }
             }
         });
+        currentY = (doc as any).lastAutoTable.finalY + 10;
     }
 
     // --- Add Clockify Breakdown Page if requested ---
@@ -188,13 +210,13 @@ export const generatePDF = (
         doc.setTextColor(15, 29, 66);
         doc.text('Distribución de Tiempo (Clockify)', 105, 20, { align: 'center' });
 
-        let y = 35;
+        currentY = 35;
 
         // --- 1. Team Total Section ---
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL EQUIPO', 14, y);
-        y += 7;
+        doc.text('TOTAL EQUIPO', 14, currentY);
+        currentY += 7;
 
         const teamProjects: Record<string, number> = {};
         let totalTeamTime = 0;
@@ -214,7 +236,7 @@ export const generatePDF = (
             ]);
 
         autotableFunc(doc, {
-            startY: y,
+            startY: currentY,
             head: [['Proyecto (Equipo)', 'Tiempo Total', '%']],
             body: sortedTeamProjects,
             theme: 'striped',
@@ -222,22 +244,59 @@ export const generatePDF = (
             styles: { fontSize: 8, cellPadding: 3 },
         });
 
-        y = (doc as any).lastAutoTable.finalY + 15;
+        // --- 1b. Team Tags Section ---
+        const teamTags: Record<string, number> = {};
+        data.forEach(u => {
+            u.tags.forEach(t => {
+                teamTags[t.name] = (teamTags[t.name] || 0) + t.duration;
+            });
+        });
+
+        if (Object.keys(teamTags).length > 0) {
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+            if (currentY > 230) { doc.addPage(); currentY = 20; }
+
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DISTRIBUCIÓN POR TAGS (EQUIPO)', 14, currentY);
+            currentY += 7;
+
+            const sortedTeamTags = Object.entries(teamTags)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, duration]) => [
+                    name,
+                    `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}m`,
+                    totalTeamTime > 0 ? `${((duration / totalTeamTime) * 100).toFixed(1)}%` : '0%'
+                ]);
+
+            autotableFunc(doc, {
+                startY: currentY,
+                head: [['Tag (Equipo)', 'Tiempo Total', '%']],
+                body: sortedTeamTags,
+                theme: 'striped',
+                headStyles: { fillColor: [80, 160, 120], textColor: [255, 255, 255], fontStyle: 'bold' },
+                styles: { fontSize: 8, cellPadding: 3 },
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 15;
+        } else {
+            currentY = (doc as any).lastAutoTable.finalY + 15;
+        }
 
         // --- 2. Individual Breakdowns ---
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('DESGLOSE POR MIEMBRO', 14, y);
-        y += 8;
+        doc.text('DESGLOSE POR MIEMBRO', 14, currentY);
+        currentY += 8;
 
         data.forEach(user => {
             if (user.projects.length > 0) {
-                if (y > 240) { doc.addPage(); y = 20; }
+                if (currentY > 240) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(60, 60, 60);
-                doc.text(user.user.toUpperCase(), 14, y);
-                y += 5;
+                doc.text(user.user.toUpperCase(), 14, currentY);
+                currentY += 5;
 
                 const projectData = user.projects
                     .sort((a, b) => b.duration - a.duration)
@@ -248,7 +307,7 @@ export const generatePDF = (
                     ]);
 
                 autotableFunc(doc, {
-                    startY: y,
+                    startY: currentY,
                     head: [['Proyecto', 'Tiempo', '%']],
                     body: projectData,
                     theme: 'plain',
@@ -262,16 +321,44 @@ export const generatePDF = (
                     }
                 });
 
-                y = (doc as any).lastAutoTable.finalY + 2;
+                currentY = (doc as any).lastAutoTable.finalY + 5;
+
+                // --- Individual Tags Section ---
+                if (user.tags.length > 0) {
+                    if (currentY > 260) { doc.addPage(); currentY = 20; }
+                    const individualTags = user.tags
+                        .sort((a, b) => b.duration - a.duration)
+                        .map(t => [
+                            t.name,
+                            `${Math.floor(t.duration / 3600)}h ${Math.floor((t.duration % 3600) / 60)}m`,
+                            user.time > 0 ? `${((t.duration / user.time) * 100).toFixed(1)}%` : '0%'
+                        ]);
+
+                    autotableFunc(doc, {
+                        startY: currentY,
+                        head: [['Tag', 'Tiempo', '%']],
+                        body: individualTags,
+                        theme: 'plain',
+                        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+                        styles: { fontSize: 6, cellPadding: 1 },
+                        margin: { left: 30 },
+                        columnStyles: {
+                            0: { cellWidth: 70 },
+                            1: { halign: 'right', cellWidth: 20 },
+                            2: { halign: 'right', cellWidth: 20 }
+                        }
+                    });
+                    currentY = (doc as any).lastAutoTable.finalY + 5;
+                }
 
                 // --- Detailed Entries Sub-section ---
                 user.projects
                     .filter(p => p.entries && p.entries.length > 0)
                     .forEach(p => {
-                        if (y > 260) { doc.addPage(); y = 20; }
+                        if (currentY > 260) { doc.addPage(); currentY = 20; }
 
                         const entryData = p.entries!.map(e => [
-                            `  - ${e.description}`,
+                            `  - ${e.description}${e.tags && e.tags.length > 0 ? ` [${e.tags.join(', ')}]` : ''}`,
                             `${Math.floor(e.duration / 3600)}h ${Math.floor((e.duration % 3600) / 60)}m`,
                             new Date(e.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
                         ]);
@@ -279,11 +366,11 @@ export const generatePDF = (
                         doc.setFontSize(6);
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(120, 120, 120);
-                        doc.text(`Tareas: ${p.name}`, 25, y + 4);
-                        y += 6;
+                        doc.text(`Tareas: ${p.name}`, 25, currentY + 4);
+                        currentY += 6;
 
                         autotableFunc(doc, {
-                            startY: y,
+                            startY: currentY,
                             body: entryData,
                             theme: 'plain',
                             styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100] },
@@ -294,10 +381,10 @@ export const generatePDF = (
                                 2: { halign: 'right', cellWidth: 20 }
                             }
                         });
-                        y = (doc as any).lastAutoTable.finalY + 4;
+                        currentY = (doc as any).lastAutoTable.finalY + 4;
                     });
 
-                y += 5;
+                currentY += 5;
             }
         });
     }
@@ -311,7 +398,9 @@ export const generatePDF = (
             time: acc.time + curr.time
         }), { cv: 0, rev: 0, prof: 0, lp: 0, time: 0 });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        let finalY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 10 : currentY + 10;
+        if (finalY > 250) { doc.addPage(); finalY = 20; }
+
         doc.setFontSize(12);
         doc.setTextColor(15, 29, 66);
         doc.text('Resumen Ejecutivo Corporativo', 14, finalY);

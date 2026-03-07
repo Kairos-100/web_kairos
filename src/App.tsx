@@ -200,18 +200,33 @@ const App: React.FC = () => {
     setIsEditOpen(true);
   };
 
-  const handleRunAiIngestion = async () => {
-    if (!window.confirm('¿Quieres indexar todo el conocimiento existente en Explorar? Esto puede tardar un momento.')) return;
+  const handleRunAiIngestion = async (silent = false) => {
+    if (!silent && !window.confirm('¿Quieres indexar todo el conocimiento existente en Explorar? Esto puede tardar un momento.')) return;
     try {
-      setAiStatus('Indexando conocimiento...');
-      await runLegacyIngestion((msg) => setAiStatus(msg));
-      setTimeout(() => setAiStatus(null), 5000);
+      if (!silent) setAiStatus('Indexando conocimiento...');
+      await runLegacyIngestion((msg) => {
+        if (!silent) setAiStatus(msg);
+      });
+      if (!silent) setTimeout(() => setAiStatus(null), 5000);
+      else setAiStatus(null);
     } catch (err: any) {
       console.error('Indexing error:', err);
-      alert(`Error al indexar conocimiento: ${err.message || 'Error desconocido'}`);
+      if (!silent) alert(`Error al indexar conocimiento: ${err.message || 'Error desconocido'}`);
       setAiStatus(null);
     }
   };
+
+  // Background Auto-Ingestion
+  useEffect(() => {
+    const key = localStorage.getItem('kairos_openai_key') || import.meta.env.VITE_OPENAI_API_KEY;
+    if (key && essays.length > 0) {
+      // Small delay to let other things load
+      const timer = setTimeout(() => {
+        handleRunAiIngestion(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [essays.length]);
 
   useEffect(() => {
     if (essays.length > 0 && !import.meta.env.VITE_SUPABASE_URL) {
@@ -424,16 +439,6 @@ const App: React.FC = () => {
                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
                   <span className="text-[10px] font-bold uppercase tracking-tight">{aiStatus}</span>
                 </div>
-              )}
-              {(!aiStatus && (activeTab !== 'feed' || selectedEssayId)) && (
-                <button
-                  onClick={handleRunAiIngestion}
-                  className="flex items-center space-x-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-kairos-navy/60 hover:text-kairos-navy bg-white border border-gray-100 rounded-xl transition-all shadow-sm hover:shadow-md"
-                  title="Sincronizar todo el conocimiento previo con la IA"
-                >
-                  <Clock size={14} />
-                  <span>Indexar Conocimiento</span>
-                </button>
               )}
               {!(activeTab === 'feed' && !selectedEssayId) && (
                 <DateRangePicker range={dateRange} onChange={setDateRange} />

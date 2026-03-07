@@ -147,6 +147,14 @@ export async function ingestDocument(
             if (error) throw error;
         }
 
+        // Marcar como indexado en la tabla original (si es un essay)
+        if (sourceType === 'essay') {
+            await supabase
+                .from('essays')
+                .update({ is_indexed: true })
+                .eq('id', sourceId);
+        }
+
         console.log(`Ingesta completada!`);
     } catch (err) {
         console.error('Error in ingestDocument:', err);
@@ -309,7 +317,8 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
         const { data: essays, error: eError } = await supabase
             .from('essays')
             .select('id, pdf_url')
-            .not('pdf_url', 'is', null);
+            .not('pdf_url', 'is', null)
+            .or('is_indexed.eq.false,is_indexed.is.null'); // Solo los no indexados
 
         if (eError) throw eError;
 
@@ -342,6 +351,12 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
                 await ingestDocument(metric.id, 'metric', metric.cp_pdf_url, key);
             }
         }
+
+        // Marcar todos los essays como indexados después de la ingesta batch
+        await supabase
+            .from('essays')
+            .update({ is_indexed: true })
+            .not('pdf_url', 'is', null);
 
         if (onProgress) onProgress(`¡Éxito! Base de conocimiento actualizada.`);
     } catch (err: any) {

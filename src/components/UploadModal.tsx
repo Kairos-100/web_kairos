@@ -145,7 +145,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                     if (dbError) throw dbError;
 
                     if (finalPdfUrl) {
-                        ingestDocument(editEssay.id, 'essay', finalPdfUrl).catch(console.error);
+                        setUploadProgress(95);
+                        await ingestDocument(editEssay.id, 'essay', finalPdfUrl);
+                        setUploadProgress(100);
                     }
                 } else {
                     const { data: newData, error: dbError } = await supabase
@@ -166,6 +168,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                         notifyNewEssay(newEssay).catch(console.error);
 
                         // Trigger Google Drive Sync
+                        setUploadProgress(100);
+                        setTimeout(() => setUploadProgress(100), 500); // Visual stability
+
                         fetch('/api/sync-drive', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -444,8 +449,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                                 <span className="relative z-10 flex items-center justify-center space-x-2">
                                     {isUploading ? (
                                         <>
-                                            <span>{uploadProgress < 100 ? `Subiendo... ${uploadProgress}%` : 'Finalizando registro...'}</span>
-                                            {uploadProgress === 100 && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                            <span>{uploadProgress < 90 ? `Subiendo... ${uploadProgress}%` : (uploadProgress < 100 ? '🤖 Indexando en IA...' : '¡Hecho!')}</span>
+                                            {uploadProgress < 100 && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                                         </>
                                     ) : (
                                         <span>{editEssay ? 'Guardar Cambios' : (pdfUrl ? 'Publicar Conocimiento' : 'Adjuntar PDF para Publicar')}</span>
