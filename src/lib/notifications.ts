@@ -8,7 +8,7 @@ import { WHITELIST } from '../constants.js';
  */
 async function sendEmail(to: string[], subject: string, html: string, attachments?: { filename: string, content: string }[]) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
     try {
         const response = await fetch('/api/send-email', {

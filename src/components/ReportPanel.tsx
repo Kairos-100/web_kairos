@@ -67,10 +67,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
         const aggregatedArray = Object.values(aggregated);
 
         try {
-            const teamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, { includeTable: true, includeDistributions: false });
             const clockPdf = generatePDF(`Distribución Clockify Equipo - ${type}`, period, aggregatedArray, { includeTable: false, includeDistributions: true });
-
-            const teamBase64 = teamPdf.output('datauristring').split(',')[1];
             const clockBase64 = clockPdf.output('datauristring').split(',')[1];
 
             const usersToSend = WHITELIST.map(email => ({
@@ -87,13 +84,19 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                 setSendingStatus({ current: i + 1, total: usersToSend.length, user: u.userKey });
 
                 try {
-                    const indivPdf = generatePDF(`Tus Indicadores ${type}`, period, [u.userData!], { includeTable: true, includeDistributions: false });
-                    const indivBase64 = indivPdf.output('datauristring').split(',')[1];
+                    // Generate TEAM summary but highlighting THIS specific user
+                    console.log(`Generating highlighted Team PDF for ${u.userKey}...`);
+                    const highlightedTeamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, {
+                        includeTable: true,
+                        includeDistributions: false,
+                        highlightUserKey: u.userKey
+                    });
+                    const highlightedTeamBase64 = highlightedTeamPdf.output('datauristring').split(',')[1];
 
-                    await notifyReport(u.email, `Reporte ${type}`, indivBase64, period, [
-                        { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
-                        { filename: `2_Tus_Indicadores_${type}_${u.userKey}.pdf`, content: indivBase64 },
-                        { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
+                    console.log(`Sending email to ${u.email}...`);
+                    await notifyReport(u.email, `Reporte ${type}`, highlightedTeamBase64, period, [
+                        { filename: `1_Resumen_Equipo_${type}.pdf`, content: highlightedTeamBase64 },
+                        { filename: `2_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
                     ]);
                 } catch (err) {
                     console.error(`Error sending to ${u.email}:`, err);

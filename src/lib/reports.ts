@@ -143,6 +143,7 @@ export interface ReportOptions {
     includeTable?: boolean;
     includeDistributions?: boolean;
     includeCorporate?: boolean;
+    highlightUserKey?: string;
 }
 
 export const generatePDF = (
@@ -198,6 +199,16 @@ export const generatePDF = (
                 6: { halign: 'center' },
                 7: { halign: 'center' },
                 8: { halign: 'right' }
+            },
+            didParseCell: (dataCell: any) => {
+                if (options.highlightUserKey && dataCell.section === 'body') {
+                    const rowUser = data.map(r => r.user.split('@')[0])[dataCell.row.index];
+                    if (rowUser === options.highlightUserKey) {
+                        dataCell.cell.styles.fillColor = [240, 247, 255]; // Light blue highlight
+                        dataCell.cell.styles.textColor = [15, 29, 66];
+                        dataCell.cell.styles.fontStyle = 'bold';
+                    }
+                }
             }
         });
         currentY = (doc as any).lastAutoTable.finalY + 10;
