@@ -45,7 +45,7 @@ export async function extractTextFromPDF(source: string | Blob): Promise<string>
         if (typeof source === 'string') {
             loadingTask = pdfjs.getDocument({
                 url: source,
-                withCredentials: true // Try to send cookies if available
+                // Removed withCredentials: true as it breaks public Supabase storage fetches
             });
         } else {
             const arrayBuffer = await source.arrayBuffer();
@@ -343,8 +343,8 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
 
         for (const essay of essays || []) {
             if (essay.pdf_url) {
-                if (!isAbsoluteUrl(essay.pdf_url) || essay.pdf_url.includes('google.com')) {
-                    if (onProgress) onProgress(`Saltando Tesis no válida/Google: ${essay.id}`);
+                if (!isAbsoluteUrl(essay.pdf_url) || essay.pdf_url.includes('google.com') || essay.pdf_url.includes('canva.com')) {
+                    if (onProgress) onProgress(`Saltando Tesis no válida/Externo: ${essay.id}`);
                     continue;
                 }
                 try {
@@ -359,8 +359,8 @@ export async function runLegacyIngestion(onProgress?: (msg: string) => void) {
 
         for (const metric of metrics || []) {
             const processUrl = async (url: string, label: string) => {
-                if (!isAbsoluteUrl(url) || url.includes('google.com')) {
-                    if (onProgress) onProgress(`Saltando ${label} no válido/Google: ${metric.id}`);
+                if (!isAbsoluteUrl(url) || url.includes('google.com') || url.includes('canva.com')) {
+                    if (onProgress) onProgress(`Saltando ${label} no válido/Externo: ${metric.id}`);
                     return;
                 }
                 try {
