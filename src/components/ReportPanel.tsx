@@ -81,19 +81,24 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                 const userData = aggregated[userKey];
 
                 if (userData) {
-                    // Generate only the personal Indicators PDF
+                    // Generate only the personal Indicators PDF (no distribution to keep it small)
                     const indivPdf = generatePDF(`Tus Indicadores ${type}`, period, [userData], { includeTable: true, includeDistributions: false });
                     const indivBase64 = indivPdf.output('datauristring').split(',')[1];
 
                     // Send the 3 attachments
-                    await notifyReport(email, `Reporte ${type}`, indivBase64, period, [
-                        { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
-                        { filename: `2_Tus_Indicadores_${type}_${userKey}.pdf`, content: indivBase64 },
-                        { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
-                    ]);
+                    try {
+                        await notifyReport(email, `Reporte ${type}`, indivBase64, period, [
+                            { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
+                            { filename: `2_Tus_Indicadores_${type}_${userKey}.pdf`, content: indivBase64 },
+                            { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
+                        ]);
+                    } catch (err: any) {
+                        console.error(`Failed to send report to ${email}:`, err);
+                        // Continue to next user even if one fails
+                    }
                 }
                 // Add a small delay to avoid Resend's rate limit (2 req/s)
-                await sleep(700);
+                await sleep(800);
             }
             setShowSuccess(type);
             setTimeout(() => setShowSuccess(null), 5000);

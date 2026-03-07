@@ -22,11 +22,18 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
         });
 
         if (!response.ok) {
-            const errorData = await response.json() as any;
-            const errorMessage = typeof errorData.error === 'string'
-                ? errorData.error
-                : (errorData.error?.message || JSON.stringify(errorData.error || errorData));
-            throw new Error(`Server Error: ${errorMessage}`);
+            let errorMessage = `Server Error: ${response.status}`;
+            try {
+                const errorData = await response.json() as any;
+                errorMessage = typeof errorData.error === 'string'
+                    ? errorData.error
+                    : (errorData.error?.message || JSON.stringify(errorData.error || errorData));
+            } catch (jsonErr) {
+                // If it's not JSON, get the text body (likely a Vercel error page)
+                const textError = await response.text();
+                errorMessage = textError.substring(0, 200) || response.statusText;
+            }
+            throw new Error(errorMessage);
         }
     } catch (err) {
         console.error('Error enviando notificación por email:', err);
