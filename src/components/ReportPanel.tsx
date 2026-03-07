@@ -81,32 +81,26 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
 
             setSendingStatus({ current: 0, total: usersToSend.length, user: '' });
 
-            // Send in chunks of 3 to speed up but respect Resend rate limits
-            const chunkSize = 3;
-            for (let i = 0; i < usersToSend.length; i += chunkSize) {
-                const chunk = usersToSend.slice(i, i + chunkSize);
+            for (let i = 0; i < usersToSend.length; i++) {
+                const u = usersToSend[i];
+                console.log(`Processing report for ${u.userKey} (${i + 1}/${usersToSend.length})`);
+                setSendingStatus({ current: i + 1, total: usersToSend.length, user: u.userKey });
 
-                await Promise.all(chunk.map(async (u, idx) => {
-                    const progressIndex = i + idx + 1;
-                    setSendingStatus(prev => prev ? { ...prev, current: progressIndex, user: u.userKey } : null);
-
+                try {
                     const indivPdf = generatePDF(`Tus Indicadores ${type}`, period, [u.userData!], { includeTable: true, includeDistributions: false });
                     const indivBase64 = indivPdf.output('datauristring').split(',')[1];
 
-                    try {
-                        await notifyReport(u.email, `Reporte ${type}`, indivBase64, period, [
-                            { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
-                            { filename: `2_Tus_Indicadores_${type}_${u.userKey}.pdf`, content: indivBase64 },
-                            { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
-                        ]);
-                    } catch (err) {
-                        console.error(`Error sending to ${u.email}:`, err);
-                    }
-                }));
+                    await notifyReport(u.email, `Reporte ${type}`, indivBase64, period, [
+                        { filename: `1_Resumen_Equipo_${type}.pdf`, content: teamBase64 },
+                        { filename: `2_Tus_Indicadores_${type}_${u.userKey}.pdf`, content: indivBase64 },
+                        { filename: `3_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
+                    ]);
+                } catch (err) {
+                    console.error(`Error sending to ${u.email}:`, err);
+                }
 
-                // Short delay between chunks to be safe with Resend rate limits (2 req/s)
-                if (i + chunkSize < usersToSend.length) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                if (i < usersToSend.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 800));
                 }
             }
 

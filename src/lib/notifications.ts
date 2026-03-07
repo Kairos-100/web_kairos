@@ -7,12 +7,16 @@ import { WHITELIST } from '../constants.js';
  * Generic function to send email via our serverless API proxy
  */
 async function sendEmail(to: string[], subject: string, html: string, attachments?: { filename: string, content: string }[]) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
     try {
         const response = await fetch('/api/send-email', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
+            signal: controller.signal,
             body: JSON.stringify({
                 to,
                 subject,
@@ -20,6 +24,7 @@ async function sendEmail(to: string[], subject: string, html: string, attachment
                 attachments
             })
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             let errorMessage = `Server Error: ${response.status}`;
