@@ -241,7 +241,12 @@ export const generatePDF = (
             body: sortedTeamProjects,
             theme: 'striped',
             headStyles: { fillColor: [40, 80, 200], textColor: [255, 255, 255], fontStyle: 'bold' },
-            styles: { fontSize: 8, cellPadding: 3 },
+            styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+            columnStyles: {
+                0: { cellWidth: 100 },
+                1: { halign: 'right', cellWidth: 40 },
+                2: { halign: 'right', cellWidth: 30 }
+            }
         });
 
         // --- 1b. Team Tags Section ---
@@ -275,7 +280,12 @@ export const generatePDF = (
                 body: sortedTeamTags,
                 theme: 'striped',
                 headStyles: { fillColor: [80, 160, 120], textColor: [255, 255, 255], fontStyle: 'bold' },
-                styles: { fontSize: 8, cellPadding: 3 },
+                styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+                columnStyles: {
+                    0: { cellWidth: 100 },
+                    1: { halign: 'right', cellWidth: 40 },
+                    2: { halign: 'right', cellWidth: 30 }
+                }
             });
 
             currentY = (doc as any).lastAutoTable.finalY + 15;
@@ -312,12 +322,12 @@ export const generatePDF = (
                     body: projectData,
                     theme: 'plain',
                     headStyles: { fillColor: [245, 247, 250], textColor: [0, 0, 0], fontStyle: 'bold' },
-                    styles: { fontSize: 7, cellPadding: 2 },
+                    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
                     margin: { left: 20 },
                     columnStyles: {
-                        0: { cellWidth: 80 },
-                        1: { halign: 'right', cellWidth: 25 },
-                        2: { halign: 'right', cellWidth: 20 }
+                        0: { cellWidth: 90 },
+                        1: { halign: 'right', cellWidth: 30 },
+                        2: { halign: 'right', cellWidth: 30 }
                     }
                 });
 
@@ -340,12 +350,12 @@ export const generatePDF = (
                         body: individualTags,
                         theme: 'plain',
                         headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-                        styles: { fontSize: 6, cellPadding: 1 },
+                        styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak' },
                         margin: { left: 30 },
                         columnStyles: {
-                            0: { cellWidth: 70 },
-                            1: { halign: 'right', cellWidth: 20 },
-                            2: { halign: 'right', cellWidth: 20 }
+                            0: { cellWidth: 80 },
+                            1: { halign: 'right', cellWidth: 25 },
+                            2: { halign: 'right', cellWidth: 25 }
                         }
                     });
                     currentY = (doc as any).lastAutoTable.finalY + 5;
@@ -373,12 +383,12 @@ export const generatePDF = (
                             startY: currentY,
                             body: entryData,
                             theme: 'plain',
-                            styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100] },
+                            styles: { fontSize: 6, cellPadding: 1, textColor: [100, 100, 100], overflow: 'linebreak' },
                             margin: { left: 30 },
                             columnStyles: {
-                                0: { cellWidth: 80 },
-                                1: { halign: 'right', cellWidth: 20 },
-                                2: { halign: 'right', cellWidth: 20 }
+                                0: { cellWidth: 100 },
+                                1: { halign: 'right', cellWidth: 25 },
+                                2: { halign: 'right', cellWidth: 25 }
                             }
                         });
                         currentY = (doc as any).lastAutoTable.finalY + 4;

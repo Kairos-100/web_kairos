@@ -43,7 +43,18 @@ export async function extractTextFromPDF(source: string | Blob): Promise<string>
     try {
         let loadingTask;
         if (typeof source === 'string') {
-            loadingTask = pdfjs.getDocument(source);
+            let finalUrl = source;
+            // Transformation for Google Drive links (view -> download)
+            if (source.includes('drive.google.com')) {
+                const match = source.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                    finalUrl = `https://drive.google.com/uc?id=${match[1]}&export=download`;
+                }
+            }
+            loadingTask = pdfjs.getDocument({
+                url: finalUrl,
+                withCredentials: true // Try to send cookies if available
+            });
         } else {
             const arrayBuffer = await source.arrayBuffer();
             loadingTask = pdfjs.getDocument({ data: arrayBuffer });
