@@ -97,6 +97,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                 });
 
                 await Promise.all(batch.map(async (u) => {
+                    const timerName = `Email_Send_${u.userKey}`;
                     try {
                         console.log(`Generating highlighted Team PDF for ${u.userKey}...`);
                         const highlightedTeamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, {
@@ -118,16 +119,19 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                                     console.log(`Retrying report for ${u.userKey} (Attempt ${attempts}/${maxAttempts})...`);
                                 }
 
+                                console.time(timerName);
                                 await notifyReport(u.email, `Reporte ${type}`, highlightedTeamBase64, period, [
                                     { filename: `1_Resumen_Equipo_${type}.pdf`, content: highlightedTeamBase64 },
                                     { filename: `2_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
                                 ]);
+                                console.timeEnd(timerName);
                                 success = true;
                                 console.log(`Email successfully sent to ${u.email}`);
-                            } catch (err) {
-                                console.error(`Error sending to ${u.email} (Attempt ${attempts}):`, err);
+                            } catch (err: any) {
+                                console.timeEnd(timerName);
+                                console.error(`Error sending to ${u.email} (Attempt ${attempts}):`, err.message || err);
                                 if (attempts < maxAttempts) {
-                                    await new Promise(resolve => setTimeout(resolve, 1500));
+                                    await new Promise(resolve => setTimeout(resolve, 2000));
                                 }
                             }
                         }
@@ -138,7 +142,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
 
                 // Short pause between batches to breathe
                 if (i + batchSize < usersToSend.length) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
 
