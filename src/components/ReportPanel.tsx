@@ -84,7 +84,7 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
 
             setSendingStatus({ current: 0, total: usersToSend.length, user: '' });
 
-            const batchSize = 3;
+            const batchSize = 2; // Reduced to 2 to respect Resend's 2 req/sec free tier limit
             for (let i = 0; i < usersToSend.length; i += batchSize) {
                 const batch = usersToSend.slice(i, i + batchSize);
                 const batchNames = batch.map(u => u.userKey).join(', ');
@@ -131,7 +131,8 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                                 console.timeEnd(timerName);
                                 console.error(`Error sending to ${u.email} (Attempt ${attempts}):`, err.message || err);
                                 if (attempts < maxAttempts) {
-                                    await new Promise(resolve => setTimeout(resolve, 2000));
+                                    // Wait longer on retry to clear rate limit window
+                                    await new Promise(resolve => setTimeout(resolve, 2500));
                                 }
                             }
                         }
@@ -140,9 +141,9 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
                     }
                 }));
 
-                // Short pause between batches to breathe
+                // Pause to ensure we stay safely under 2 requests per second
                 if (i + batchSize < usersToSend.length) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 1200));
                 }
             }
 
