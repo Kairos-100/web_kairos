@@ -27,6 +27,7 @@ export default async function handler(req: Request) {
 
         const resend = new Resend(RESEND_API_KEY);
 
+        console.time(`Resend_API_Call_${to?.[0] || 'unknown'}`);
         const { data, error } = await resend.emails.send({
             from: from || 'Kairos Team <notificaciones@kairoscompany.es>',
             to,
@@ -34,9 +35,10 @@ export default async function handler(req: Request) {
             html,
             attachments: attachments?.map((a: any) => ({
                 filename: a.filename,
-                content: a.content,
+                content: Buffer.from(a.content, 'base64'),
             })),
         });
+        console.timeEnd(`Resend_API_Call_${to?.[0] || 'unknown'}`);
 
         if (error) {
             console.error('Resend API Error:', error);

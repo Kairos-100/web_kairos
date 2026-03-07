@@ -84,60 +84,61 @@ export const ReportPanel: React.FC<ReportPanelProps> = ({ metrics, essays, clock
 
             setSendingStatus({ current: 0, total: usersToSend.length, user: '' });
 
-            for (let i = 0; i < usersToSend.length; i++) {
-                const u = usersToSend[i];
-                console.log(`Processing report for ${u.userKey} (${i + 1}/${usersToSend.length})`);
-                setSendingStatus({ current: i + 1, total: usersToSend.length, user: u.userKey });
+            const batchSize = 3;
+            for (let i = 0; i < usersToSend.length; i += batchSize) {
+                const batch = usersToSend.slice(i, i + batchSize);
+                const batchNames = batch.map(u => u.userKey).join(', ');
+                console.log(`Processing Batch ${Math.floor(i / batchSize) + 1} (${batchNames})...`);
 
-                try {
-                    // Generate TEAM summary but highlighting THIS specific user (No details for speed)
-                    console.log(`Generating highlighted Team PDF for ${u.userKey}...`);
-                    const highlightedTeamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, {
-                        includeTable: true,
-                        includeDistributions: false,
-                        includeDetails: false, // Keep team summary lightweight
-                        highlightUserKey: u.userKey
-                    });
-                    const highlightedTeamBase64 = highlightedTeamPdf.output('datauristring').split(',')[1];
-                    console.log(`Team PDF Size: ${(highlightedTeamBase64.length / 1024).toFixed(2)} KB`);
-                    console.timeEnd('PDF_Generation');
+                setSendingStatus({
+                    current: Math.min(i + batchSize, usersToSend.length),
+                    total: usersToSend.length,
+                    user: `Lote: ${batchNames}`
+                });
 
-                    let attempts = 0;
-                    const maxAttempts = 3;
-                    let success = false;
+                await Promise.all(batch.map(async (u) => {
+                    try {
+                        console.log(`Generating highlighted Team PDF for ${u.userKey}...`);
+                        const highlightedTeamPdf = generatePDF(`Resumen de Equipo ${type}`, period, aggregatedArray, {
+                            includeTable: true,
+                            includeDistributions: false,
+                            includeDetails: false,
+                            highlightUserKey: u.userKey
+                        });
+                        const highlightedTeamBase64 = highlightedTeamPdf.output('datauristring').split(',')[1];
 
-                    while (attempts < maxAttempts && !success) {
-                        try {
-                            attempts++;
-                            if (attempts > 1) {
-                                console.log(`Retrying report for ${u.userKey} (Attempt ${attempts}/${maxAttempts})...`);
-                            }
+                        let attempts = 0;
+                        const maxAttempts = 3;
+                        let success = false;
 
-                            console.time('Email_Send');
-                            console.log(`Sending email to ${u.email}...`);
-                            await notifyReport(u.email, `Reporte ${type}`, highlightedTeamBase64, period, [
-                                { filename: `1_Resumen_Equipo_${type}.pdf`, content: highlightedTeamBase64 },
-                                { filename: `2_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
-                            ]);
-                            console.timeEnd('Email_Send');
-                            success = true;
-                            console.log(`Email sent successfully to ${u.email}`);
-                        } catch (err) {
-                            console.error(`Error sending to ${u.email} (Attempt ${attempts}):`, err);
-                            if (attempts < maxAttempts) {
-                                console.log(`Waiting 2 seconds before retry...`);
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-                            } else {
-                                console.error(`Giving up on ${u.email} after ${maxAttempts} attempts.`);
+                        while (attempts < maxAttempts && !success) {
+                            try {
+                                attempts++;
+                                if (attempts > 1) {
+                                    console.log(`Retrying report for ${u.userKey} (Attempt ${attempts}/${maxAttempts})...`);
+                                }
+
+                                await notifyReport(u.email, `Reporte ${type}`, highlightedTeamBase64, period, [
+                                    { filename: `1_Resumen_Equipo_${type}.pdf`, content: highlightedTeamBase64 },
+                                    { filename: `2_Distribucion_Clockify_Equipo_${type}.pdf`, content: clockBase64 }
+                                ]);
+                                success = true;
+                                console.log(`Email successfully sent to ${u.email}`);
+                            } catch (err) {
+                                console.error(`Error sending to ${u.email} (Attempt ${attempts}):`, err);
+                                if (attempts < maxAttempts) {
+                                    await new Promise(resolve => setTimeout(resolve, 1500));
+                                }
                             }
                         }
+                    } catch (userErr) {
+                        console.error(`Unhandled error for ${u.email}:`, userErr);
                     }
+                }));
 
-                    if (i < usersToSend.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 800));
-                    }
-                } catch (userErr) {
-                    console.error(`Unhandled error for ${u.email}:`, userErr);
+                // Short pause between batches to breathe
+                if (i + batchSize < usersToSend.length) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
 
