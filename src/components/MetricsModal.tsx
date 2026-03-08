@@ -167,6 +167,34 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
         }
     };
 
+    const clearCv = () => {
+        setCvTitle('');
+        setCvDescription('');
+        setCvPdfFile(null);
+        setCvPdfName(undefined);
+        setCvPdfUrl(undefined);
+    };
+
+    const clearSharing = () => {
+        setSharing(0);
+        setSharingPdfFile(null);
+        setSharingPdfName(undefined);
+        setSharingPdfUrl(undefined);
+    };
+
+    const clearAll = () => {
+        setCp(0);
+        clearCv();
+        clearSharing();
+        setRevenue(0);
+        setProfit(0);
+        setCpTitle('');
+        setCpDescription('');
+        setCpPdfFile(null);
+        setCpPdfName(undefined);
+        setCpPdfUrl(undefined);
+    };
+
     const handleAuth = (e: React.FormEvent) => {
         e.preventDefault();
         if (WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
@@ -278,8 +306,14 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 {activeTab === 'individual' ? (
                                     <motion.div key="individual" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                                         <div className="bg-blue-50 p-4 rounded-xl flex items-center justify-between">
-                                            <span className="text-xs font-bold text-blue-600">Registro para: {email}</span>
-                                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-white border rounded px-2 py-1 text-xs" />
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] uppercase font-black text-blue-400 tracking-tighter">Colaborador</span>
+                                                <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{email}</span>
+                                            </div>
+                                            <div className="flex items-center space-x-3">
+                                                <button type="button" onClick={clearAll} className="text-[10px] font-bold text-blue-600 bg-white px-3 py-1 rounded-lg shadow-sm border border-blue-100 hover:bg-blue-50 transition-colors">Nuevo Registro</button>
+                                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-white border rounded-lg px-2 py-1 text-xs font-bold text-kairos-navy outline-none" />
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -301,7 +335,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                                     {[1, 2, 3].map(v => (
                                                         <button key={v} type="button" onClick={() => setCp(v)} className={`flex-1 py-2 rounded-lg border font-bold ${cp === v ? 'bg-red-500 text-white border-red-600' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>{v}</button>
                                                     ))}
-                                                    <button type="button" onClick={() => setCp(0)} className="px-2 text-[10px] text-gray-400">Limpiar</button>
+                                                    <button type="button" onClick={() => setCp(0)} className="px-2 text-[10px] text-gray-400 hover:text-red-500 transition-colors">Limpiar</button>
                                                 </div>
                                             </div>
 
@@ -329,7 +363,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className={`p-4 rounded-xl border-2 border-dashed ${cvPdfUrl ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
-                                                <p className="text-[10px] font-bold text-blue-600 uppercase mb-2">Justificante CV</p>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <p className="text-[10px] font-bold text-blue-600 uppercase">Justificante CV</p>
+                                                    <button type="button" onClick={clearCv} className="text-[10px] text-gray-400 hover:text-red-500 transition-colors">Limpiar</button>
+                                                </div>
                                                 <div className="mb-3 space-y-2">
                                                     <input type="text" value={cvTitle} onChange={(e) => setCvTitle(e.target.value)} placeholder="Título de la reunión" className="w-full px-3 py-2 text-xs border rounded-lg" />
                                                     <textarea value={cvDescription} onChange={(e) => setCvDescription(e.target.value)} placeholder="¿Cómo ayuda a tu proyecto?" className="w-full px-3 py-2 text-xs border rounded-lg h-16" />
@@ -341,7 +378,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                             </div>
 
                                             <div className={`p-4 rounded-xl border-2 border-dashed ${sharingPdfUrl ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-200'}`}>
-                                                <p className="text-[10px] font-bold text-purple-600 uppercase mb-2">Justificante Sharing</p>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <p className="text-[10px] font-bold text-purple-600 uppercase">Justificante Sharing</p>
+                                                    <button type="button" onClick={clearSharing} className="text-[10px] text-gray-400 hover:text-red-500 transition-colors">Limpiar</button>
+                                                </div>
                                                 <input type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'sharing')} ref={sharingInputRef} className="hidden" />
                                                 <button type="button" onClick={() => sharingInputRef.current?.click()} className="w-full py-2 bg-white rounded-lg border flex items-center justify-center space-x-2 text-xs font-bold">
                                                     <FileUp size={14} /> <span>{sharingPdfName ? 'Cambiar PDF' : 'Subir PDF'}</span>
