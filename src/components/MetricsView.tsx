@@ -1,24 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Legend, Maximize2, Minimize2, Calendar, Filter
+    ResponsiveContainer
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Trophy, Award, ChevronDown } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
-import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
-import { CLOCKIFY_USER_MAP } from '../constants';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
-    clockifyData: {
-        users: ClockifyUserTime[];
-        projects: ClockifyProjectSummary[];
-        totalTime: number;
-    } | null;
+    clockifyData: any;
     currentUserEmail?: string | null;
     onEditEssay?: (essay: Essay) => void;
     onDeleteEssay?: (id: string, pdfUrl?: string) => void;
@@ -29,33 +23,18 @@ interface MetricsViewProps {
 const COLORS = {
     cv: '#F59E0B',
     lp: '#3B82F6',
-    cp: '#EF4444',
-    sharing: '#8B5CF6',
-    revenue: '#10B981',
-    profit: '#059669',
 };
 
 export const MetricsView: React.FC<MetricsViewProps> = ({
     metrics,
     essays,
-    clockifyData,
     currentUserEmail,
     onEditEssay,
     onDeleteEssay,
     onEditMetric,
     onDeleteMetric
 }) => {
-    const [expandedUser, setExpandedUser] = useState<string | null>(null);
     const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
-    const [expandedProject, setExpandedProject] = useState<string | null>(null);
-    const [expandedTimeUser, setExpandedTimeUser] = useState<string | null>(null);
-    const [expandedLpUser, setExpandedLpUser] = useState<string | null>(null);
-    const [evolutionUser, setEvolutionUser] = useState<string>('team');
-    const [isChartExpanded, setIsChartExpanded] = useState(false);
-    const [timeRange, setTimeRange] = useState<'all' | '7d' | '30d' | '90d' | 'custom'>('all');
-    const [customStartDate, setCustomStartDate] = useState<string>('');
-    const [customEndDate, setCustomEndDate] = useState<string>('');
-    const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv']);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -78,56 +57,16 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     // 2. Evolution Data
     const evolutionData = useMemo(() => {
         const grouped: Record<string, any> = {};
-        const now = new Date();
-
-        let rangeStartDate: Date | null = null;
-        let rangeEndDate: Date | null = new Date();
-
-        if (timeRange === '7d') {
-            rangeStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        } else if (timeRange === '30d') {
-            rangeStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-        } else if (timeRange === '90d') {
-            rangeStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
-        } else if (timeRange === 'custom' && customStartDate) {
-            rangeStartDate = parseDate(customStartDate);
-            if (customEndDate) rangeEndDate = parseDate(customEndDate);
-        }
-
-        if (rangeStartDate && rangeEndDate) {
-            let temp = new Date(rangeStartDate);
-            while (temp <= rangeEndDate) {
-                const ds = temp.toISOString().split('T')[0];
-                grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
-                temp.setDate(temp.getDate() + 1);
-            }
-        }
 
         metrics.forEach(m => {
-            const mDate = parseDate(m.date);
-            if (rangeStartDate && mDate < rangeStartDate) return;
-            if (rangeEndDate && mDate > rangeEndDate) return;
-
-            const user = m.user_email.split('@')[0];
-            if (evolutionUser !== 'team' && user !== evolutionUser) return;
-
             const ds = m.date;
-            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
+            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0 };
             grouped[ds].cv += m.cv || 0;
-            grouped[ds].cp += m.cp || 0;
-            grouped[ds].sharing += m.sharing || 0;
         });
 
         essays.forEach(e => {
-            const eDate = parseDate(e.date);
-            if (rangeStartDate && eDate < rangeStartDate) return;
-            if (rangeEndDate && eDate > rangeEndDate) return;
-
-            const user = e.author.split('@')[0];
-            if (evolutionUser !== 'team' && user !== evolutionUser) return;
-
             const ds = e.date;
-            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0 };
+            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0 };
             grouped[ds].lp += e.points || 0;
         });
 
@@ -140,68 +79,35 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 chartDate: dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
             };
         });
-    }, [metrics, essays, evolutionUser, timeRange, customStartDate, customEndDate]);
+    }, [metrics, essays]);
 
-    const { userData, auditLog } = useMemo(() => {
+    const userData = useMemo(() => {
         const grouped: Record<string, any> = {};
-        const logs: Record<string, any[]> = {};
 
         metrics.forEach(m => {
             const user = m.user_email.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
             }
-            if (!logs[user]) logs[user] = [];
-
             grouped[user].cv += m.cv || 0;
             grouped[user].cp += m.cp || 0;
             grouped[user].sharing += m.sharing || 0;
             grouped[user].revenue += m.revenue || 0;
             grouped[user].profit += m.profit || 0;
-
-            if (m.cv_pdf_url && !grouped[user].cv_pdf_urls.includes(m.cv_pdf_url)) grouped[user].cv_pdf_urls.push(m.cv_pdf_url);
-            if (m.sharing_pdf_url && !grouped[user].sharing_pdf_urls.includes(m.sharing_pdf_url)) grouped[user].sharing_pdf_urls.push(m.sharing_pdf_url);
-            if (m.cp_pdf_url && !grouped[user].cp_pdf_urls.includes(m.cp_pdf_url)) grouped[user].cp_pdf_urls.push(m.cp_pdf_url);
-
-            logs[user].push({ ...m });
         });
 
         essays.forEach(e => {
             const user = e.author.split('@')[0];
             if (!grouped[user]) {
-                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [] };
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0 };
             }
-            if (!logs[user]) logs[user] = [];
-
             grouped[user].lp += e.points || 0;
-
-            logs[user].push({
-                id: e.id,
-                created_at: new Date().toISOString(),
-                user_email: e.author,
-                date: e.date,
-                cv: 0,
-                cp: 0,
-                sharing: 0,
-                revenue: 0,
-                profit: 0,
-                type: 'essay',
-                title: e.title,
-                points: e.points,
-                pdfUrl: e.pdfUrl
-            });
         });
 
-        const sortedUsers = Object.values(grouped).map((u: any) => ({
+        return Object.values(grouped).map((u: any) => ({
             ...u,
             totalScore: u.lp + u.cp + u.cv + u.sharing
         })).sort((a: any, b: any) => b.totalScore - a.totalScore);
-
-        Object.keys(logs).forEach(u => {
-            logs[u].sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
-        });
-
-        return { userData: sortedUsers, auditLog: logs };
     }, [metrics, essays]);
 
     const topPerformers = useMemo(() => userData.slice(0, 3), [userData]);
@@ -350,8 +256,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={evolutionData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="chartDate" hide />
-                                <YAxis hide />
+                                <XAxis dataKey="chartDate" />
+                                <YAxis />
                                 <Tooltip />
                                 <Area type="monotone" dataKey="lp" stroke={COLORS.lp} fill={COLORS.lp} fillOpacity={0.1} />
                                 <Area type="monotone" dataKey="cv" stroke={COLORS.cv} fill={COLORS.cv} fillOpacity={0.1} />

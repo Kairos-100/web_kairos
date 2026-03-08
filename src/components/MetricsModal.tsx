@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, CheckCircle2, Search, Users, Target, Share2, DollarSign, Wallet, AlertCircle, FileUp, FileSpreadsheet } from 'lucide-react';
+import { X, Users, Target, Share2, DollarSign, Wallet, FileUp, FileSpreadsheet } from 'lucide-react';
 import { WHITELIST } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase.js';
@@ -23,8 +23,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [activeTab, setActiveTab] = useState<'individual' | 'bulk'>('individual');
     const [csvFile, setCsvFile] = useState<File | null>(null);
     const [csvData, setCsvData] = useState<any[]>([]);
-    const [csvError, setCsvError] = useState<string | null>(null);
-    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Form states
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -115,7 +113,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
         if (type === 'csv') {
             if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-                setCsvError('Por favor, selecciona un archivo CSV válido.');
+                setError('Por favor, selecciona un archivo CSV válido.');
                 return;
             }
             setCsvFile(file);
@@ -125,14 +123,11 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 try {
                     const { data } = parseCSV(text);
                     const errors = validateMetricCSV(data);
-                    if (errors.length > 0) {
-                        setCsvError(errors.join(' '));
-                    } else {
+                    if (errors.length === 0) {
                         setCsvData(data);
-                        setCsvError(null);
                     }
                 } catch (err) {
-                    setCsvError('Error al procesar el archivo CSV.');
+                    console.error('Error al procesar el archivo CSV.');
                 }
             };
             reader.readAsText(file);
@@ -182,7 +177,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsUploading(true);
-        setUploadProgress(0);
 
         try {
             if (activeTab === 'bulk') {
