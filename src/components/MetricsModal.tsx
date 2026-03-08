@@ -480,17 +480,28 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     if (finalBpUrl) ingestDocument(metricId, 'metric', finalBpUrl).catch(console.error);
 
                     // Trigger Google Drive Sync for each document
-                    const syncToDrive = (url: string, title: string, type: string) => {
-                        fetch('/api/sync-drive', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                userEmail: email,
-                                pdfUrl: url,
-                                fileName: `${title || type}.pdf`,
-                                type
-                            })
-                        }).catch(err => console.error(`Failed to sync ${type} to Drive:`, err));
+                    const syncToDrive = async (url: string, title: string, type: string) => {
+                        try {
+                            const response = await fetch('/api/sync-drive', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    userEmail: email,
+                                    pdfUrl: url,
+                                    fileName: `${title || type}.pdf`,
+                                    type
+                                })
+                            });
+
+                            const result = await response.json();
+                            if (!response.ok) {
+                                console.error(`Error syncing ${type} to Drive:`, result.error || response.statusText);
+                            } else {
+                                console.log(`Successfully synced ${type} to Drive:`, result.link);
+                            }
+                        } catch (err) {
+                            console.error(`Network error syncing ${type} to Drive:`, err);
+                        }
                     };
 
                     if (finalCvUrl) syncToDrive(finalCvUrl, cvTitle, 'cv');

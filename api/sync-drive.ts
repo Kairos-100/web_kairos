@@ -99,13 +99,23 @@ export default async function handler(req: Request) {
             });
         }
 
+        if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+            console.error('Missing Google Drive environment variables');
+            return new Response(JSON.stringify({ error: 'Google Drive configuration missing on server' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const userFolders = USER_FOLDER_MAP[userEmail.toLowerCase()];
         const targetFolderId = userFolders?.[type];
 
+        console.log(`Syncing ${type} for ${userEmail} to folder ${targetFolderId}`);
+
         if (!targetFolderId) {
             console.warn(`No Drive folder configured for user ${userEmail} and type ${type}`);
-            return new Response(JSON.stringify({ message: 'Target folder not configured', skipped: true }), {
-                status: 200,
+            return new Response(JSON.stringify({ error: `No tienes configurada la carpeta de Drive para "${type}"`, skipped: true }), {
+                status: 400,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
