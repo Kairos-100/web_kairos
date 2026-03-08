@@ -91,9 +91,9 @@ export async function notifyNewMetric(metric: MetricEntry) {
                     </div>
                 </div>
                 <div style="margin-top: 15px;">
-                    <p style="font-size: 14px;"><strong>Actividad:</strong> CV: ${metric.cv} | CP: ${metric.cp} | Sharing: ${metric.sharing}</p>
+                    <p style="font-size: 14px;"><strong>Actividad:</strong> CV: ${metric.cv} | CP: ${metric.cp} | Sharing: ${metric.sharing} | BP: ${metric.bp || 0}</p>
                 </div>
-                ${metric.cv_pdf_url || metric.cp_pdf_url || metric.sharing_pdf_url ? '<p style="font-size: 12px; margin-top: 10px;">¡Se han adjuntado documentos de respaldo!</p>' : ''}
+                ${metric.cv_pdf_url || metric.cp_pdf_url || metric.sharing_pdf_url || metric.bp_pdf_url ? '<p style="font-size: 12px; margin-top: 10px;">¡Se han adjuntado documentos de respaldo!</p>' : ''}
             </div>
             <p style="font-size: 12px; color: #94a3b8;">¡Cambiando las reglas del juego!</p>
         </div>
