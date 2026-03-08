@@ -395,24 +395,8 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
                 const finalRecordsToInsert = Object.values(grouped);
 
-                // Check for existing records to show a summary
-                const { data: existingRecords } = await supabase
-                    .from('metrics')
-                    .select('user_email, date')
-                    .in('user_email', Array.from(new Set(finalRecordsToInsert.map(r => r.user_email))))
-                    .in('date', Array.from(new Set(finalRecordsToInsert.map(r => r.date))));
-
-                const existingSet = new Set(existingRecords?.map(r => `${r.user_email}_${r.date}`));
-                const updatesCount = finalRecordsToInsert.filter(r => existingSet.has(`${r.user_email}_${r.date}`)).length;
-                const newCount = finalRecordsToInsert.length - updatesCount;
-
-                if (updatesCount > 0) {
-                    const confirmUpdate = window.confirm(`Se han detectado ${updatesCount} registros que ya existen. Se actualizarán con los nuevos datos agregados. Los otros ${newCount} registros son nuevos. ¿Deseas continuar?`);
-                    if (!confirmUpdate) {
-                        setIsUploading(false);
-                        return;
-                    }
-                }
+                // Just set progress to started
+                setUploadProgress(10);
 
                 const { error: dbError } = await supabase
                     .from('metrics')
@@ -428,6 +412,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 let finalBpUrl = undefined;
 
                 if (import.meta.env.VITE_SUPABASE_URL) {
+                    setUploadProgress(10);
+                    // Check if record exists for this user and date to avoid accidental overwrites if desired
+                    // (But upsert with onConflict 'user_email,date' handles this technically)
+
                     if (cvPdfFile) {
                         finalCvUrl = await uploadToSupabase(cvPdfFile, 'cv');
                     }
