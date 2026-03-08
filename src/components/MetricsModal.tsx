@@ -478,7 +478,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                 body: JSON.stringify({
                                     userEmail: email,
                                     pdfUrl: url,
-                                    fileName: `${title || type}.pdf`,
+                                    fileName: `${Date.now()}-${title || type}.pdf`,
                                     type
                                 }),
                                 signal: controller.signal
@@ -501,10 +501,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     };
 
                     const syncPromises = [];
-                    if (finalCvUrl) syncPromises.push(syncToDrive(finalCvUrl, cvTitle, 'cv'));
-                    if (finalSharingUrl) syncPromises.push(syncToDrive(finalSharingUrl, sharingTitle, 'sharing'));
-                    if (finalCpUrl) syncPromises.push(syncToDrive(finalCpUrl, cpTitle, 'cp'));
-                    if (finalBpUrl) syncPromises.push(syncToDrive(finalBpUrl, bpTitle, 'bp'));
+                    if (finalCvUrl) syncPromises.push(syncToDrive(finalCvUrl, cvPdfName || cvTitle || 'cv', 'cv'));
+                    if (finalSharingUrl) syncPromises.push(syncToDrive(finalSharingUrl, sharingPdfName || sharingTitle || 'sharing', 'sharing'));
+                    if (finalCpUrl) syncPromises.push(syncToDrive(finalCpUrl, cpPdfName || cpTitle || 'cp', 'cp'));
+                    if (finalBpUrl) syncPromises.push(syncToDrive(finalBpUrl, bpPdfName || bpTitle || 'bp', 'bp'));
 
                     if (syncPromises.length > 0) {
                         await Promise.all(syncPromises);

@@ -144,9 +144,22 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                         .eq('id', editEssay.id);
                     if (dbError) throw dbError;
 
-                    if (finalPdfUrl) {
+                    if (finalPdfUrl && pdfFile) {
                         setUploadProgress(95);
                         await ingestDocument(editEssay.id, 'essay', finalPdfUrl);
+
+                        // Trigger Google Drive Sync for edited document
+                        fetch('/api/sync-drive', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userEmail: email,
+                                pdfUrl: finalPdfUrl,
+                                fileName: `${Date.now()}-${title}.pdf`,
+                                type: contributionType
+                            })
+                        }).catch(err => console.error('Failed to sync to Drive (edit):', err));
+
                         setUploadProgress(100);
                     }
                 } else {
@@ -177,7 +190,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onS
                             body: JSON.stringify({
                                 userEmail: email,
                                 pdfUrl: finalPdfUrl,
-                                fileName: `${title}.pdf`,
+                                fileName: `${Date.now()}-${title}.pdf`,
                                 type: contributionType // 'molecula' or 'libro'
                             })
                         }).catch(err => console.error('Failed to sync to Drive:', err));

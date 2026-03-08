@@ -139,7 +139,7 @@ export default async function handler(req: Request) {
 
         // 3. Search for existing file with same name in same folder
         const existingFiles: any = await drive.files.list({
-            q: `name = '${fileName}' and '${targetFolderId}' in parents and trashed = false`,
+            q: `name = '${fileName.replace(/'/g, "\\'")}' and '${targetFolderId}' in parents and trashed = false`,
             fields: 'files(id, name)',
             spaces: 'drive',
         });
