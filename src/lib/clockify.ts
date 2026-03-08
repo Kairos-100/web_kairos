@@ -146,6 +146,8 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
     if (!CLOCKIFY_API_KEY) return null;
 
     try {
+        const formatClockifyDate = (date: Date) => date.toISOString().replace('Z', '');
+
         // 1. Get Summary Data (Users and Projects)
         const summaryResponse = await fetch(`${CLOCKIFY_REPORTS_URL}/workspaces/${workspaceId}/reports/summary`, {
             method: 'POST',
@@ -154,15 +156,28 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                dateRangeStart: start.toISOString(),
-                dateRangeEnd: end.toISOString(),
+                dateRangeStart: formatClockifyDate(start),
+                dateRangeEnd: formatClockifyDate(end),
                 summaryFilter: {
                     groups: ['USER', 'PROJECT']
-                }
+                },
+                amountShown: 'HIDE_AMOUNT'
             })
         });
 
-        if (!summaryResponse.ok) throw new Error('Failed to fetch summary report');
+        if (!summaryResponse.ok) {
+            const errorBody = await summaryResponse.json().catch(() => ({}));
+            console.error('Clockify Error (getWeeklyTimeSummary) - Summary Response:', {
+                status: summaryResponse.status,
+                body: errorBody,
+                payload: {
+                    dateRangeStart: start.toISOString(),
+                    dateRangeEnd: end.toISOString(),
+                    workspaceId
+                }
+            });
+            throw new Error(`Failed to fetch summary report: ${summaryResponse.status}`);
+        }
         const summaryData = await summaryResponse.json() as any;
 
         // 2. Get Detailed Data (Individual Entries)
@@ -173,8 +188,8 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                dateRangeStart: start.toISOString(),
-                dateRangeEnd: end.toISOString(),
+                dateRangeStart: formatClockifyDate(start),
+                dateRangeEnd: formatClockifyDate(end),
                 detailedFilter: {
                     page: 1,
                     pageSize: 1000 // Adjust if needed
