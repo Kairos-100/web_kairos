@@ -83,42 +83,64 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     .from('metrics')
                     .select('*')
                     .eq('user_email', email.toLowerCase())
-                    .eq('date', date)
-                    .single();
+                    .eq('date', date);
 
-                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+                if (error) {
                     console.error('Error fetching existing metrics:', error);
                     return;
                 }
+                if (data && data.length > 0) {
+                    // Aggregate multiple records for the same day
+                    const aggregated = data.reduce((acc: any, curr: any) => ({
+                        cv: acc.cv + (curr.cv || 0),
+                        cp: acc.cp + (curr.cp || 0),
+                        sharing: acc.sharing + (curr.sharing || 0),
+                        revenue: acc.revenue + (curr.revenue || 0),
+                        profit: acc.profit + (curr.profit || 0),
+                        bp: acc.bp + (curr.bp || 0),
+                        // Titles and descriptions are harder to aggregate visually, 
+                        // so we'll just show the last one's metadata if available
+                        cv_title: curr.cv_title || acc.cv_title,
+                        cv_description: curr.cv_description || acc.cv_description,
+                        sharing_title: curr.sharing_title || acc.sharing_title,
+                        sharing_description: curr.sharing_description || acc.sharing_description,
+                        cp_title: curr.cp_title || acc.cp_title,
+                        cp_description: curr.cp_description || acc.cp_description,
+                        bp_title: curr.bp_title || acc.bp_title,
+                        bp_description: curr.bp_description || acc.bp_description,
+                        cv_pdf_url: curr.cv_pdf_url || acc.cv_pdf_url,
+                        sharing_pdf_url: curr.sharing_pdf_url || acc.sharing_pdf_url,
+                        cp_pdf_url: curr.cp_pdf_url || acc.cp_pdf_url,
+                        bp_pdf_url: curr.bp_pdf_url || acc.bp_pdf_url,
+                    }), { cv: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, bp: 0, cv_title: '', cv_description: '', sharing_title: '', sharing_description: '', cp_title: '', cp_description: '', bp_title: '', bp_description: '' });
 
-                if (data) {
-                    setCv(data.cv || 0);
-                    setCp(data.cp || 0);
-                    setSharing(data.sharing || 0);
-                    setRevenue(data.revenue || 0);
-                    setProfit(data.profit || 0);
-                    setBp(data.bp || 0);
-                    setCvTitle(data.cv_title || '');
-                    setCvDescription(data.cv_description || '');
-                    setSharingTitle(data.sharing_title || '');
-                    setSharingDescription(data.sharing_description || '');
-                    setCpTitle(data.cp_title || '');
-                    setCpDescription(data.cp_description || '');
-                    setBpTitle(data.bp_title || '');
-                    setBpDescription(data.bp_description || '');
-                    setCvPdfUrl(data.cv_pdf_url || undefined);
-                    setSharingPdfUrl(data.sharing_pdf_url || undefined);
-                    setCpPdfUrl(data.cp_pdf_url || undefined);
-                    setBpPdfUrl(data.bp_pdf_url || undefined);
+                    setCv(aggregated.cv);
+                    setCp(aggregated.cp);
+                    setSharing(aggregated.sharing);
+                    setRevenue(aggregated.revenue);
+                    setProfit(aggregated.profit);
+                    setBp(aggregated.bp);
+                    setCvTitle(aggregated.cv_title);
+                    setCvDescription(aggregated.cv_description);
+                    setSharingTitle(aggregated.sharing_title);
+                    setSharingDescription(aggregated.sharing_description);
+                    setCpTitle(aggregated.cp_title);
+                    setCpDescription(aggregated.cp_description);
+                    setBpTitle(aggregated.bp_title);
+                    setBpDescription(aggregated.bp_description);
+                    setCvPdfUrl(aggregated.cv_pdf_url || undefined);
+                    setSharingPdfUrl(aggregated.sharing_pdf_url || undefined);
+                    setCpPdfUrl(aggregated.cp_pdf_url || undefined);
+                    setBpPdfUrl(aggregated.bp_pdf_url || undefined);
                     // Clear files since we are loading existing ones
                     setCvPdfFile(null);
                     setSharingPdfFile(null);
                     setCpPdfFile(null);
                     setBpPdfFile(null);
-                    setCvPdfName(data.cv_pdf_url ? 'PDF Existente' : undefined);
-                    setSharingPdfName(data.sharing_pdf_url ? 'PDF Existente' : undefined);
-                    setCpPdfName(data.cp_pdf_url ? 'PDF Existente' : undefined);
-                    setBpPdfName(data.bp_pdf_url ? 'PDF Existente' : undefined);
+                    setCvPdfName(aggregated.cv_pdf_url ? 'PDF Existente' : undefined);
+                    setSharingPdfName(aggregated.sharing_pdf_url ? 'PDF Existente' : undefined);
+                    setCpPdfName(aggregated.cp_pdf_url ? 'PDF Existente' : undefined);
+                    setBpPdfName(aggregated.bp_pdf_url ? 'PDF Existente' : undefined);
                 } else {
                     // Reset fields if no data found for this date
                     setCv(0);
@@ -390,7 +412,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
                 const { error: dbError } = await supabase
                     .from('metrics')
-                    .upsert(finalRecordsToInsert, { onConflict: 'user_email,date' });
+                    .insert(finalRecordsToInsert);
 
                 if (dbError) throw dbError;
 
@@ -419,11 +441,11 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         finalBpUrl = await uploadToSupabase(bpPdfFile, 'bp');
                     }
                 }
-                console.log("[Drive Sync Debug] Upserting metric to database...", { email, date });
+                console.log("[Drive Sync Debug] Inserting metric to database...", { email, date });
                 const { data: newData, error: dbError } = await supabase
                     .from('metrics')
-                    .upsert([{
-                        user_email: email,
+                    .insert([{
+                        user_email: email.toLowerCase(),
                         date: date,
                         cv,
                         cp,
@@ -443,7 +465,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         bp_title: bpTitle,
                         bp_description: bpDescription,
                         bp: bp
-                    }], { onConflict: 'user_email,date' })
+                    }])
                     .select();
 
                 console.log("[Drive Sync Debug] Upsert response:", { newData, dbError });
