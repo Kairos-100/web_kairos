@@ -435,6 +435,32 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         finalBpUrl = await uploadToSupabase(bpPdfFile, 'bp');
                     }
                 }
+                console.log("[Drive Sync Debug] Upserting metric to database...", { email, date });
+                const { data: newData, error: dbError } = await supabase
+                    .from('metrics')
+                    .upsert([{
+                        user_email: email,
+                        date: date,
+                        cv,
+                        cp,
+                        sharing,
+                        revenue,
+                        profit,
+                        cv_pdf_url: finalCvUrl,
+                        sharing_pdf_url: finalSharingUrl,
+                        cp_pdf_url: finalCpUrl,
+                        bp_pdf_url: finalBpUrl,
+                        cv_title: cvTitle,
+                        cv_description: cvDescription,
+                        sharing_title: sharingTitle,
+                        sharing_description: sharingDescription,
+                        cp_title: cpTitle,
+                        cp_description: cpDescription,
+                        bp_title: bpTitle,
+                        bp_description: bpDescription,
+                        bp: bp
+                    }], { onConflict: 'user_email,date' })
+                    .select();
 
                 console.log("[Drive Sync Debug] Upsert response:", { newData, dbError });
                 if (dbError) {
