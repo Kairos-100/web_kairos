@@ -217,22 +217,29 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
         if (file && file.type === 'application/pdf') {
             const url = URL.createObjectURL(file);
+            console.log(`[Drive Sync Debug] PDF selected for ${type}: ${file.name}`);
+
             if (type === 'cv') {
                 setCvPdfFile(file);
                 setCvPdfName(file.name);
                 setCvPdfUrl(url);
+                setCv(prev => prev + 1); // Auto-increment
+                console.log(`[Drive Sync Debug] CV count incremented to ${cv + 1}`);
             } else if (type === 'sharing') {
                 setSharingPdfFile(file);
                 setSharingPdfName(file.name);
                 setSharingPdfUrl(url);
+                setSharing(prev => prev + 1); // Auto-increment
             } else if (type === 'cp') {
                 setCpPdfFile(file);
                 setCpPdfName(file.name);
                 setCpPdfUrl(url);
+                setCp(prev => prev + 1); // Auto-increment
             } else if (type === 'bp') {
                 setBpPdfFile(file);
                 setBpPdfName(file.name);
                 setBpPdfUrl(url);
+                setBp(prev => prev + 1); // Auto-increment
             }
             return () => URL.revokeObjectURL(url);
         }
@@ -484,6 +491,9 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     // Trigger Google Drive Sync for each document
                     const syncToDrive = async (url: string, title: string, type: string) => {
                         console.log(`[Drive Sync Debug] Syncing ${type} to Drive: ${title || type}`);
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
                         try {
                             const response = await fetch('/api/sync-drive', {
                                 method: 'POST',
@@ -493,17 +503,23 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                     pdfUrl: url,
                                     fileName: `${title || type}.pdf`,
                                     type
-                                })
+                                }),
+                                signal: controller.signal
                             });
 
+                            clearTimeout(timeoutId);
                             const result = await response.json();
                             if (!response.ok) {
                                 console.error(`Error syncing ${type} to Drive:`, result.error || response.statusText);
                             } else {
                                 console.log(`Successfully synced ${type} to Drive:`, result.link);
                             }
-                        } catch (err) {
-                            console.error(`Network error syncing ${type} to Drive:`, err);
+                        } catch (err: any) {
+                            if (err.name === 'AbortError') {
+                                console.warn(`[Drive Sync Debug] Drive sync for ${type} timed out (15s). Continuing in background.`);
+                            } else {
+                                console.error(`Network error syncing ${type} to Drive:`, err);
+                            }
                         }
                     };
 
