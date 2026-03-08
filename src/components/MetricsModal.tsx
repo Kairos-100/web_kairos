@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase.js';
 import { ingestDocument } from '../lib/ai';
 import { notifyNewMetric } from '../lib/notifications';
-import { getWorkspaceId, getProjects, createTimeEntry } from '../lib/clockify';
 import { parseCSV, validateMetricCSV } from '../utils/csv';
 
 interface MetricsModalProps {
@@ -28,12 +27,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
 
-    // Clockify states
-    const [syncToClockify, setSyncToClockify] = useState(false);
-    const [availableProjects, setAvailableProjects] = useState<{ id: string, name: string }[]>([]);
-    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-    const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
     // Form states
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -163,22 +156,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
         fetchExistingMetrics();
     }, [isAuth, email, date, activeTab]);
 
-    React.useEffect(() => {
-        // Fetch Clockify projects
-        const initClockify = async () => {
-            setIsLoadingProjects(true);
-            const wId = await getWorkspaceId();
-            if (wId) {
-                setWorkspaceId(wId);
-                const projects = await getProjects(wId);
-                if (projects) {
-                    setAvailableProjects(projects);
-                }
-            }
-            setIsLoadingProjects(false);
-        };
-        initClockify();
-    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cv' | 'sharing' | 'cp' | 'bp' | 'csv') => {
         const file = e.target.files?.[0];
@@ -536,19 +513,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     await notifyNewMetric(newMetric).catch(console.error);
                 }
 
-                // Clockify Sync
-                if (syncToClockify && workspaceId && selectedProjectId) {
-                    const end = new Date();
-                    const start = new Date(end.getTime() - 15 * 60 * 1000); // Default 15 min
-
-                    await createTimeEntry(
-                        workspaceId,
-                        selectedProjectId,
-                        start,
-                        end,
-                        `Registro de Métricas: CV:${cv}, CP:${cp}, SH:${sharing}, BP:${bp}`
-                    ).catch(err => console.error('Failed to sync to Clockify:', err));
-                }
             }
 
             if (onSuccess) onSuccess();
@@ -927,51 +891,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                             </div>
                                         </div>
 
-                                        <div className="p-6 rounded-2xl bg-kairos-navy/5 border border-kairos-navy/10">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <div className="p-2 bg-blue-100 rounded-lg">
-                                                        <img src="https://clockify.me/assets/images/favicon.ico" className="w-4 h-4" alt="Clockify" />
-                                                    </div>
-                                                    <span className="text-xs font-bold uppercase tracking-widest text-kairos-navy">Sincronizar con Clockify</span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSyncToClockify(!syncToClockify)}
-                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${syncToClockify ? 'bg-blue-600' : 'bg-gray-200'}`}
-                                                >
-                                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${syncToClockify ? 'translate-x-6' : 'translate-x-1'}`} />
-                                                </button>
-                                            </div>
-
-                                            {syncToClockify && (
-                                                <div className="space-y-4">
-                                                    {isLoadingProjects ? (
-                                                        <div className="flex items-center space-x-2 text-[10px] text-gray-400">
-                                                            <div className="w-3 h-3 border border-gray-300 border-t-blue-500 rounded-full animate-spin" />
-                                                            <span>Cargando proyectos...</span>
-                                                        </div>
-                                                    ) : availableProjects.length > 0 ? (
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Seleccionar Proyecto</label>
-                                                            <select
-                                                                value={selectedProjectId}
-                                                                onChange={(e) => setSelectedProjectId(e.target.value)}
-                                                                className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-kairos-navy outline-none transition-all text-sm"
-                                                                required={syncToClockify}
-                                                            >
-                                                                <option value="">-- Elige un proyecto --</option>
-                                                                {availableProjects.map(p => (
-                                                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-[10px] text-red-400 font-medium">No se encontraron proyectos.</p>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
                                     </motion.div>
                                 ) : (
                                     <motion.div
