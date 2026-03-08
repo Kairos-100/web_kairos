@@ -197,8 +197,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     }}
                     initialDocuments={selectedUserDetail.timeline.map((item: any) => ({
                         id: item.id,
-                        title: item.type === 'essay' ? item.title : (item.cv > 0 ? 'Customer Visit' : item.sharing > 0 ? 'Sharing' : 'Community Point'),
-                        description: item.type === 'essay' ? item.category : (item.cp_description || ''),
+                        title: item.type === 'essay' ? item.title : (item.cv > 0 ? (item.cv_title || 'Customer Visit') : item.sharing > 0 ? 'Sharing' : (item.cp_title || 'Community Point')),
+                        description: item.type === 'essay' ? item.category : (item.cv > 0 ? (item.cv_description || '') : (item.cp_description || '')),
                         author: selectedUserDetail.name,
                         date: item.date,
                         category: item.type === 'essay' ? 'Aprendizaje' : (item.cv > 0 ? 'Comercial' : 'Comunidad'),

@@ -32,6 +32,8 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [profit, setProfit] = useState(0);
 
     // Metadata states
+    const [cvTitle, setCvTitle] = useState('');
+    const [cvDescription, setCvDescription] = useState('');
     const [cpTitle, setCpTitle] = useState('');
     const [cpDescription, setCpDescription] = useState('');
 
@@ -76,15 +78,22 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                         sharing: acc.sharing + (curr.sharing || 0),
                         revenue: acc.revenue + (curr.revenue || 0),
                         profit: acc.profit + (curr.profit || 0),
+                        cv_title: curr.cv_title || acc.cv_title,
+                        cv_description: curr.cv_description || acc.cv_description,
+                        cv_pdf_url: curr.cv_pdf_url || acc.cv_pdf_url,
                         cp_title: curr.cp_title || acc.cp_title,
                         cp_description: curr.cp_description || acc.cp_description,
                         cp_pdf_url: curr.cp_pdf_url || acc.cp_pdf_url,
-                    }), { cp: 0, sharing: 0, revenue: 0, profit: 0, cp_title: '', cp_description: '', cp_pdf_url: '' });
+                    }), { cp: 0, sharing: 0, revenue: 0, profit: 0, cv_title: '', cv_description: '', cv_pdf_url: '', cp_title: '', cp_description: '', cp_pdf_url: '' });
 
                     setCp(Math.min(3, aggregated.cp));
                     setSharing(aggregated.sharing);
                     setRevenue(aggregated.revenue);
                     setProfit(aggregated.profit);
+                    setCvTitle(aggregated.cv_title || '');
+                    setCvDescription(aggregated.cv_description || '');
+                    setCvPdfUrl(aggregated.cv_pdf_url || undefined);
+                    setCvPdfName(aggregated.cv_pdf_url ? 'PDF Existente' : undefined);
                     setCpTitle(aggregated.cp_title || '');
                     setCpDescription(aggregated.cp_description || '');
                     setCpPdfUrl(aggregated.cp_pdf_url || undefined);
@@ -94,6 +103,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     setSharing(0);
                     setRevenue(0);
                     setProfit(0);
+                    setCvTitle('');
+                    setCvDescription('');
+                    setCvPdfUrl(undefined);
+                    setCvPdfName(undefined);
                     setCpTitle('');
                     setCpDescription('');
                     setCpPdfUrl(undefined);
@@ -211,6 +224,8 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     cv_pdf_url: finalCvUrl,
                     sharing_pdf_url: finalSharingUrl,
                     cp_pdf_url: finalCpUrl,
+                    cv_title: cvTitle,
+                    cv_description: cvDescription,
                     cp_title: cpTitle,
                     cp_description: cpDescription
                 }]).select();
@@ -315,6 +330,10 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className={`p-4 rounded-xl border-2 border-dashed ${cvPdfUrl ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
                                                 <p className="text-[10px] font-bold text-blue-600 uppercase mb-2">Justificante CV</p>
+                                                <div className="mb-3 space-y-2">
+                                                    <input type="text" value={cvTitle} onChange={(e) => setCvTitle(e.target.value)} placeholder="Título de la reunión" className="w-full px-3 py-2 text-xs border rounded-lg" />
+                                                    <textarea value={cvDescription} onChange={(e) => setCvDescription(e.target.value)} placeholder="¿Cómo ayuda a tu proyecto?" className="w-full px-3 py-2 text-xs border rounded-lg h-16" />
+                                                </div>
                                                 <input type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'cv')} ref={cvInputRef} className="hidden" />
                                                 <button type="button" onClick={() => cvInputRef.current?.click()} className="w-full py-2 bg-white rounded-lg border flex items-center justify-center space-x-2 text-xs font-bold">
                                                     <FileUp size={14} /> <span>{cvPdfName ? 'Cambiar PDF' : 'Subir PDF'}</span>
