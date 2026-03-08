@@ -229,16 +229,17 @@ export const TeamView: React.FC<TeamViewProps> = ({
                     const target = selectedUserDetail.name;
                     const clockifyUser = clockifyData?.users.find(u => {
                         const expectedClockifyName = CLOCKIFY_USER_MAP[target];
-                        const uName = u.userName.toLowerCase();
-                        const uEmail = u.email.toLowerCase();
+                        const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                        const normUName = normalize(u.userName);
+                        const normUEmail = normalize(u.email);
+                        const normTarget = normalize(target);
 
                         if (expectedClockifyName) {
-                            const expected = expectedClockifyName.toLowerCase();
-                            return uName === expected || uName.includes(expected) || expected.includes(uName);
+                            const normExpected = normalize(expectedClockifyName);
+                            return normUName === normExpected || normUName.includes(normExpected) || normExpected.includes(normUName);
                         }
 
-                        const normalizedTarget = target.toLowerCase();
-                        return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
+                        return normUName.includes(normTarget) || normTarget.includes(normUName) || normUEmail.includes(normTarget) || normUEmail.startsWith(normTarget);
                     });
                     if (!clockifyUser || clockifyUser.projects.length === 0) return null;
 
@@ -484,16 +485,18 @@ export const TeamView: React.FC<TeamViewProps> = ({
                                             const target = user.user;
                                             const clockifyUser = clockifyData?.users.find(u => {
                                                 const expectedClockifyName = CLOCKIFY_USER_MAP[target];
-                                                const uName = u.userName.toLowerCase();
-                                                const uEmail = u.email.toLowerCase();
+
+                                                const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                                                const normUName = normalize(u.userName);
+                                                const normUEmail = normalize(u.email);
+                                                const normTarget = normalize(target);
 
                                                 if (expectedClockifyName) {
-                                                    const expected = expectedClockifyName.toLowerCase();
-                                                    return uName === expected || uName.includes(expected) || expected.includes(uName);
+                                                    const normExpected = normalize(expectedClockifyName);
+                                                    return normUName === normExpected || normUName.includes(normExpected) || normExpected.includes(normUName);
                                                 }
 
-                                                const normalizedTarget = target.toLowerCase();
-                                                return uName.includes(normalizedTarget) || normalizedTarget.includes(uName) || uEmail.includes(normalizedTarget) || uEmail.startsWith(normalizedTarget);
+                                                return normUName.includes(normTarget) || normTarget.includes(normUName) || normUEmail.includes(normTarget) || normUEmail.startsWith(normTarget);
                                             });
                                             if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
                                             const hours = Math.floor(clockifyUser.totalTime / 3600);
