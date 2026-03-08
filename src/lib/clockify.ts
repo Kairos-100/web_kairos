@@ -206,11 +206,21 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
         const projectMap: Record<string, ClockifyProjectSummary> = {};
         let grandTotal = 0;
 
+        // Build a map of name to email from detailed data if possible
+        const emailByName: Record<string, string> = {};
+        if (detailedData.timeentries) {
+            detailedData.timeentries.forEach((entry: any) => {
+                if (entry.userName && entry.userEmail) {
+                    emailByName[entry.userName] = entry.userEmail;
+                }
+            });
+        }
+
         // Process Summary Data
         if (summaryData.groupOne) {
             summaryData.groupOne.forEach((userGroup: any) => {
-                const userEmail = userGroup.name;
                 const userName = userGroup.name;
+                const userEmail = emailByName[userName] || userName;
 
                 if (!userMap[userEmail]) {
                     userMap[userEmail] = {

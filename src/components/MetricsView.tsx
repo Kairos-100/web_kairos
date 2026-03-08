@@ -828,7 +828,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                     const target = user.user;
 
                                                     // Normalization function to handle accents and other variations
-                                                    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                                                    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
 
                                                     const clockifyUser = clockifyData?.users.find(u => {
                                                         const expectedClockifyName = CLOCKIFY_USER_MAP[target];
@@ -838,7 +838,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                         if (expectedClockifyName) {
                                                             const expected = normalize(expectedClockifyName);
                                                             const normalizedUName = normalize(uName);
-                                                            return normalizedUName === expected || normalizedUName.includes(expected) || expected.includes(normalizedUName);
+                                                            const isMatch = normalizedUName === expected || normalizedUName.includes(expected) || expected.includes(normalizedUName);
+                                                            if (isMatch) return true;
                                                         }
 
                                                         const normalizedTarget = normalize(target);
@@ -846,10 +847,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                         const normalizedUEmail = normalize(uEmail);
 
                                                         return (
-                                                            normalizedUName.includes(normalizedTarget) ||
-                                                            normalizedTarget.includes(normalizedUName) ||
                                                             normalizedUEmail.includes(normalizedTarget) ||
-                                                            normalizedUEmail.startsWith(normalizedTarget)
+                                                            normalizedUEmail.startsWith(normalizedTarget) ||
+                                                            normalizedUName.includes(normalizedTarget) ||
+                                                            normalizedTarget.includes(normalizedUName)
                                                         );
                                                     });
 
@@ -939,12 +940,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                                     const uEmail = u.email.toLowerCase();
 
                                                                     // Normalization function to handle accents and other variations
-                                                                    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                                                                    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
 
                                                                     if (expectedClockifyName) {
                                                                         const expected = normalize(expectedClockifyName);
                                                                         const normalizedUName = normalize(uName);
-                                                                        return normalizedUName === expected || normalizedUName.includes(expected) || expected.includes(normalizedUName);
+                                                                        const isMatch = normalizedUName === expected || normalizedUName.includes(expected) || expected.includes(normalizedUName);
+                                                                        if (isMatch) return true;
                                                                     }
 
                                                                     const normalizedTarget = normalize(target);
@@ -952,10 +954,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                                     const normalizedUEmail = normalize(uEmail);
 
                                                                     return (
-                                                                        normalizedUName.includes(normalizedTarget) ||
-                                                                        normalizedTarget.includes(normalizedUName) ||
                                                                         normalizedUEmail.includes(normalizedTarget) ||
-                                                                        normalizedUEmail.startsWith(normalizedTarget)
+                                                                        normalizedUEmail.startsWith(normalizedTarget) ||
+                                                                        normalizedUName.includes(normalizedTarget) ||
+                                                                        normalizedTarget.includes(normalizedUName)
                                                                     );
                                                                 });
 
