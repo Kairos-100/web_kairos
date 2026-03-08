@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { MetricEntry, Essay } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Clock, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar } from 'lucide-react';
+import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -53,8 +53,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [evolutionUser, setEvolutionUser] = useState<string>('team');
     const [isChartExpanded, setIsChartExpanded] = useState(false);
     const [timeRange, setTimeRange] = useState<'all' | '7d' | '30d' | '90d' | 'custom'>('all');
-    const [customStartDate, setCustomStartDate] = useState<string>('');
-    const [customEndDate, setCustomEndDate] = useState<string>('');
+    const [customStartDate] = useState<string>('');
+    const [customEndDate] = useState<string>('');
     const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv']);
 
     // 1. Summary Stats
