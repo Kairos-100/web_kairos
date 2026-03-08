@@ -256,6 +256,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
             .replace(/_{2,}/g, "_");
 
         const fileName = `metrics/${prefix}-${Date.now()}-${sanitizedName}`;
+        console.log(`[Drive Sync Debug] Starting upload of ${file.name} to bucket pdfs, path: ${fileName}`);
         const { error: storageError } = await supabase.storage
             .from('pdfs')
             .upload(fileName, file, {
@@ -263,12 +264,17 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                 onUploadProgress: (progress: any) => {
                     if (progress.total && progress.total > 0) {
                         const percent = (progress.loaded / progress.total) * 100;
-                        setUploadProgress(prev => Math.min(99, Math.round((prev + percent) / 2)));
+                        console.log(`[Drive Sync Debug] Upload progress for ${prefix}: ${percent.toFixed(1)}%`);
+                        setUploadProgress(prev => Math.max(prev, Math.round(10 + (percent * 0.8)))); // Use 10-90% range for storage
                     }
                 }
             } as any);
 
-        if (storageError) throw storageError;
+        if (storageError) {
+            console.error(`[Drive Sync Debug] Storage error:`, storageError);
+            throw storageError;
+        }
+        console.log(`[Drive Sync Debug] Successfully uploaded ${file.name} to storage.`);
 
         const { data: { publicUrl } } = supabase.storage
             .from('pdfs')
@@ -430,38 +436,20 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                     }
                 }
 
-                const { data: newData, error: dbError } = await supabase
-                    .from('metrics')
-                    .upsert([{
-                        user_email: email,
-                        date: date,
-                        cv,
-                        cp,
-                        sharing,
-                        revenue,
-                        profit,
-                        cv_pdf_url: finalCvUrl,
-                        sharing_pdf_url: finalSharingUrl,
-                        cp_pdf_url: finalCpUrl,
-                        bp_pdf_url: finalBpUrl,
-                        cv_title: cvTitle,
-                        cv_description: cvDescription,
-                        sharing_title: sharingTitle,
-                        sharing_description: sharingDescription,
-                        cp_title: cpTitle,
-                        cp_description: cpDescription,
-                        bp_title: bpTitle,
-                        bp_description: bpDescription,
-                        bp: bp
-                    }], { onConflict: 'user_email,date' })
-                    .select();
+                console.log("[Drive Sync Debug] Upsert response:", { newData, dbError });
+                if (dbError) {
+                    console.error("[Drive Sync Debug] Database error:", dbError);
+                    throw dbError;
+                }
 
-                if (dbError) throw dbError;
+                setUploadProgress(95);
 
                 // Trigger AI Ingestion for each PDF in background
                 if (newData && newData[0]) {
                     const metricId = newData[0].id;
                     const newMetric = { ...newData[0] };
+                    console.log("[Drive Sync Debug] Data returned, starting ingestion and Drive sync for metric:", metricId);
+
                     if (finalCvUrl) ingestDocument(metricId, 'metric', finalCvUrl).catch(console.error);
                     if (finalSharingUrl) ingestDocument(metricId, 'metric', finalSharingUrl).catch(console.error);
                     if (finalCpUrl) ingestDocument(metricId, 'metric', finalCpUrl).catch(console.error);
@@ -469,6 +457,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
 
                     // Trigger Google Drive Sync for each document
                     const syncToDrive = async (url: string, title: string, type: string) => {
+                        console.log(`[Drive Sync Debug] Syncing ${type} to Drive: ${title || type}`);
                         try {
                             const response = await fetch('/api/sync-drive', {
                                 method: 'POST',
