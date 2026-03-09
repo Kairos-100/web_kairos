@@ -11,11 +11,12 @@ interface MetricsModalProps {
     onClose: () => void;
     onSuccess?: () => void;
     onIdentify?: (email: string) => void;
+    userEmail?: string;
 }
 
-export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, onIdentify }) => {
-    const [email, setEmail] = useState('');
-    const [isAuth, setIsAuth] = useState(false);
+export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, onIdentify, userEmail }) => {
+    const [email, setEmail] = useState(userEmail || '');
+    const [isAuth, setIsAuth] = useState(!!userEmail && WHITELIST.some(w => w.toLowerCase() === userEmail.toLowerCase()));
     const [error, setError] = useState('');
     const [isUploading, setIsUploading] = useState(false);
 

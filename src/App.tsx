@@ -456,8 +456,8 @@ const App: React.FC = () => {
           </div>
         </header>
         {renderContent()}
-        {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} />}
-        {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} />}
+        {(isUploadOpen || isEditOpen) && <UploadModal onClose={() => { setIsUploadOpen(false); setIsEditOpen(false); setEditingEssay(null); }} onUpload={handleUpload} onSuccess={fetchEssays} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} editEssay={editingEssay || undefined} userEmail={loggedInUser || undefined} />}
+        {isMetricsModalOpen && <MetricsModal onClose={() => setIsMetricsModalOpen(false)} onSuccess={fetchMetrics} onIdentify={(email) => { setLoggedInUser(email); localStorage.setItem('kairos_user', email); }} userEmail={loggedInUser || undefined} />}
       </Layout>
       <KairosAI essays={filteredByDateEssays} metrics={filteredMetrics} clockifyData={clockifyData} />
     </>

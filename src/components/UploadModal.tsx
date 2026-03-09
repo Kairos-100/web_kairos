@@ -13,11 +13,12 @@ interface UploadModalProps {
     onSuccess?: () => void;
     onIdentify?: (email: string) => void;
     editEssay?: Essay;
+    userEmail?: string;
 }
 
-export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onSuccess, onIdentify, editEssay }) => {
-    const [email, setEmail] = useState(editEssay?.author || '');
-    const [isAuth, setIsAuth] = useState(!!editEssay);
+export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUpload, onSuccess, onIdentify, editEssay, userEmail }) => {
+    const [email, setEmail] = useState(editEssay?.author || userEmail || '');
+    const [isAuth, setIsAuth] = useState(!!editEssay || (!!userEmail && WHITELIST.some(w => w.toLowerCase() === userEmail.toLowerCase())));
     const [error, setError] = useState('');
     const [title, setTitle] = useState(editEssay?.title || '');
     const [category, setCategory] = useState(editEssay?.category || CATEGORIES[0]);
