@@ -1,73 +1,53 @@
-# React + TypeScript + Vite
+# Kairos - Knowledge & Performance Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
-Currently, two official plugins are available:
+Kairos es una plataforma premium diseñada para la gestión del conocimiento y el seguimiento de métricas de rendimiento en equipos de alto rendimiento.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Características Principales
 
-## React Compiler
+- **Dashboard de Métricas**: Visualización en tiempo real de CV, LP, CP y Compartición.
+- **Gestión de Conocimiento**: Repositorio de tesis y ensayos con indexación para IA.
+- **Kairos AI**: Asistente inteligente integrado para consultar la base de conocimiento.
+- **Integración con Clockify**: Sincronización automática de tiempos de proyecto.
+- **Diseño Premium**: Interfaz moderna con micro-animaciones dinámicas y modo oscuro integrado.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Stack Tecnológico
 
-## Expanding the ESLint configuration
+- **Frontend**: React 18, Vite, Lucide Icons, Recharts.
+- **Estado/Animaciones**: Framer Motion.
+- **Backend**: Supabase (DB + Storage).
+- **IA**: RAG Engine integrado.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📦 Configuración e Instalación
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1.  **Clonar el repositorio**:
+    ```bash
+    git clone https://github.com/Kairos-100/web_kairos.git
+    cd web_kairos
+    ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+2.  **Instalar dependencias**:
+    ```bash
+    npm install
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+3.  **Variables de Entorno**:
+    Crea un archivo `.env` en la raíz con:
+    ```env
+    VITE_SUPABASE_URL=tu_url_supabase
+    VITE_SUPABASE_ANON_KEY=tu_anon_key
+    ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+4.  **Ejecutar en desarrollo**:
+    ```bash
+    npm run dev
+    ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📄 Documentación de Producto
+Para una visión detallada de las especificaciones, reglas de negocio y arquitectura, consulta el [PRD Detallado](./PRD.md).
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+© 2024 Kairos - Impulsando el conocimiento compartido.
