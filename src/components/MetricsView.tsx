@@ -9,7 +9,7 @@ import { Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalL
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
-import { CLOCKIFY_USER_MAP } from '../constants';
+import { CLOCKIFY_USER_MAP, WHITELIST } from '../constants';
 
 interface MetricsViewProps {
     metrics: MetricEntry[];
@@ -149,8 +149,20 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         const grouped: Record<string, any> = {};
         const logs: Record<string, MetricEntry[]> = {};
 
+        // Seed participants from whitelist
+        WHITELIST.forEach(email => {
+            const user = email.split('@')[0];
+            if (user === 'eider') return;
+            if (!grouped[user]) {
+                grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
+            }
+            if (!logs[user]) logs[user] = [];
+        });
+
         metrics.forEach(m => {
             const user = m.user_email.split('@')[0];
+            if (user === 'eider') return;
+
             if (!grouped[user]) {
                 grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
             }
@@ -172,6 +184,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
         essays.forEach(e => {
             const user = e.author.split('@')[0];
+            if (user === 'eider') return;
+
             if (!grouped[user]) {
                 grouped[user] = { user, cv: 0, lp: 0, cp: 0, sharing: 0, revenue: 0, profit: 0, cv_pdf_urls: [], sharing_pdf_urls: [], cp_pdf_urls: [], bp_pdf_urls: [] };
             }
