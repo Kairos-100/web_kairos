@@ -117,7 +117,7 @@ export interface HoldedInvoice {
     type: string;
     contact_name: string;
     contact_id: string;
-    desc: string;
+    notes: string;
     date: number;
     due_date: number;
     total: number;
