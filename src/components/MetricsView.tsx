@@ -458,7 +458,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
             {activeTab === 'finances' ? (
                 <HoldedHub 
-                    snapshots={holdedSnapshots} 
                     invoices={holdedInvoices} 
                     perUserHolded={totals.perUserHolded} 
                 />

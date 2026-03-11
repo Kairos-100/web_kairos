@@ -10,15 +10,14 @@ import {
     Target,
     Users
 } from 'lucide-react';
-import type { HoldedSnapshot, HoldedInvoice } from '../constants';
+import type { HoldedInvoice } from '../constants';
 
 interface HoldedHubProps {
-    snapshots: HoldedSnapshot[];
     invoices: HoldedInvoice[];
     perUserHolded: Record<string, { billing: number; profit: number }>;
 }
 
-export const HoldedHub: React.FC<HoldedHubProps> = ({ snapshots, invoices, perUserHolded }) => {
+export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded }) => {
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
         const income = invoices
