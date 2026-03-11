@@ -12,7 +12,7 @@ import { TeamView } from './components/TeamView';
 import { DocumentExplorer } from './components/DocumentExplorer';
 import { KairosAI } from './components/KairosAI';
 import { supabase } from './lib/supabase';
-import type { Essay, Comment, MetricEntry } from './constants';
+import type { Essay, Comment, MetricEntry, HoldedSnapshot, HoldedInvoice } from './constants';
 import { WHITELIST } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,6 +47,8 @@ const App: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
+  const [holdedSnapshots, setHoldedSnapshots] = useState<HoldedSnapshot[]>([]);
+  const [holdedInvoices, setHoldedInvoices] = useState<HoldedInvoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEssayId, setSelectedEssayId] = useState<string | null>(null);
   const [showPdf, setShowPdf] = useState(false);
@@ -80,6 +82,8 @@ const App: React.FC = () => {
     fetchEssays();
     fetchMetrics();
     fetchClockifyData();
+    fetchHoldedSnapshots();
+    fetchHoldedInvoices();
   }, [dateRange]);
 
   const fetchEssays = async () => {
@@ -126,6 +130,44 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Error fetching metrics from Supabase:', err);
+    }
+  };
+
+  const fetchHoldedInvoices = async () => {
+    const hasConfig = import.meta.env.VITE_SUPABASE_URL;
+    if (!hasConfig) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('holded_invoices')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      if (data) {
+        setHoldedInvoices(data as HoldedInvoice[]);
+      }
+    } catch (err) {
+      console.error('Error fetching holded invoices:', err);
+    }
+  };
+
+  const fetchHoldedSnapshots = async () => {
+    const hasConfig = import.meta.env.VITE_SUPABASE_URL;
+    if (!hasConfig) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('holded_project_snapshots')
+        .select('*')
+        .order('snapshot_date', { ascending: false });
+
+      if (error) throw error;
+      if (data) {
+        setHoldedSnapshots(data as HoldedSnapshot[]);
+      }
+    } catch (err) {
+      console.error('Error fetching holded snapshots:', err);
     }
   };
 
@@ -321,6 +363,8 @@ const App: React.FC = () => {
           <MetricsView
             metrics={filteredMetrics}
             essays={filteredByDateEssays}
+            holdedSnapshots={holdedSnapshots}
+            holdedInvoices={holdedInvoices}
             clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}

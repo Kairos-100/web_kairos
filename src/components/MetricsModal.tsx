@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Users, Target, Share2, DollarSign, Wallet, FileUp, FileSpreadsheet } from 'lucide-react';
+import { X, Users, Target, Share2, DollarSign, Wallet, FileUp, FileSpreadsheet, TrendingUp } from 'lucide-react';
 import { WHITELIST } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase.js';
@@ -19,6 +19,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
     const [isAuth, setIsAuth] = useState(!!userEmail && WHITELIST.some(w => w.toLowerCase() === userEmail.toLowerCase()));
     const [error, setError] = useState('');
     const [isUploading, setIsUploading] = useState(false);
+    const [isSyncingHolded, setIsSyncingHolded] = useState(false);
 
     // CSV Import states
     const [activeTab, setActiveTab] = useState<'individual' | 'bulk'>('individual');
@@ -271,10 +272,25 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
             }
             if (onSuccess) onSuccess();
             onClose();
-        } catch (err: any) {
-            setError(err.message);
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleSyncHolded = async () => {
+        setIsSyncingHolded(true);
+        setError('');
+        try {
+            const { data, error } = await supabase.functions.invoke('sync-holded-projects');
+            if (error) throw error;
+            console.log('Sync Holded Response:', data);
+            alert('Sincronización con Holded completada con éxito.');
+            if (onSuccess) onSuccess();
+        } catch (err: any) {
+            console.error('Error syncing Holded:', err);
+            setError(`Error al sincronizar Holded: ${err.message || 'Error desconocido'}`);
+        } finally {
+            setIsSyncingHolded(false);
         }
     };
 
@@ -311,7 +327,16 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({ onClose, onSuccess, 
                                                 <span className="text-[10px] uppercase font-black text-blue-400 tracking-tighter">Colaborador</span>
                                                 <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{email}</span>
                                             </div>
-                                            <div className="flex items-center space-x-3">
+                                            <div className="flex items-center space-x-2">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={handleSyncHolded} 
+                                                    disabled={isSyncingHolded}
+                                                    className={`text-[10px] font-bold px-3 py-1 rounded-lg shadow-sm border transition-all flex items-center space-x-1 ${isSyncingHolded ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'}`}
+                                                >
+                                                    <TrendingUp size={12} />
+                                                    <span>{isSyncingHolded ? 'Sincronizando...' : 'Sincronizar Holded'}</span>
+                                                </button>
                                                 <button type="button" onClick={clearAll} className="text-[10px] font-bold text-blue-600 bg-white px-3 py-1 rounded-lg shadow-sm border border-blue-100 hover:bg-blue-50 transition-colors">Nuevo Registro</button>
                                                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-white border rounded-lg px-2 py-1 text-xs font-bold text-kairos-navy outline-none" />
                                             </div>

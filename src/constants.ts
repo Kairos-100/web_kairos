@@ -91,3 +91,40 @@ export interface MetricEntry {
     bp_title?: string;
     bp_description?: string;
 }
+
+export interface HoldedSnapshot {
+    id: string;
+    source_key_id: number;
+    holded_id: string;
+    snapshot_date: string;
+    name: string;
+    status: string;
+    metrics: {
+        total_income: number;
+        total_expenses: number;
+        income_document_count: number;
+        expense_document_count: number;
+        last_movement_date: string | null;
+    };
+    created_at: string;
+}
+
+export interface HoldedInvoice {
+    id: string;
+    source_key_id: number;
+    holded_id: string;
+    doc_number: string;
+    type: string;
+    contact_name: string;
+    contact_id: string;
+    desc: string;
+    date: number;
+    due_date: number;
+    total: number;
+    subtotal: number;
+    tax: number;
+    status: string;
+    project_id: string;
+    raw_data: any;
+    created_at: string;
+}
