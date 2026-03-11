@@ -53,8 +53,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [evolutionUser, setEvolutionUser] = useState<string>('team');
     const [isChartExpanded, setIsChartExpanded] = useState(false);
     const [timeRange, setTimeRange] = useState<'all' | '7d' | '30d' | '90d' | 'custom'>('all');
-    const [customStartDate] = useState<string>('');
-    const [customEndDate] = useState<string>('');
+    const [customStartDate, setCustomStartDate] = useState<string>('');
+    const [customEndDate, setCustomEndDate] = useState<string>('');
     const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv']);
 
     // 1. Summary Stats
