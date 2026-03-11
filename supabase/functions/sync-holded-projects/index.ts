@@ -157,18 +157,20 @@ serve(async (req) => {
                 })
                 totalRows += rowsToInsert.length;
 
-                // --- NEW: Sync Invoices, Purchases, Credit Notes, and Sales Receipts ---
+                // --- NEW: Sync Invoices, Purchases, Credit Notes, Sales Receipts AND Generic Expenses ---
                 console.log(`Syncing documents for Key ID: ${keyRow.id}`);
                 const invoicesSync = await syncDocuments(apiKey, 'invoice', keyRow.id, supabase);
                 const purchasesSync = await syncDocuments(apiKey, 'purchase', keyRow.id, supabase);
                 const creditNotesSync = await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase);
                 const salesReceiptsSync = await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase);
+                const expensesSync = await syncExpenses(apiKey, keyRow.id, supabase);
                 
                 results[results.length - 1].documents = {
                     invoices: invoicesSync,
                     purchases: purchasesSync,
                     creditnotes: creditNotesSync,
-                    salesreceipts: salesReceiptsSync
+                    salesreceipts: salesReceiptsSync,
+                    expenses: expensesSync
                 };
             } else {
                  results.push({
@@ -255,7 +257,8 @@ async function syncDocuments(apiKey: string, docType: string, sourceKeyId: any, 
 
     while (hasMore) {
         console.log(`Fetching ${docType} page ${page}...`);
-        const response = await fetch(`https://api.holded.com/api/invoicing/v1/documents/${docType}?page=${page}`, {
+        // dateFrom=0 ensures we get all historical documents
+        const response = await fetch(`https://api.holded.com/api/invoicing/v1/documents/${docType}?page=${page}&dateFrom=0`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -310,6 +313,78 @@ async function syncDocuments(apiKey: string, docType: string, sourceKeyId: any, 
         allProcessed += rows.length;
         
         // If we got fewer than the limit, it's the last page
+        if (docs.length < limit) {
+            hasMore = false;
+        } else {
+            page++;
+        }
+    }
+
+    return { status: 'ok', count: allProcessed };
+}
+
+async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
+    let allProcessed = 0;
+    let page = 0;
+    const limit = 100;
+    let hasMore = true;
+
+    while (hasMore) {
+        console.log(`Fetching expenses page ${page}...`);
+        const response = await fetch(`https://api.holded.com/api/expenses/v1/expenses?page=${page}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'key': apiKey,
+            }
+        });
+
+        if (!response.ok) {
+            console.error(`Error fetching expenses (page ${page}):`, await response.text());
+            return { status: 'error', code: response.status, processed: allProcessed };
+        }
+
+        const docs = await response.json();
+        if (!Array.isArray(docs)) {
+            hasMore = false;
+            break;
+        }
+
+        if (docs.length === 0) {
+            hasMore = false;
+            break;
+        }
+
+        const rows = docs.map(d => ({
+            source_key_id: sourceKeyId,
+            holded_id: String(d.id),
+            doc_number: d.name || d.id,
+            type: 'expense',
+            contact_name: d.contactName || 'Gasto General',
+            contact_id: d.contact || '',
+            notes: d.desc || d.description || '',
+            date: d.date,
+            due_date: d.date,
+            total: d.amount || d.total || 0,
+            subtotal: d.subtotal || d.amount || 0,
+            tax: (d.amount || 0) - (d.subtotal || d.amount || 0),
+            status: 'paid',
+            project_id: d.project || '',
+            raw_data: d,
+            updated_at: new Date().toISOString()
+        }));
+
+        const { error } = await supabase
+            .from('holded_invoices')
+            .upsert(rows, { onConflict: 'source_key_id, holded_id' });
+        
+        if (error) {
+            console.error(`Error upserting expenses (page ${page}):`, error);
+            return { status: 'error', message: error.message, processed: allProcessed };
+        }
+
+        allProcessed += rows.length;
+        
         if (docs.length < limit) {
             hasMore = false;
         } else {

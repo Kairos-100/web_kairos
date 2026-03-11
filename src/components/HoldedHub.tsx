@@ -32,9 +32,15 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded })
                 return acc;
             }, 0);
             
+        // Expenses = purchases + generic expenses
         const expenses = invoices
-            .filter(inv => inv.type === 'purchase')
-            .reduce((acc, inv) => acc + (inv.total || 0), 0);
+            .reduce((acc, inv) => {
+                const amount = inv.total || 0;
+                if (inv.type === 'purchase' || inv.type === 'expense') {
+                    return acc + amount;
+                }
+                return acc;
+            }, 0);
 
         return {
             income,

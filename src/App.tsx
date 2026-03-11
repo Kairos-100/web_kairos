@@ -141,7 +141,8 @@ const App: React.FC = () => {
       const { data, error } = await supabase
         .from('holded_invoices')
         .select('*')
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .limit(5000);
 
       if (error) throw error;
       if (data) {
@@ -160,7 +161,8 @@ const App: React.FC = () => {
       const { data, error } = await supabase
         .from('holded_project_snapshots')
         .select('*')
-        .order('snapshot_date', { ascending: false });
+        .order('snapshot_date', { ascending: false })
+        .limit(5000);
 
       if (error) throw error;
       if (data) {
