@@ -353,6 +353,20 @@ const App: React.FC = () => {
     });
   }, [essays, dateRange]);
 
+  const filteredHoldedInvoices = useMemo(() => {
+    return holdedInvoices.filter(inv => {
+      const d = new Date(inv.date * 1000);
+      return d >= dateRange.start && d <= dateRange.end;
+    });
+  }, [holdedInvoices, dateRange]);
+
+  const filteredHoldedSnapshots = useMemo(() => {
+    return holdedSnapshots.filter(s => {
+      const d = new Date(s.snapshot_date);
+      return d >= dateRange.start && d <= dateRange.end;
+    });
+  }, [holdedSnapshots, dateRange]);
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -363,8 +377,8 @@ const App: React.FC = () => {
           <MetricsView
             metrics={filteredMetrics}
             essays={filteredByDateEssays}
-            holdedSnapshots={holdedSnapshots}
-            holdedInvoices={holdedInvoices}
+            holdedSnapshots={filteredHoldedSnapshots}
+            holdedInvoices={filteredHoldedInvoices}
             clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}

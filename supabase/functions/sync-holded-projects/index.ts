@@ -157,14 +157,18 @@ serve(async (req) => {
                 })
                 totalRows += rowsToInsert.length;
 
-                // --- NEW: Sync Invoices and Purchases ---
+                // --- NEW: Sync Invoices, Purchases, Credit Notes, and Sales Receipts ---
                 console.log(`Syncing documents for Key ID: ${keyRow.id}`);
                 const invoicesSync = await syncDocuments(apiKey, 'invoice', keyRow.id, supabase);
                 const purchasesSync = await syncDocuments(apiKey, 'purchase', keyRow.id, supabase);
+                const creditNotesSync = await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase);
+                const salesReceiptsSync = await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase);
                 
                 results[results.length - 1].documents = {
                     invoices: invoicesSync,
-                    purchases: purchasesSync
+                    purchases: purchasesSync,
+                    creditnotes: creditNotesSync,
+                    salesreceipts: salesReceiptsSync
                 };
             } else {
                  results.push({
@@ -184,7 +188,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("General Sync Error:", error)
         return new Response(JSON.stringify({ error: error.message }), { 
             status: 500,
@@ -244,51 +248,74 @@ function calculateProjectMetrics(project: any) {
 }
 
 async function syncDocuments(apiKey: string, docType: string, sourceKeyId: any, supabase: any) {
-    const response = await fetch(`https://api.holded.com/api/invoicing/v1/documents/${docType}`, {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/json',
-            'key': apiKey,
+    let allProcessed = 0;
+    let page = 0;
+    const limit = 100;
+    let hasMore = true;
+
+    while (hasMore) {
+        console.log(`Fetching ${docType} page ${page}...`);
+        const response = await fetch(`https://api.holded.com/api/invoicing/v1/documents/${docType}?page=${page}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'key': apiKey,
+            }
+        });
+
+        if (!response.ok) {
+            console.error(`Error fetching ${docType} (page ${page}):`, await response.text());
+            return { status: 'error', code: response.status, processed: allProcessed };
         }
-    });
 
-    if (!response.ok) {
-        console.error(`Error fetching ${docType}:`, await response.text());
-        return { status: 'error', code: response.status };
-    }
+        const docs = await response.json();
+        if (!Array.isArray(docs)) {
+            hasMore = false;
+            break;
+        }
 
-    const docs = await response.json();
-    if (!Array.isArray(docs)) return { status: 'error', message: 'Not an array' };
+        if (docs.length === 0) {
+            hasMore = false;
+            break;
+        }
 
-    const rows = docs.map(d => ({
-        source_key_id: sourceKeyId,
-        holded_id: String(d.id),
-        doc_number: d.docNumber || d.customId,
-        type: docType,
-        contact_name: d.contactName,
-        contact_id: d.contact,
-        notes: d.notes,
-        date: d.date,
-        due_date: d.dueDate,
-        total: d.total,
-        subtotal: d.subtotal,
-        tax: d.tax,
-        status: String(d.status),
-        project_id: d.project,
-        raw_data: d,
-        updated_at: new Date().toISOString()
-    }));
+        const rows = docs.map(d => ({
+            source_key_id: sourceKeyId,
+            holded_id: String(d.id),
+            doc_number: d.docNumber || d.customId,
+            type: docType,
+            contact_name: d.contactName,
+            contact_id: d.contact,
+            notes: d.notes,
+            date: d.date,
+            due_date: d.dueDate,
+            total: d.total,
+            subtotal: d.subtotal,
+            tax: d.tax,
+            status: String(d.status),
+            project_id: d.project,
+            raw_data: d,
+            updated_at: new Date().toISOString()
+        }));
 
-    if (rows.length > 0) {
         const { error } = await supabase
             .from('holded_invoices')
             .upsert(rows, { onConflict: 'source_key_id, holded_id' });
         
         if (error) {
-            console.error(`Error upserting ${docType}:`, error);
-            return { status: 'error', message: error.message };
+            console.error(`Error upserting ${docType} (page ${page}):`, error);
+            return { status: 'error', message: error.message, processed: allProcessed };
+        }
+
+        allProcessed += rows.length;
+        
+        // If we got fewer than the limit, it's the last page
+        if (docs.length < limit) {
+            hasMore = false;
+        } else {
+            page++;
         }
     }
 
-    return { status: 'ok', count: rows.length };
+    return { status: 'ok', count: allProcessed };
 }

@@ -125,10 +125,16 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             }
         });
 
-        // Calculate total income from all invoices (sales)
-        const totalHoldedRevenue = holdedInvoices
-            .filter(inv => inv.type === 'invoice')
-            .reduce((acc, inv) => acc + (inv.total || 0), 0);
+        // Calculate total revenue: (Invoices + Sales Receipts) - Credit Notes
+        const totalHoldedRevenue = holdedInvoices.reduce((acc, inv) => {
+            const amount = inv.total || 0;
+            if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
+                return acc + amount;
+            } else if (inv.type === 'creditnote') {
+                return acc - amount;
+            }
+            return acc;
+        }, 0);
 
         return {
             ...metricTotals,

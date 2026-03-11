@@ -20,9 +20,17 @@ interface HoldedHubProps {
 export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded }) => {
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
+        // Income = invoices + salesreceipts - creditnotes
         const income = invoices
-            .filter(inv => inv.type === 'invoice')
-            .reduce((acc, inv) => acc + (inv.total || 0), 0);
+            .reduce((acc, inv) => {
+                const amount = inv.total || 0;
+                if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
+                    return acc + amount;
+                } else if (inv.type === 'creditnote') {
+                    return acc - amount;
+                }
+                return acc;
+            }, 0);
             
         const expenses = invoices
             .filter(inv => inv.type === 'purchase')
