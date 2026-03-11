@@ -138,16 +138,32 @@ const App: React.FC = () => {
     if (!hasConfig) return;
 
     try {
-      const { data, error } = await supabase
-        .from('holded_invoices')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(5000);
+      let allInvoices: any[] = [];
+      let from = 0;
+      let to = 999;
+      let hasMore = true;
 
-      if (error) throw error;
-      if (data) {
-        setHoldedInvoices(data as HoldedInvoice[]);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('holded_invoices')
+          .select('*')
+          .order('date', { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allInvoices = [...allInvoices, ...data];
+          if (data.length < 1000) {
+            hasMore = false;
+          } else {
+            from += 1000;
+            to += 1000;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+      setHoldedInvoices(allInvoices);
     } catch (err) {
       console.error('Error fetching holded invoices:', err);
     }
@@ -158,16 +174,32 @@ const App: React.FC = () => {
     if (!hasConfig) return;
 
     try {
-      const { data, error } = await supabase
-        .from('holded_project_snapshots')
-        .select('*')
-        .order('snapshot_date', { ascending: false })
-        .limit(5000);
+      let allSnapshots: any[] = [];
+      let from = 0;
+      let to = 999;
+      let hasMore = true;
 
-      if (error) throw error;
-      if (data) {
-        setHoldedSnapshots(data as HoldedSnapshot[]);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('holded_project_snapshots')
+          .select('*')
+          .order('snapshot_date', { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allSnapshots = [...allSnapshots, ...data];
+          if (data.length < 1000) {
+            hasMore = false;
+          } else {
+            from += 1000;
+            to += 1000;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+      setHoldedSnapshots(allSnapshots);
     } catch (err) {
       console.error('Error fetching holded snapshots:', err);
     }

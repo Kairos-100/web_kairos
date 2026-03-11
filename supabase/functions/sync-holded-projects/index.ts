@@ -157,21 +157,20 @@ serve(async (req) => {
                 })
                 totalRows += rowsToInsert.length;
 
-                // --- NEW: Sync Invoices, Purchases, Credit Notes, Sales Receipts AND Generic Expenses ---
-                console.log(`Syncing documents for Key ID: ${keyRow.id}`);
-                const invoicesSync = await syncDocuments(apiKey, 'invoice', keyRow.id, supabase);
-                const purchasesSync = await syncDocuments(apiKey, 'purchase', keyRow.id, supabase);
-                const creditNotesSync = await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase);
-                const salesReceiptsSync = await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase);
-                const expensesSync = await syncExpenses(apiKey, keyRow.id, supabase);
-                
-                results[results.length - 1].documents = {
-                    invoices: invoicesSync,
-                    purchases: purchasesSync,
-                    creditnotes: creditNotesSync,
-                    salesreceipts: salesReceiptsSync,
-                    expenses: expensesSync
+                // --- DEEP SYNC: All Document Types from Invoicing Module ---
+                console.log(`Deep Syncing documents for Key ID: ${keyRow.id}`);
+                const syncRes = {
+                    invoices: await syncDocuments(apiKey, 'invoice', keyRow.id, supabase),
+                    purchases: await syncDocuments(apiKey, 'purchase', keyRow.id, supabase),
+                    creditnotes: await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase),
+                    salesreceipts: await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase),
+                    proforms: await syncDocuments(apiKey, 'proform', keyRow.id, supabase),
+                    estimates: await syncDocuments(apiKey, 'estimate', keyRow.id, supabase),
+                    purchaseorders: await syncDocuments(apiKey, 'purchaseorder', keyRow.id, supabase),
+                    expenses: await syncExpenses(apiKey, keyRow.id, supabase)
                 };
+                
+                results[results.length - 1].documents = syncRes;
             } else {
                  results.push({
                     key_id: keyRow.id,
@@ -331,7 +330,7 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
 
     while (hasMore) {
         console.log(`Fetching expenses page ${page}...`);
-        const response = await fetch(`https://api.holded.com/api/expenses/v1/expenses?page=${page}`, {
+        const response = await fetch(`https://api.holded.com/api/expenses/v1/expenses?page=${page}&dateFrom=0`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
