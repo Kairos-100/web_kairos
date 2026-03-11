@@ -562,22 +562,41 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                             <Calendar size={12} />
                                             <span>Rango Temporal</span>
                                         </label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {[
-                                                { id: 'all', label: 'Todo' },
-                                                { id: '7d', label: '7D' },
-                                                { id: '30d', label: '30D' },
-                                                { id: '90d', label: '90D' },
-                                                { id: 'custom', label: 'Personalizado' }
-                                            ].map(range => (
-                                                <button
-                                                    key={range.id}
-                                                    onClick={() => setTimeRange(range.id as any)}
-                                                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${timeRange === range.id ? 'bg-kairos-navy text-white' : 'bg-white text-gray-400 hover:text-kairos-navy shadow-sm'}`}
-                                                >
-                                                    {range.label}
-                                                </button>
-                                            ))}
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    { id: 'all', label: 'Todo' },
+                                                    { id: '7d', label: '7D' },
+                                                    { id: '30d', label: '30D' },
+                                                    { id: '90d', label: '90D' },
+                                                    { id: 'custom', label: 'Personalizado' }
+                                                ].map(range => (
+                                                    <button
+                                                        key={range.id}
+                                                        onClick={() => setTimeRange(range.id as any)}
+                                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${timeRange === range.id ? 'bg-kairos-navy text-white' : 'bg-white text-gray-400 hover:text-kairos-navy shadow-sm'}`}
+                                                    >
+                                                        {range.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {timeRange === 'custom' && (
+                                                <div className="flex items-center space-x-2">
+                                                    <input
+                                                        type="date"
+                                                        value={customStartDate}
+                                                        onChange={(e) => setCustomStartDate(e.target.value)}
+                                                        className="px-3 py-1.5 rounded-xl text-[10px] font-black text-kairos-navy bg-white border border-gray-100 focus:outline-none focus:border-kairos-navy"
+                                                    />
+                                                    <span className="text-gray-400 font-black">-</span>
+                                                    <input
+                                                        type="date"
+                                                        value={customEndDate}
+                                                        onChange={(e) => setCustomEndDate(e.target.value)}
+                                                        className="px-3 py-1.5 rounded-xl text-[10px] font-black text-kairos-navy bg-white border border-gray-100 focus:outline-none focus:border-kairos-navy"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
