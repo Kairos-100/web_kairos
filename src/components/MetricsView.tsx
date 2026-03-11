@@ -125,7 +125,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             }
         });
 
-        const totalHoldedRevenue = Array.from(projectFinances.values()).reduce((a, b) => a + b.income, 0);
+        // Calculate total income from all invoices (sales)
+        const totalHoldedRevenue = holdedInvoices
+            .filter(inv => inv.type === 'invoice')
+            .reduce((acc, inv) => acc + (inv.total || 0), 0);
 
         return {
             ...metricTotals,
@@ -133,7 +136,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             holdedRevenue: totalHoldedRevenue,
             perUserHolded
         };
-    }, [metrics, essays, holdedSnapshots, clockifyData]);
+    }, [metrics, essays, holdedSnapshots, holdedInvoices, clockifyData]);
 
 
     // 2. Evolution Data

@@ -21,26 +21,20 @@ interface HoldedHubProps {
 export const HoldedHub: React.FC<HoldedHubProps> = ({ snapshots, invoices, perUserHolded }) => {
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
-        const latestProjectMetrics = new Map<string, { income: number; expenses: number }>();
-        snapshots.forEach(s => {
-            if (!latestProjectMetrics.has(s.holded_id)) {
-                latestProjectMetrics.set(s.holded_id, {
-                    income: s.metrics?.total_income || 0,
-                    expenses: s.metrics?.total_expenses || 0
-                });
-            }
-        });
-
-        const totals = Array.from(latestProjectMetrics.values()).reduce((acc, curr) => ({
-            income: acc.income + curr.income,
-            expenses: acc.expenses + curr.expenses
-        }), { income: 0, expenses: 0 });
+        const income = invoices
+            .filter(inv => inv.type === 'invoice')
+            .reduce((acc, inv) => acc + (inv.total || 0), 0);
+            
+        const expenses = invoices
+            .filter(inv => inv.type === 'purchase')
+            .reduce((acc, inv) => acc + (inv.total || 0), 0);
 
         return {
-            ...totals,
-            profit: totals.income - totals.expenses
+            income,
+            expenses,
+            profit: income - expenses
         };
-    }, [snapshots]);
+    }, [invoices]);
 
     // 2. Formatting Helpers
     const formatCurrency = (val: number) => 
