@@ -5,14 +5,11 @@ import {
     ArrowUpRight, 
     ArrowDownRight, 
     Building2, 
-    PieChart, 
     TrendingUp, 
-    Calendar,
     Receipt,
     Target,
     Users
 } from 'lucide-react';
-import { ResponsiveContainer } from 'recharts';
 import type { HoldedSnapshot, HoldedInvoice } from '../constants';
 
 interface HoldedHubProps {

@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar, Receipt, ArrowUpRight, ArrowDownRight, LayoutDashboard, Wallet, TrendingUp, DollarSign, Briefcase
+    Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar, Receipt, ArrowUpRight, ArrowDownRight, LayoutDashboard, Wallet
 } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
