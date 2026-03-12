@@ -107,6 +107,54 @@ serve(async (req) => {
                     raw: p, // JSON
                     updated_at: new Date().toISOString(),
                 })
+
+                // --- NEW: Project-Centric Deep Sync ---
+                // For each project, we fetch its full details to get the official sales/expenses list
+                try {
+                    console.log(`Deep syncing project: ${p.name} (${holdedId})`);
+                    const projectDetailResponse = await fetch(`${baseUri}/projects/${holdedId}`, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json', 'key': apiKey }
+                    });
+                    
+                    if (projectDetailResponse.ok) {
+                        const projectDetail = await projectDetailResponse.json();
+                        
+                        // Process linked sales
+                        if (projectDetail.sales && Array.isArray(projectDetail.sales)) {
+                            const salesRows = projectDetail.sales.map((s: any) => ({
+                                source_key_id: keyRow.id,
+                                holded_id: String(s.id),
+                                doc_number: s.docNumber || s.customId || s.id,
+                                type: 'invoice', // We treat these as invoices for aggregation
+                                contact_name: s.contactName || '',
+                                total: parseFloat(s.total || 0),
+                                date: s.date,
+                                project_id: String(holdedId),
+                                updated_at: new Date().toISOString()
+                            }));
+                            await supabase.from('holded_invoices').upsert(salesRows, { onConflict: 'source_key_id, holded_id' });
+                        }
+                        
+                        // Process linked expenses
+                        if (projectDetail.expenses && Array.isArray(projectDetail.expenses)) {
+                            const expenseRows = projectDetail.expenses.map((e: any) => ({
+                                source_key_id: keyRow.id,
+                                holded_id: String(e.id),
+                                doc_number: e.name || e.id,
+                                type: 'purchase',
+                                contact_name: e.contactName || '',
+                                total: parseFloat(e.total || 0),
+                                date: e.date,
+                                project_id: String(holdedId),
+                                updated_at: new Date().toISOString()
+                            }));
+                            await supabase.from('holded_invoices').upsert(expenseRows, { onConflict: 'source_key_id, holded_id' });
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Error deep syncing project ${holdedId}:`, err);
+                }
             }
 
             if (rowsToInsert.length > 0) {
@@ -157,16 +205,13 @@ serve(async (req) => {
                 })
                 totalRows += rowsToInsert.length;
 
-                // --- DEEP SYNC: All Document Types from Invoicing Module ---
-                console.log(`Deep Syncing documents for Key ID: ${keyRow.id}`);
+                // --- GLOBAL SYNC (Backup for non-project items) ---
+                console.log(`Global document sync for Key ID: ${keyRow.id}`);
                 const syncRes = {
                     invoices: await syncDocuments(apiKey, 'invoice', keyRow.id, supabase),
                     purchases: await syncDocuments(apiKey, 'purchase', keyRow.id, supabase),
                     creditnotes: await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase),
                     salesreceipts: await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase),
-                    proforms: await syncDocuments(apiKey, 'proform', keyRow.id, supabase),
-                    estimates: await syncDocuments(apiKey, 'estimate', keyRow.id, supabase),
-                    purchaseorders: await syncDocuments(apiKey, 'purchaseorder', keyRow.id, supabase),
                     expenses: await syncExpenses(apiKey, keyRow.id, supabase)
                 };
                 
@@ -281,24 +326,34 @@ async function syncDocuments(apiKey: string, docType: string, sourceKeyId: any, 
             break;
         }
 
-        const rows = docs.map(d => ({
-            source_key_id: sourceKeyId,
-            holded_id: String(d.id),
-            doc_number: d.docNumber || d.customId,
-            type: docType,
-            contact_name: d.contactName,
-            contact_id: d.contact,
-            notes: d.notes,
-            date: d.date,
-            due_date: d.dueDate,
-            total: d.total,
-            subtotal: d.subtotal,
-            tax: d.tax,
-            status: String(d.status),
-            project_id: d.project,
-            raw_data: d,
-            updated_at: new Date().toISOString()
-        }));
+        const rows = docs.map(d => {
+            // project_id can be a string or an object {id: string, name: string}
+            let projectId = null;
+            if (typeof d.project === 'string') {
+                projectId = d.project;
+            } else if (d.project && typeof d.project === 'object' && d.project.id) {
+                projectId = d.project.id;
+            }
+
+            return {
+                source_key_id: sourceKeyId,
+                holded_id: String(d.id),
+                doc_number: d.docNumber || d.customId,
+                type: docType,
+                contact_name: d.contactName,
+                contact_id: d.contact,
+                notes: d.notes,
+                date: d.date,
+                due_date: d.due_date || d.dueDate,
+                total: parseFloat(d.total || 0),
+                subtotal: parseFloat(d.subtotal || 0),
+                tax: parseFloat(d.tax || 0),
+                status: String(d.status || ''),
+                project_id: projectId ? String(projectId) : null,
+                raw_data: d,
+                updated_at: new Date().toISOString()
+            };
+        });
 
         const { error } = await supabase
             .from('holded_invoices')
