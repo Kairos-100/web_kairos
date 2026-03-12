@@ -1,0 +1,18 @@
+name: Daily Holded Sync
+
+on:
+  schedule:
+    # Runs at 06:00 UTC every day
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Holded Sync Edge Function
+        run: |
+          curl -X POST "https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co/functions/v1/sync-holded-projects" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}'
