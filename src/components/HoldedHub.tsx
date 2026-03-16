@@ -16,9 +16,23 @@ interface HoldedHubProps {
     invoices: HoldedInvoice[];
     perUserHolded: Record<string, { billing: number; profit: number }>;
     unmatchedProjects?: string[];
+    projectDistribution?: Array<{
+        name: string;
+        totalIncome: number;
+        totalProfit: number;
+        sharedIncome: number;
+        sharedProfit: number;
+        users: string[];
+        profitPerUser: number;
+    }>;
 }
 
-export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded, unmatchedProjects = [] }) => {
+export const HoldedHub: React.FC<HoldedHubProps> = ({ 
+    invoices, 
+    perUserHolded, 
+    unmatchedProjects = [],
+    projectDistribution = []
+}) => {
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
         // Income = invoices + salesreceipts - creditnotes
@@ -156,6 +170,88 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded, u
                     </div>
                 </motion.div>
             )}
+
+            {/* Project-Centric Breakdown */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden"
+            >
+                <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                    <div>
+                        <h3 className="text-xl font-black text-kairos-navy">Desglose por Proyecto (Holded)</h3>
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Visión por proyecto antes del reparto 50/50</p>
+                    </div>
+                    <Target className="text-gray-300" size={24} />
+                </div>
+                
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="text-gray-400 text-[10px] uppercase font-black tracking-widest bg-gray-50/30">
+                                <th className="px-8 py-4">Proyecto</th>
+                                <th className="px-8 py-4 text-right">Facturación</th>
+                                <th className="px-8 py-4 text-right">Beneficio Total</th>
+                                <th className="px-8 py-4 text-right text-emerald-600">50% a Repartir</th>
+                                <th className="px-8 py-4">Kairenses</th>
+                                <th className="px-8 py-4 text-right">Beneficio/Persona</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {projectDistribution.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-8 py-12 text-center text-xs text-gray-400 italic">
+                                        No hay datos de proyectos disponibles.
+                                    </td>
+                                </tr>
+                            ) : (
+                                projectDistribution
+                                    .sort((a, b) => b.totalProfit - a.totalProfit)
+                                    .map((proj, idx) => (
+                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-8 py-6">
+                                                <p className="text-sm font-black text-kairos-navy">{proj.name}</p>
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <span className="text-xs font-bold text-gray-600">{formatCurrency(proj.totalIncome)}</span>
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <p className={`text-xs font-black ${proj.totalProfit >= 0 ? 'text-kairos-navy' : 'text-rose-500'}`}>
+                                                    {formatCurrency(proj.totalProfit)}
+                                                </p>
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <p className="text-sm font-black text-emerald-600">
+                                                    {formatCurrency(proj.sharedProfit)}
+                                                </p>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {proj.users.length > 0 ? (
+                                                        proj.users.map(email => (
+                                                            <span key={email} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg border border-blue-100 uppercase">
+                                                                {email.split('@')[0]}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Sin vincular</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                {proj.users.length > 0 ? (
+                                                    <p className="text-sm font-black text-emerald-600">+{formatCurrency(proj.profitPerUser)}</p>
+                                                ) : (
+                                                    <span className="text-gray-300">—</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
 
             {/* Per-Person Split Visualization */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

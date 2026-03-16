@@ -79,17 +79,18 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
         // Per-user financial redistribution (50/50 logic)
         // Note: This implements the logic originally found in the PHP calculateProjectMetrics
-        // but distributed per user based on Clockify involvement.
+        // but distributed per project and then per user based on Clockify involvement.
         
         const normalize = (s: string) => s.trim().toLowerCase();
 
         // 1. Map Holded Projects to their latest billing/profit (Case-Insensitive)
-        const projectFinances = new Map<string, { income: number; profit: number }>();
+        const projectFinances = new Map<string, { income: number; profit: number; originalName: string }>();
         holdedSnapshots.forEach(s => {
             if (s.name) {
                 const normName = normalize(s.name);
                 if (!projectFinances.has(normName)) {
                     projectFinances.set(normName, { 
+                        originalName: s.name,
                         income: s.metrics?.total_income || 0, 
                         profit: (s.metrics?.total_income || 0) - (s.metrics?.total_expenses || 0)
                     });
@@ -120,33 +121,50 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             });
         });
 
-        // 3. Distribute 50% fixed among users
+        // 3. Calculate Project-Centric Distribution and Per-User Totals
         const perUserHolded: Record<string, { billing: number; profit: number }> = {};
-        projectUsers.forEach((users, normalizedName) => {
-            const finances = projectFinances.get(normalizedName);
-            if (finances && users.size > 0) {
-                const shareBilling = (finances.income * 0.5) / users.size;
-                const shareProfit = (finances.profit * 0.5) / users.size;
-                users.forEach(email => {
+        const perProjectHolded: Array<{
+            name: string;
+            totalIncome: number;
+            totalProfit: number;
+            sharedIncome: number;
+            sharedProfit: number;
+            users: string[];
+            profitPerUser: number;
+        }> = [];
+
+        projectFinances.forEach((finances, normalizedName) => {
+            const users = projectUsers.get(normalizedName);
+            const userList = users ? Array.from(users) : [];
+            
+            const sharedIncome = finances.income * 0.5;
+            const sharedProfit = finances.profit * 0.5;
+            const profitPerUser = userList.length > 0 ? sharedProfit / userList.length : 0;
+            const incomePerUser = userList.length > 0 ? sharedIncome / userList.length : 0;
+
+            perProjectHolded.push({
+                name: finances.originalName,
+                totalIncome: finances.income,
+                totalProfit: finances.profit,
+                sharedIncome,
+                sharedProfit,
+                users: userList,
+                profitPerUser
+            });
+
+            if (userList.length > 0) {
+                userList.forEach(email => {
                     if (!perUserHolded[email]) perUserHolded[email] = { billing: 0, profit: 0 };
-                    perUserHolded[email].billing += shareBilling;
-                    perUserHolded[email].profit += shareProfit;
+                    perUserHolded[email].billing += incomePerUser;
+                    perUserHolded[email].profit += profitPerUser;
                 });
             }
         });
 
-        // 4. Identify unmatched projects for debugging
-        const unmatchedHoldedProjects: string[] = [];
-        holdedSnapshots.forEach(s => {
-            if (s.name) {
-                const normName = normalize(s.name);
-                if (!projectUsers.has(normName)) {
-                    if (!unmatchedHoldedProjects.includes(s.name)) {
-                        unmatchedHoldedProjects.push(s.name);
-                    }
-                }
-            }
-        });
+        // 4. Identify unmatched projects for debugging (Filter out small projects without users if desired, but here we keep them)
+        const unmatchedHoldedProjects = perProjectHolded
+            .filter(p => p.users.length === 0 && (p.totalIncome > 0 || p.totalProfit !== 0))
+            .map(p => p.name);
 
         // Calculate total revenue: (Invoices + Sales Receipts) - Credit Notes - Expenses
         const totalHoldedRevenue = holdedInvoices.reduce((acc, inv) => {
@@ -164,7 +182,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             lp: lpTotal + metricTotals.bp,
             holdedRevenue: totalHoldedRevenue,
             perUserHolded,
-            unmatchedHoldedProjects
+            unmatchedHoldedProjects,
+            perProjectHolded
         };
     }, [metrics, essays, holdedSnapshots, holdedInvoices, clockifyData]);
 
@@ -491,6 +510,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     invoices={holdedInvoices} 
                     perUserHolded={totals.perUserHolded} 
                     unmatchedProjects={totals.unmatchedHoldedProjects}
+                    projectDistribution={totals.perProjectHolded}
                 />
             ) : (
                 <>
