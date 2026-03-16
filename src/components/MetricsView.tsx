@@ -78,14 +78,22 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
         const lpTotal = essays.reduce((acc, e) => acc + (e.points || 0), 0);
 
         // Per-user financial redistribution (50/50 logic)
-        // 1. Map Holded Projects to their latest billing/profit
+        // Note: This implements the logic originally found in the PHP calculateProjectMetrics
+        // but distributed per user based on Clockify involvement.
+        
+        const normalize = (s: string) => s.trim().toLowerCase();
+
+        // 1. Map Holded Projects to their latest billing/profit (Case-Insensitive)
         const projectFinances = new Map<string, { income: number; profit: number }>();
         holdedSnapshots.forEach(s => {
-            if (!projectFinances.has(s.name)) {
-                projectFinances.set(s.name, { 
-                    income: s.metrics?.total_income || 0, 
-                    profit: (s.metrics?.total_income || 0) - (s.metrics?.total_expenses || 0)
-                });
+            if (s.name) {
+                const normName = normalize(s.name);
+                if (!projectFinances.has(normName)) {
+                    projectFinances.set(normName, { 
+                        income: s.metrics?.total_income || 0, 
+                        profit: (s.metrics?.total_income || 0) - (s.metrics?.total_expenses || 0)
+                    });
+                }
             }
         });
 
@@ -96,15 +104,17 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             u.projects.forEach((p: any) => {
                 // Collect project name as potential identifier
                 if (p.projectName) {
-                    if (!projectUsers.has(p.projectName)) projectUsers.set(p.projectName, new Set());
-                    projectUsers.get(p.projectName)?.add(u.email);
+                    const normName = normalize(p.projectName);
+                    if (!projectUsers.has(normName)) projectUsers.set(normName, new Set());
+                    projectUsers.get(normName)?.add(u.email);
                 }
                 
                 // Collect tags as primary identifiers
                 p.detailedEntries?.forEach((e: any) => {
                     e.tags?.forEach((tag: string) => {
-                        if (!projectUsers.has(tag)) projectUsers.set(tag, new Set());
-                        projectUsers.get(tag)?.add(u.email);
+                        const normTag = normalize(tag);
+                        if (!projectUsers.has(normTag)) projectUsers.set(normTag, new Set());
+                        projectUsers.get(normTag)?.add(u.email);
                     });
                 });
             });
@@ -112,8 +122,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
         // 3. Distribute 50% fixed among users
         const perUserHolded: Record<string, { billing: number; profit: number }> = {};
-        projectUsers.forEach((users, projectName) => {
-            const finances = projectFinances.get(projectName);
+        projectUsers.forEach((users, normalizedName) => {
+            const finances = projectFinances.get(normalizedName);
             if (finances && users.size > 0) {
                 const shareBilling = (finances.income * 0.5) / users.size;
                 const shareProfit = (finances.profit * 0.5) / users.size;
@@ -122,6 +132,19 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     perUserHolded[email].billing += shareBilling;
                     perUserHolded[email].profit += shareProfit;
                 });
+            }
+        });
+
+        // 4. Identify unmatched projects for debugging
+        const unmatchedHoldedProjects: string[] = [];
+        holdedSnapshots.forEach(s => {
+            if (s.name) {
+                const normName = normalize(s.name);
+                if (!projectUsers.has(normName)) {
+                    if (!unmatchedHoldedProjects.includes(s.name)) {
+                        unmatchedHoldedProjects.push(s.name);
+                    }
+                }
             }
         });
 
@@ -140,7 +163,8 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             ...metricTotals,
             lp: lpTotal + metricTotals.bp,
             holdedRevenue: totalHoldedRevenue,
-            perUserHolded
+            perUserHolded,
+            unmatchedHoldedProjects
         };
     }, [metrics, essays, holdedSnapshots, holdedInvoices, clockifyData]);
 
@@ -466,6 +490,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 <HoldedHub 
                     invoices={holdedInvoices} 
                     perUserHolded={totals.perUserHolded} 
+                    unmatchedProjects={totals.unmatchedHoldedProjects}
                 />
             ) : (
                 <>

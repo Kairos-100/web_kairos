@@ -15,9 +15,10 @@ import type { HoldedInvoice } from '../constants';
 interface HoldedHubProps {
     invoices: HoldedInvoice[];
     perUserHolded: Record<string, { billing: number; profit: number }>;
+    unmatchedProjects?: string[];
 }
 
-export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded }) => {
+export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded, unmatchedProjects = [] }) => {
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
         // Income = invoices + salesreceipts - creditnotes
@@ -129,6 +130,32 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({ invoices, perUserHolded })
                     </div>
                 </motion.div>
             </div>
+
+            {/* Debugging / Unmatched Projects Section */}
+            {unmatchedProjects.length > 0 && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                    <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                            <Target size={20} />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-black text-amber-900 leading-tight">Proyectos de Holded sin vincular</h4>
+                            <p className="text-[10px] text-amber-700 font-bold uppercase tracking-widest mt-0.5">Estos proyectos no tienen etiquetas coincidentes en Clockify (50/50 no aplicado)</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {unmatchedProjects.map(name => (
+                            <span key={name} className="px-3 py-1 bg-white/50 border border-amber-200 text-amber-800 text-[10px] font-black rounded-xl italic">
+                                "{name}"
+                            </span>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
 
             {/* Per-Person Split Visualization */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
