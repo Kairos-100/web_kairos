@@ -13,7 +13,7 @@ import { FinanceView } from './components/FinanceView';
 import { DocumentExplorer } from './components/DocumentExplorer';
 import { KairosAI } from './components/KairosAI';
 import { supabase } from './lib/supabase';
-import type { Essay, Comment, MetricEntry, HoldedSnapshot, HoldedInvoice } from './constants';
+import type { Essay, Comment, MetricEntry, HoldedSnapshot, HoldedInvoice, HoldedProject } from './constants';
 import { WHITELIST } from './constants';
 import { Search, User, Clock, ChevronRight, Tag as TagIcon, FileDown, FileText, Trash2, AlertCircle, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [holdedSnapshots, setHoldedSnapshots] = useState<HoldedSnapshot[]>([]);
   const [holdedInvoices, setHoldedInvoices] = useState<HoldedInvoice[]>([]);
+  const [holdedProjects, setHoldedProjects] = useState<HoldedProject[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEssayId, setSelectedEssayId] = useState<string | null>(null);
   const [showPdf, setShowPdf] = useState(false);
@@ -84,6 +85,7 @@ const App: React.FC = () => {
     fetchMetrics();
     fetchClockifyData();
     fetchHoldedSnapshots();
+    fetchHoldedProjects();
     fetchHoldedInvoices();
   }, [dateRange]);
 
@@ -131,6 +133,41 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Error fetching metrics from Supabase:', err);
+    }
+  };
+
+  const fetchHoldedProjects = async () => {
+    const hasConfig = import.meta.env.VITE_SUPABASE_URL;
+    if (!hasConfig) return;
+
+    try {
+      let allProjects: any[] = [];
+      let from = 0;
+      let to = 999;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('holded_projects')
+          .select('*')
+          .range(from, to);
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allProjects = [...allProjects, ...data];
+          if (data.length < 1000) {
+            hasMore = false;
+          } else {
+            from += 1000;
+            to += 1000;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+      setHoldedProjects(allProjects);
+    } catch (err) {
+      console.error('Error fetching holded projects:', err);
     }
   };
 
@@ -433,6 +470,7 @@ const App: React.FC = () => {
           <FinanceView 
             invoices={filteredHoldedInvoices}
             holdedSnapshots={holdedSnapshots}
+            holdedProjects={holdedProjects}
             clockifyData={clockifyData}
           />
         );

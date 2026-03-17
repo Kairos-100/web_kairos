@@ -12,12 +12,13 @@ import {
     Receipt,
     Target
 } from 'lucide-react';
-import type { HoldedInvoice, HoldedSnapshot } from '../constants';
+import type { HoldedInvoice, HoldedSnapshot, HoldedProject } from '../constants';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
 
 interface FinanceViewProps {
     invoices: HoldedInvoice[];
     holdedSnapshots: HoldedSnapshot[];
+    holdedProjects: HoldedProject[];
     clockifyData: {
         users: ClockifyUserTime[];
         projects: ClockifyProjectSummary[];
@@ -28,6 +29,7 @@ interface FinanceViewProps {
 export const FinanceView: React.FC<FinanceViewProps> = ({ 
     invoices, 
     holdedSnapshots,
+    holdedProjects,
     clockifyData 
 }) => {
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -65,24 +67,58 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const finances = useMemo(() => {
         const normalize = (s: string) => s.trim().toLowerCase();
 
-        // Map Holded Projects to their latest billing/profit
+        // A. Start with all projects from holded_projects
         const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string; holdedId: string }>();
+        
+        holdedProjects.forEach(p => {
+            const id = p.holded_id || (p as any).project_id || p.id;
+            if (id) {
+                projectFinances.set(id, {
+                    originalName: p.name || 'Sin Nombre',
+                    holdedId: id,
+                    income: 0,
+                    expenses: 0,
+                    profit: 0
+                });
+            }
+        });
+
+        // B. Update with Snapshot metrics (more accurate/detailed)
         holdedSnapshots.forEach(s => {
-            if (s.holded_id) {
-                const id = s.holded_id;
+            const id = s.holded_id || (s as any).project_id || s.id;
+            if (id) {
                 const current = projectFinances.get(id);
                 const income = s.metrics?.total_income || 0;
                 const expenses = s.metrics?.total_expenses || 0;
                 
-                // If we don't have it or this snapshot is newer (or has metrics)
+                // If we don't have it (new project from snapshot) or this snapshot has metrics
                 if (!current || (income > 0 || expenses > 0)) {
                     projectFinances.set(id, { 
-                        originalName: s.name || 'Sin Nombre',
+                        originalName: s.name || current?.originalName || 'Sin Nombre',
                         holdedId: id,
-                        income, 
-                        expenses,
-                        profit: income - expenses
+                        income: income || current?.income || 0, 
+                        expenses: expenses || current?.expenses || 0,
+                        profit: (income || current?.income || 0) - (expenses || current?.expenses || 0)
                     });
+                }
+            }
+        });
+
+        // C. Fallback: Aggregate metrics from Invoices for projects with no snapshot metrics
+        invoices.forEach(inv => {
+            const id = inv.project_id || inv.holded_id;
+            if (id) {
+                const current = projectFinances.get(id);
+                // If the project exists but has 0 income/expenses in snapshots, use invoice data
+                if (current && current.income === 0 && current.expenses === 0) {
+                    if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
+                        current.income += inv.total;
+                    } else if (inv.type === 'creditnote') {
+                        current.income -= inv.total;
+                    } else if (inv.type === 'purchase' || inv.type === 'expense') {
+                        current.expenses += inv.total;
+                    }
+                    current.profit = current.income - current.expenses;
                 }
             }
         });
@@ -96,13 +132,15 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     if (!projectUsers.get(normName)) projectUsers.set(normName, new Set());
                     projectUsers.get(normName)?.add(u.email);
                 }
-                // Try linking by tags or explicit IDs if available
+                // Try linking by tags or IDs if available
                 p.detailedEntries?.forEach((e: any) => {
-                    e.tags?.forEach((tag: string) => {
-                        const normTag = normalize(tag);
-                        if (!projectUsers.get(normTag)) projectUsers.set(normTag, new Set());
-                        projectUsers.get(normTag)?.add(u.email);
-                    });
+                    if (e.tags) {
+                        e.tags.forEach((tag: any) => {
+                            const normTag = normalize(tag.name);
+                            if (!projectUsers.get(normTag)) projectUsers.set(normTag, new Set());
+                            projectUsers.get(normTag)?.add(u.email);
+                        });
+                    }
                 });
             });
         });
@@ -120,21 +158,20 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         }> = [];
 
         projectFinances.forEach((f) => {
-            const normalizedName = normalize(f.originalName);
-            const users = projectUsers.get(normalizedName);
-            const userList = users ? Array.from(users) : [];
+            const normName = normalize(f.originalName);
+            const users = projectUsers.get(normName) || new Set<string>();
+            const userList = Array.from(users);
             
-            const sharedIncome = f.income * 0.5;
             const sharedProfit = f.profit * 0.5;
+            const incomePerUser = userList.length > 0 ? f.income / userList.length : 0;
             const profitPerUser = userList.length > 0 ? sharedProfit / userList.length : 0;
-            const incomePerUser = userList.length > 0 ? sharedIncome / userList.length : 0;
 
             perProjectHolded.push({
                 name: f.originalName,
                 totalIncome: f.income,
                 totalExpenses: f.expenses,
                 totalProfit: f.profit,
-                sharedIncome,
+                sharedIncome: f.income, 
                 sharedProfit,
                 users: userList,
                 profitPerUser
@@ -162,7 +199,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             perUser: perUserHolded,
             unmatched: unmatchedProjects
         };
-    }, [holdedSnapshots, clockifyData, searchTerm, showEmptyProjects]);
+    }, [holdedSnapshots, holdedProjects, invoices, clockifyData, searchTerm, showEmptyProjects]);
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);

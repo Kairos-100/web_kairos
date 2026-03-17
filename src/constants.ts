@@ -92,6 +92,15 @@ export interface MetricEntry {
     bp_description?: string;
 }
 
+export interface HoldedProject {
+    id: string;
+    holded_id: string;
+    name: string;
+    status: string;
+    raw: any;
+    updated_at: string;
+}
+
 export interface HoldedSnapshot {
     id: string;
     source_key_id: number;
