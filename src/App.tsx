@@ -469,6 +469,7 @@ const App: React.FC = () => {
         return (
           <FinanceView 
             invoices={filteredHoldedInvoices}
+            allInvoices={holdedInvoices}
             holdedSnapshots={holdedSnapshots}
             holdedProjects={holdedProjects}
             clockifyData={clockifyData}

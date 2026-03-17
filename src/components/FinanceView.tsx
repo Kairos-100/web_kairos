@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Users,
     Search,
@@ -17,6 +17,7 @@ import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
 
 interface FinanceViewProps {
     invoices: HoldedInvoice[];
+    allInvoices: HoldedInvoice[];
     holdedSnapshots: HoldedSnapshot[];
     holdedProjects: HoldedProject[];
     clockifyData: {
@@ -28,12 +29,14 @@ interface FinanceViewProps {
 
 export const FinanceView: React.FC<FinanceViewProps> = ({ 
     invoices, 
+    allInvoices,
     holdedSnapshots,
     holdedProjects,
     clockifyData 
 }) => {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [showEmptyProjects, setShowEmptyProjects] = React.useState(true);
+    const [expandedProject, setExpandedProject] = React.useState<string | null>(null);
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
         const income = invoices
@@ -104,10 +107,17 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             }
         });
 
-        // C. Fallback: Aggregate metrics from Invoices for projects with no snapshot metrics
-        invoices.forEach(inv => {
+        // C. Fallback: Aggregate metrics from ALL Invoices for projects with no snapshot metrics
+        // Also map ALL invoices to their projects for the detailed view
+        const invoicesByProject = new Map<string, HoldedInvoice[]>();
+
+        allInvoices.forEach(inv => {
             const id = inv.project_id || inv.holded_id;
             if (id) {
+                // Collect invoices for detail view
+                if (!invoicesByProject.has(id)) invoicesByProject.set(id, []);
+                invoicesByProject.get(id)?.push(inv);
+
                 const current = projectFinances.get(id);
                 // If the project exists but has 0 income/expenses in snapshots, use invoice data
                 if (current && current.income === 0 && current.expenses === 0) {
@@ -155,6 +165,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             sharedProfit: number;
             users: string[];
             profitPerUser: number;
+            invoices: HoldedInvoice[];
         }> = [];
 
         projectFinances.forEach((f) => {
@@ -166,6 +177,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             const incomePerUser = userList.length > 0 ? f.income / userList.length : 0;
             const profitPerUser = userList.length > 0 ? sharedProfit / userList.length : 0;
 
+            const projectInvoices = invoicesByProject.get(f.holdedId) || [];
+            
             perProjectHolded.push({
                 name: f.originalName,
                 totalIncome: f.income,
@@ -174,7 +187,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 sharedIncome: f.income, 
                 sharedProfit,
                 users: userList,
-                profitPerUser
+                profitPerUser,
+                invoices: projectInvoices.sort((a, b) => (b.date || 0) - (a.date || 0))
             });
 
             userList.forEach(email => {
@@ -199,7 +213,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             perUser: perUserHolded,
             unmatched: unmatchedProjects
         };
-    }, [holdedSnapshots, holdedProjects, invoices, clockifyData, searchTerm, showEmptyProjects]);
+    }, [holdedSnapshots, holdedProjects, allInvoices, clockifyData, searchTerm, showEmptyProjects]);
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
@@ -306,23 +320,76 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {finances.perProject.sort((a, b) => b.totalProfit - a.totalProfit).map((proj, idx) => (
-                                <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
-                                    <td className="px-8 py-6"><p className="text-sm font-black text-kairos-navy">{proj.name}</p></td>
-                                    <td className="px-8 py-6 text-right"><span className="text-xs font-bold text-gray-600">{formatCurrency(proj.totalIncome)}</span></td>
-                                    <td className="px-8 py-6 text-right"><span className="text-xs font-bold text-rose-400">{formatCurrency(proj.totalExpenses)}</span></td>
-                                    <td className="px-8 py-6 text-right"><p className={`text-xs font-black ${proj.totalProfit >= 0 ? 'text-kairos-navy' : 'text-rose-500'}`}>{formatCurrency(proj.totalProfit)}</p></td>
-                                    <td className="px-8 py-6 text-right"><p className="text-sm font-black text-emerald-600">{formatCurrency(proj.sharedProfit)}</p></td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex flex-wrap gap-1">
-                                            {proj.users.length > 0 ? proj.users.map(email => (
-                                                <span key={email} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg border border-blue-100 uppercase">{email.split('@')[0]}</span>
-                                            )) : <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Sin vincular</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        {proj.users.length > 0 ? <p className="text-sm font-black text-emerald-600">+{formatCurrency(proj.profitPerUser)}</p> : <span className="text-gray-300">—</span>}
-                                    </td>
-                                </tr>
+                                <React.Fragment key={idx}>
+                                    <tr 
+                                        onClick={() => setExpandedProject(expandedProject === proj.name ? null : proj.name)}
+                                        className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
+                                    >
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center space-x-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${proj.totalProfit >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                                                <p className="text-sm font-black text-kairos-navy">{proj.name}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right"><span className="text-xs font-bold text-gray-600">{formatCurrency(proj.totalIncome)}</span></td>
+                                        <td className="px-8 py-6 text-right"><span className="text-xs font-bold text-rose-400">{formatCurrency(proj.totalExpenses)}</span></td>
+                                        <td className="px-8 py-6 text-right"><p className={`text-xs font-black ${proj.totalProfit >= 0 ? 'text-kairos-navy' : 'text-rose-500'}`}>{formatCurrency(proj.totalProfit)}</p></td>
+                                        <td className="px-8 py-6 text-right"><p className="text-sm font-black text-emerald-600">{formatCurrency(proj.sharedProfit)}</p></td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-wrap gap-1">
+                                                {proj.users.length > 0 ? (
+                                                    proj.users.map(email => (
+                                                        <span key={email} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg border border-blue-100 uppercase">{email.split('@')[0]}</span>
+                                                    ))
+                                                ) : <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Sin vincular</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            {proj.users.length > 0 ? <p className="text-sm font-black text-emerald-600">+{formatCurrency(proj.profitPerUser)}</p> : <span className="text-gray-300">—</span>}
+                                        </td>
+                                    </tr>
+                                    <AnimatePresence>
+                                        {expandedProject === proj.name && (
+                                            <motion.tr
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="bg-gray-50/50"
+                                            >
+                                                <td colSpan={7} className="px-12 py-6">
+                                                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                                        <div className="p-4 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
+                                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                                                <Receipt size={12} /> Desglose de Facturas y Gastos
+                                                            </h5>
+                                                            <span className="text-[10px] font-bold text-gray-400">{proj.invoices.length} documentos encontrados</span>
+                                                        </div>
+                                                        <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+                                                            {proj.invoices.length > 0 ? proj.invoices.map((inv, i) => (
+                                                                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                                                                    <div className="flex items-center space-x-3">
+                                                                        <div className={`p-2 rounded-lg ${inv.type === 'invoice' || inv.type === 'salesreceipt' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                            {inv.type === 'invoice' || inv.type === 'salesreceipt' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-black text-kairos-navy">{inv.contact_name || 'Sin contacto'}</p>
+                                                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{inv.doc_number} • {new Date((inv.date || 0) * 1000).toLocaleDateString()}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <p className={`text-xs font-black ${inv.type === 'invoice' || inv.type === 'salesreceipt' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                                        {inv.type === 'invoice' || inv.type === 'salesreceipt' ? '+' : '-'}{formatCurrency(inv.total)}
+                                                                    </p>
+                                                                </div>
+                                                            )) : (
+                                                                <div className="px-6 py-8 text-center text-[10px] text-gray-400 italic">No hay documentos individuales vinculados.</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        )}
+                                    </AnimatePresence>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
