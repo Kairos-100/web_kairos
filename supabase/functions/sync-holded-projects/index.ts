@@ -67,30 +67,54 @@ serve(async (req) => {
 
             console.log(`Starting sync for Holded Key ID: ${keyRow.id}`);
 
-            // Fetch projects from Holded
-            const response = await fetch(`${baseUri}/projects`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'key': apiKey,
-                }
-            });
+            // Fetch projects from Holded with pagination
+            let projects: any[] = [];
+            let projectPage = 0;
+            let hasMoreProjects = true;
 
-            if (!response.ok) {
-                results.push({ 
-                    key_id: keyRow.id, 
-                    status: 'error', 
-                    http_status: response.status, 
-                    body: await response.text() 
-                })
-                continue
+            while (hasMoreProjects) {
+                console.log(`Fetching project page ${projectPage}...`);
+                const response = await fetch(`${baseUri}/projects?page=${projectPage}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'key': apiKey,
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error(`Error fetching projects (page ${projectPage}):`, await response.text());
+                    if (projectPage === 0) {
+                        results.push({ 
+                            key_id: keyRow.id, 
+                            status: 'error', 
+                            http_status: response.status, 
+                            body: 'Failed to fetch first page of projects' 
+                        });
+                        hasMoreProjects = false;
+                    }
+                    break;
+                }
+
+                const pageData = await response.json();
+                if (!Array.isArray(pageData) || pageData.length === 0) {
+                    hasMoreProjects = false;
+                    break;
+                }
+
+                projects = [...projects, ...pageData];
+                
+                // If we get fewer than 100 (standard limit), it's the last page
+                if (pageData.length < 100) {
+                    hasMoreProjects = false;
+                } else {
+                    projectPage++;
+                }
             }
 
-            const projects = await response.json()
-
-            if (!Array.isArray(projects)) {
-                results.push({ key_id: keyRow.id, status: 'error', reason: 'Response is not an array' })
-                continue
+            if (projects.length === 0) {
+                results.push({ key_id: keyRow.id, status: 'ok', count: 0, reason: 'No projects found' });
+                continue;
             }
 
             const rowsToInsert = [];
@@ -133,7 +157,9 @@ serve(async (req) => {
                                 project_id: String(holdedId),
                                 updated_at: new Date().toISOString()
                             }));
-                            await supabase.from('holded_invoices').upsert(salesRows, { onConflict: 'source_key_id, holded_id' });
+                            if (salesRows.length > 0) {
+                                await supabase.from('holded_invoices').upsert(salesRows, { onConflict: 'source_key_id, holded_id' });
+                            }
                         }
                         
                         // Process linked expenses
@@ -149,7 +175,9 @@ serve(async (req) => {
                                 project_id: String(holdedId),
                                 updated_at: new Date().toISOString()
                             }));
-                            await supabase.from('holded_invoices').upsert(expenseRows, { onConflict: 'source_key_id, holded_id' });
+                            if (expenseRows.length > 0) {
+                                await supabase.from('holded_invoices').upsert(expenseRows, { onConflict: 'source_key_id, holded_id' });
+                            }
                         }
                     }
                 } catch (err) {

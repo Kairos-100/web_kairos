@@ -395,12 +395,6 @@ const App: React.FC = () => {
     });
   }, [holdedInvoices, dateRange]);
 
-  const filteredHoldedSnapshots = useMemo(() => {
-    return holdedSnapshots.filter(s => {
-      const d = new Date(s.snapshot_date);
-      return d >= dateRange.start && d <= dateRange.end;
-    });
-  }, [holdedSnapshots, dateRange]);
 
 
   const renderContent = () => {
@@ -438,7 +432,7 @@ const App: React.FC = () => {
         return (
           <FinanceView 
             invoices={filteredHoldedInvoices}
-            holdedSnapshots={filteredHoldedSnapshots}
+            holdedSnapshots={holdedSnapshots}
             clockifyData={clockifyData}
           />
         );

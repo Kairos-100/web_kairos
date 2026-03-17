@@ -62,7 +62,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const normalize = (s: string) => s.trim().toLowerCase();
 
         // Map Holded Projects to their latest billing/profit
-        const projectFinances = new Map<string, { income: number; profit: number; originalName: string }>();
+        const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string }>();
         holdedSnapshots.forEach(s => {
             if (s.name) {
                 const normName = normalize(s.name);
@@ -70,6 +70,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     projectFinances.set(normName, { 
                         originalName: s.name,
                         income: s.metrics?.total_income || 0, 
+                        expenses: s.metrics?.total_expenses || 0,
                         profit: (s.metrics?.total_income || 0) - (s.metrics?.total_expenses || 0)
                     });
                 }
@@ -99,6 +100,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const perProjectHolded: Array<{
             name: string;
             totalIncome: number;
+            totalExpenses: number;
             totalProfit: number;
             sharedIncome: number;
             sharedProfit: number;
@@ -118,6 +120,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             perProjectHolded.push({
                 name: f.originalName,
                 totalIncome: f.income,
+                totalExpenses: f.expenses,
                 totalProfit: f.profit,
                 sharedIncome,
                 sharedProfit,
@@ -209,8 +212,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden">
                 <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                     <div>
-                        <h3 className="text-xl font-black text-kairos-navy">Desglose por Proyecto (Holded)</h3>
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Visión por proyecto y reparto 50/50</p>
+                        <h3 className="text-xl font-black text-kairos-navy">Desglose Histórico por Proyecto</h3>
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Acumulado histórico total (Independiente del filtro de fechas)</p>
                     </div>
                     <Target className="text-gray-300" size={24} />
                 </div>
@@ -220,6 +223,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                             <tr className="text-gray-400 text-[10px] uppercase font-black tracking-widest bg-gray-50/30">
                                 <th className="px-8 py-4">Proyecto</th>
                                 <th className="px-8 py-4 text-right">Facturación</th>
+                                <th className="px-8 py-4 text-right">Gastos</th>
                                 <th className="px-8 py-4 text-right">Beneficio</th>
                                 <th className="px-8 py-4 text-right text-emerald-600">50% Reparto</th>
                                 <th className="px-8 py-4">Equipo</th>
@@ -231,6 +235,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                 <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
                                     <td className="px-8 py-6"><p className="text-sm font-black text-kairos-navy">{proj.name}</p></td>
                                     <td className="px-8 py-6 text-right"><span className="text-xs font-bold text-gray-600">{formatCurrency(proj.totalIncome)}</span></td>
+                                    <td className="px-8 py-6 text-right"><span className="text-xs font-bold text-rose-400">{formatCurrency(proj.totalExpenses)}</span></td>
                                     <td className="px-8 py-6 text-right"><p className={`text-xs font-black ${proj.totalProfit >= 0 ? 'text-kairos-navy' : 'text-rose-500'}`}>{formatCurrency(proj.totalProfit)}</p></td>
                                     <td className="px-8 py-6 text-right"><p className="text-sm font-black text-emerald-600">{formatCurrency(proj.sharedProfit)}</p></td>
                                     <td className="px-8 py-6">
