@@ -1,14 +1,16 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
-    Wallet, 
-    ArrowUpRight, 
-    ArrowDownRight, 
-    Building2, 
-    TrendingUp, 
+    Users,
+    Search,
+    Filter,
+    Wallet,
+    ArrowUpRight,
+    ArrowDownRight,
+    Building2,
+    TrendingUp,
     Receipt,
-    Target,
-    Users
+    Target
 } from 'lucide-react';
 import type { HoldedInvoice, HoldedSnapshot } from '../constants';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
@@ -28,6 +30,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     holdedSnapshots,
     clockifyData 
 }) => {
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [showEmptyProjects, setShowEmptyProjects] = React.useState(true);
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
         const income = invoices
@@ -62,16 +66,22 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const normalize = (s: string) => s.trim().toLowerCase();
 
         // Map Holded Projects to their latest billing/profit
-        const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string }>();
+        const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string; holdedId: string }>();
         holdedSnapshots.forEach(s => {
-            if (s.name) {
-                const normName = normalize(s.name);
-                if (!projectFinances.has(normName)) {
-                    projectFinances.set(normName, { 
-                        originalName: s.name,
-                        income: s.metrics?.total_income || 0, 
-                        expenses: s.metrics?.total_expenses || 0,
-                        profit: (s.metrics?.total_income || 0) - (s.metrics?.total_expenses || 0)
+            if (s.holded_id) {
+                const id = s.holded_id;
+                const current = projectFinances.get(id);
+                const income = s.metrics?.total_income || 0;
+                const expenses = s.metrics?.total_expenses || 0;
+                
+                // If we don't have it or this snapshot is newer (or has metrics)
+                if (!current || (income > 0 || expenses > 0)) {
+                    projectFinances.set(id, { 
+                        originalName: s.name || 'Sin Nombre',
+                        holdedId: id,
+                        income, 
+                        expenses,
+                        profit: income - expenses
                     });
                 }
             }
@@ -83,13 +93,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             u.projects.forEach((p: any) => {
                 if (p.projectName) {
                     const normName = normalize(p.projectName);
-                    if (!projectUsers.has(normName)) projectUsers.set(normName, new Set());
+                    if (!projectUsers.get(normName)) projectUsers.set(normName, new Set());
                     projectUsers.get(normName)?.add(u.email);
                 }
+                // Try linking by tags or explicit IDs if available
                 p.detailedEntries?.forEach((e: any) => {
                     e.tags?.forEach((tag: string) => {
                         const normTag = normalize(tag);
-                        if (!projectUsers.has(normTag)) projectUsers.set(normTag, new Set());
+                        if (!projectUsers.get(normTag)) projectUsers.set(normTag, new Set());
                         projectUsers.get(normTag)?.add(u.email);
                     });
                 });
@@ -108,7 +119,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             profitPerUser: number;
         }> = [];
 
-        projectFinances.forEach((f, normalizedName) => {
+        projectFinances.forEach((f) => {
+            const normalizedName = normalize(f.originalName);
             const users = projectUsers.get(normalizedName);
             const userList = users ? Array.from(users) : [];
             
@@ -136,15 +148,21 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         });
 
         const unmatchedProjects = perProjectHolded
-            .filter(p => p.users.length === 0 && (p.totalIncome > 0 || p.totalProfit !== 0))
+            .filter(p => p.users.length === 0 && (p.totalIncome > 0 || p.totalExpenses > 0))
             .map(p => p.name);
 
+        const filtered = perProjectHolded.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const hasActivity = p.totalIncome > 0 || p.totalExpenses > 0;
+            return matchesSearch && (showEmptyProjects || hasActivity);
+        });
+
         return {
-            perProject: perProjectHolded,
+            perProject: filtered,
             perUser: perUserHolded,
             unmatched: unmatchedProjects
         };
-    }, [holdedSnapshots, clockifyData]);
+    }, [holdedSnapshots, clockifyData, searchTerm, showEmptyProjects]);
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
@@ -210,12 +228,31 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
             {/* 3. Project Centric Table */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden">
-                <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50">
                     <div>
-                        <h3 className="text-xl font-black text-kairos-navy">Desglose Histórico por Proyecto</h3>
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Acumulado histórico total (Independiente del filtro de fechas)</p>
+                        <h3 className="text-xl font-black text-kairos-navy">Proyectos en Holded</h3>
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Historial total y distribución por equipo</p>
                     </div>
-                    <Target className="text-gray-300" size={24} />
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar proyecto..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold focus:outline-none focus:border-blue-200 transition-all w-64"
+                            />
+                        </div>
+                        <button 
+                            onClick={() => setShowEmptyProjects(!showEmptyProjects)}
+                            className={`p-2 rounded-xl border transition-all ${showEmptyProjects ? 'bg-blue-50 border-blue-100 text-blue-600' : 'bg-white border-gray-100 text-gray-400'}`}
+                            title={showEmptyProjects ? "Ocultar proyectos sin actividad" : "Mostrar todos los proyectos"}
+                        >
+                            <Filter size={16} />
+                        </button>
+                        <Target className="text-gray-300 ml-2" size={24} />
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
