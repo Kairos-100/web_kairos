@@ -5,18 +5,15 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar, Receipt, ArrowUpRight, ArrowDownRight, LayoutDashboard, Wallet
+    Users, FileText, Trophy, Star, Award, ChevronDown, ChevronUp, ExternalLink, Target, Share2, BookOpen, Maximize2, Minimize2, Filter, Calendar
 } from 'lucide-react';
 import { DocumentExplorer } from './DocumentExplorer';
 import { parseDate } from '../lib/dates';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
-import { CLOCKIFY_USER_MAP, WHITELIST, type HoldedSnapshot, type HoldedInvoice, type MetricEntry, type Essay } from '../constants';
-import { HoldedHub } from './HoldedHub';
+import { CLOCKIFY_USER_MAP, WHITELIST, type MetricEntry, type Essay } from '../constants';
 interface MetricsViewProps {
     metrics: MetricEntry[];
     essays: Essay[];
-    holdedSnapshots: HoldedSnapshot[];
-    holdedInvoices: HoldedInvoice[];
     clockifyData: {
         users: ClockifyUserTime[];
         projects: ClockifyProjectSummary[];
@@ -41,8 +38,6 @@ const COLORS = {
 export const MetricsView: React.FC<MetricsViewProps> = ({
     metrics,
     essays,
-    holdedSnapshots,
-    holdedInvoices,
     clockifyData,
     currentUserEmail,
     onEditEssay,
@@ -61,8 +56,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
     const [timeRange, setTimeRange] = useState<'all' | '7d' | '30d' | '90d' | 'custom'>('all');
     const [customStartDate, setCustomStartDate] = useState<string>('');
     const [customEndDate, setCustomEndDate] = useState<string>('');
-    const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv', 'holded']);
-    const [activeTab, setActiveTab] = useState<'metrics' | 'finances'>('metrics');
+    const [visibleMetrics, setVisibleMetrics] = useState<string[]>(['lp', 'cp', 'cv']);
 
     // 1. Summary Stats
     const totals = useMemo(() => {
@@ -77,115 +71,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
         const lpTotal = essays.reduce((acc, e) => acc + (e.points || 0), 0);
 
-        // Per-user financial redistribution (50/50 logic)
-        // Note: This implements the logic originally found in the PHP calculateProjectMetrics
-        // but distributed per project and then per user based on Clockify involvement.
-        
-        const normalize = (s: string) => s.trim().toLowerCase();
-
-        // 1. Map Holded Projects to their latest billing/profit (Case-Insensitive)
-        const projectFinances = new Map<string, { income: number; profit: number; originalName: string }>();
-        holdedSnapshots.forEach(s => {
-            if (s.name) {
-                const normName = normalize(s.name);
-                if (!projectFinances.has(normName)) {
-                    projectFinances.set(normName, { 
-                        originalName: s.name,
-                        income: s.metrics?.total_income || 0, 
-                        profit: (s.metrics?.total_income || 0) - (s.metrics?.total_expenses || 0)
-                    });
-                }
-            }
-        });
-
-        // 2. Identify users per project from Clockify (using tags with fallback to project name)
-        const projectUsers = new Map<string, Set<string>>();
-        
-        clockifyData?.users.forEach((u: any) => {
-            u.projects.forEach((p: any) => {
-                // Collect project name as potential identifier
-                if (p.projectName) {
-                    const normName = normalize(p.projectName);
-                    if (!projectUsers.has(normName)) projectUsers.set(normName, new Set());
-                    projectUsers.get(normName)?.add(u.email);
-                }
-                
-                // Collect tags as primary identifiers
-                p.detailedEntries?.forEach((e: any) => {
-                    e.tags?.forEach((tag: string) => {
-                        const normTag = normalize(tag);
-                        if (!projectUsers.has(normTag)) projectUsers.set(normTag, new Set());
-                        projectUsers.get(normTag)?.add(u.email);
-                    });
-                });
-            });
-        });
-
-        // 3. Calculate Project-Centric Distribution and Per-User Totals
-        const perUserHolded: Record<string, { billing: number; profit: number }> = {};
-        const perProjectHolded: Array<{
-            name: string;
-            totalIncome: number;
-            totalProfit: number;
-            sharedIncome: number;
-            sharedProfit: number;
-            users: string[];
-            profitPerUser: number;
-        }> = [];
-
-        projectFinances.forEach((finances, normalizedName) => {
-            const users = projectUsers.get(normalizedName);
-            const userList = users ? Array.from(users) : [];
-            
-            const sharedIncome = finances.income * 0.5;
-            const sharedProfit = finances.profit * 0.5;
-            const profitPerUser = userList.length > 0 ? sharedProfit / userList.length : 0;
-            const incomePerUser = userList.length > 0 ? sharedIncome / userList.length : 0;
-
-            perProjectHolded.push({
-                name: finances.originalName,
-                totalIncome: finances.income,
-                totalProfit: finances.profit,
-                sharedIncome,
-                sharedProfit,
-                users: userList,
-                profitPerUser
-            });
-
-            if (userList.length > 0) {
-                userList.forEach(email => {
-                    if (!perUserHolded[email]) perUserHolded[email] = { billing: 0, profit: 0 };
-                    perUserHolded[email].billing += incomePerUser;
-                    perUserHolded[email].profit += profitPerUser;
-                });
-            }
-        });
-
-        // 4. Identify unmatched projects for debugging (Filter out small projects without users if desired, but here we keep them)
-        const unmatchedHoldedProjects = perProjectHolded
-            .filter(p => p.users.length === 0 && (p.totalIncome > 0 || p.totalProfit !== 0))
-            .map(p => p.name);
-
-        // Calculate total revenue: (Invoices + Sales Receipts) - Credit Notes - Expenses
-        const totalHoldedRevenue = holdedInvoices.reduce((acc, inv) => {
-            const amount = inv.total || 0;
-            if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
-                return acc + amount;
-            } else if (inv.type === 'creditnote' || inv.type === 'expense') {
-                return acc - amount;
-            }
-            return acc;
-        }, 0);
-
         return {
             ...metricTotals,
-            lp: lpTotal + metricTotals.bp,
-            holdedRevenue: totalHoldedRevenue,
-            perUserHolded,
-            unmatchedHoldedProjects,
-            perProjectHolded
+            lp: lpTotal + metricTotals.bp
         };
-    }, [metrics, essays, holdedSnapshots, holdedInvoices, clockifyData]);
+    }, [metrics, essays]);
 
 
     // 2. Evolution Data
@@ -246,21 +136,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             grouped[ds].lp += e.points || 0;
         });
 
-        // Add Holded Snapshots
-        holdedSnapshots.forEach(s => {
-            const sDate = parseDate(s.snapshot_date);
-            if (rangeStartDate && sDate < rangeStartDate) return;
-            if (rangeEndDate && sDate > rangeEndDate) return;
-
-            // Holded is global, doesn't filter by user in this view
-            const ds = s.snapshot_date;
-            if (!grouped[ds]) grouped[ds] = { date: ds, cv: 0, lp: 0, cp: 0, sharing: 0, holded: 0 };
-            
-            // Sum income from all projects for that day
-            const dailyIncome = s.metrics?.total_income || 0;
-            grouped[ds].holded += dailyIncome;
-        });
-
         return Object.values(grouped).sort((a: any, b: any) => {
             return parseDate(a.date).getTime() - parseDate(b.date).getTime();
         }).map((item: any) => {
@@ -270,7 +145,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 chartDate: dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
             };
         });
-    }, [metrics, essays, holdedSnapshots, evolutionUser, timeRange, customStartDate, customEndDate]);
+    }, [metrics, essays, evolutionUser, timeRange, customStartDate, customEndDate]);
     const { userData, auditLog } = useMemo(() => {
         const grouped: Record<string, any> = {};
         const logs: Record<string, MetricEntry[]> = {};
@@ -487,41 +362,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
     return (
         <div className="space-y-8 pb-20">
-            {/* Tab Switching */}
-            <div className="flex space-x-1 bg-white/50 backdrop-blur-md p-1 rounded-2xl border border-gray-100 w-fit mb-8">
-                <button
-                    onClick={() => setActiveTab('metrics')}
-                    className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'metrics' ? 'bg-kairos-navy text-white shadow-lg scale-105' : 'text-gray-400 hover:text-kairos-navy'}`}
-                >
-                    <LayoutDashboard size={14} />
-                    <span>Métricas de Equipo</span>
-                </button>
-                <button
-                    onClick={() => setActiveTab('finances')}
-                    className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'finances' ? 'bg-emerald-600 text-white shadow-lg scale-105' : 'text-gray-400 hover:text-emerald-600'}`}
-                >
-                    <Wallet size={14} />
-                    <span>Holded Hub</span>
-                </button>
-            </div>
-
-            {activeTab === 'finances' ? (
-                <HoldedHub 
-                    invoices={holdedInvoices} 
-                    perUserHolded={totals.perUserHolded} 
-                    unmatchedProjects={totals.unmatchedHoldedProjects}
-                    projectDistribution={totals.perProjectHolded}
-                />
-            ) : (
-                <>
-                    {/* 1. Summary Cards */}
+            {/* 1. Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                     { label: 'NUMERO CV', value: totals.cv, color: 'text-amber-500', bg: 'bg-amber-50' },
                     { label: 'LEARNING POINTS (LP)', value: totals.lp, color: 'text-blue-500', bg: 'bg-blue-50' },
                     { label: 'COMMUNITY POINTS (CP)', value: totals.cp, color: 'text-red-500', bg: 'bg-red-50' },
                     { label: 'NUMERO SHARING', value: totals.sharing, color: 'text-purple-500', bg: 'bg-purple-50' },
-                    { label: 'FACTURACIÓN (HOLDED)', value: `${totals.holdedRevenue.toLocaleString('es-ES')}€`, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                 ].map((stat, i) => (
                     <motion.div
                         key={stat.label}
@@ -669,17 +516,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                 <Area type="monotone" dataKey="lp" name="LEARNING POINTS" stroke={COLORS.lp} strokeWidth={3} fillOpacity={1} fill="url(#colorLP)" hide={!visibleMetrics.includes('lp')} />
                                 <Area type="monotone" dataKey="cp" name="COMMUNITY POINTS" stroke={COLORS.cp} strokeWidth={3} fillOpacity={1} fill="url(#colorCP)" hide={!visibleMetrics.includes('cp')} />
                                 <Area type="monotone" dataKey="cv" name="CUSTOMER VISITS" stroke={COLORS.cv} strokeWidth={3} fillOpacity={1} fill="url(#colorCV)" hide={!visibleMetrics.includes('cv')} />
-                                <Area 
-                                    yAxisId="right"
-                                    type="monotone" 
-                                    dataKey="holded" 
-                                    name="HOLDED (INGRESOS)" 
-                                    stroke="#10B981" 
-                                    strokeWidth={4} 
-                                    fillOpacity={0.1} 
-                                    fill="#10B981" 
-                                    hide={!visibleMetrics.includes('holded')} 
-                                />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -789,8 +625,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                 { id: 'lp', label: 'Learning (LP)', color: COLORS.lp },
                                                 { id: 'cp', label: 'Community (CP)', color: COLORS.cp },
                                                 { id: 'cv', label: 'Customer (CV)', color: COLORS.cv },
-                                                { id: 'holded', label: 'Holded (Finanzas)', color: '#10B981' },
-                                                { id: 'docs', label: 'Ver Facturas', color: '#6366f1' }
+                                                { id: 'docs', label: 'Documentos', color: '#6366f1' }
                                             ].map(m => (
                                                 <button
                                                     key={m.id}
@@ -1089,28 +924,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                                                 })()}
                                             </td>
 
-                                            <td className="p-6 text-center">
-                                                {(() => {
-                                                    const target = user.user;
-                                                    const clockifyUser = clockifyData?.users.find(u => {
-                                                        const expectedClockifyName = CLOCKIFY_USER_MAP[target];
-                                                        const uEmail = u.email.toLowerCase();
-                                                        return uEmail.includes(target.toLowerCase()) || (expectedClockifyName && u.userName.toLowerCase().includes(expectedClockifyName.toLowerCase()));
-                                                    });
-
-                                                    if (!clockifyUser) return <span className="text-gray-300 text-[10px]">—</span>;
-                                                    const finances = totals.perUserHolded[clockifyUser.email];
-                                                    if (!finances || (finances.billing === 0 && finances.profit === 0)) return <span className="text-gray-300 text-[10px]">—</span>;
-
-                                                    return (
-                                                        <div className="flex flex-col items-center">
-                                                            <span className="text-sm font-black text-emerald-600">+{Math.round(finances.profit).toLocaleString('es-ES')}€</span>
-                                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Fact: {Math.round(finances.billing).toLocaleString('es-ES')}€</span>
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </td>
-
                                             <td className="p-6">
                                                 <div className="flex flex-col items-center space-y-2">
                                                     {/* Grouped Vouchers Mini-Grid */}
@@ -1343,103 +1156,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                 </div>
             </motion.div>
 
-            {/* Holded Invoices Section */}
-            <AnimatePresence>
-                {showInvoices && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-white rounded-[32px] border border-gray-100 shadow-xl overflow-hidden mt-8"
-                    >
-                        <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-indigo-50/30">
-                            <div>
-                                <h3 className="text-xl font-heading font-black text-indigo-900 tracking-tight">Documentos de Holded</h3>
-                                <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-1">Facturas y Compras Sincronizadas</p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border border-indigo-100 flex items-center space-x-2">
-                                    <Receipt size={14} className="text-indigo-500" />
-                                    <span className="text-xs font-bold text-indigo-700">{holdedInvoices.length} Docs</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-gray-50/50">
-                                    <tr>
-                                        <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipo</th>
-                                        <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Número / Ref</th>
-                                        <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Contacto</th>
-                                        <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
-                                        <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Total</th>
-                                        <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {holdedInvoices.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-8 py-12 text-center">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
-                                                        <FileText className="text-gray-300" />
-                                                    </div>
-                                                    <p className="text-gray-400 text-xs font-bold">No hay facturas sincronizadas aún.</p>
-                                                    <p className="text-gray-300 text-[10px] mt-1 uppercase tracking-widest">Usa el botón "Sincronizar Holded" en Ajustes</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        holdedInvoices.map((doc) => (
-                                            <tr key={doc.id} className="hover:bg-gray-50/50 transition-colors group">
-                                                <td className="px-8 py-4">
-                                                    <div className="flex items-center space-x-3">
-                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${doc.type === 'invoice' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                            {doc.type === 'invoice' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-500">
-                                                            {doc.type === 'invoice' ? 'Venta' : 'Compra'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-4">
-                                                    <p className="text-xs font-bold text-kairos-navy">{doc.doc_number}</p>
-                                                    <p className="text-[10px] text-gray-400 truncate max-w-[200px]">{doc.raw_data?.notes || 'Sin descripción'}</p>
-                                                </td>
-                                                <td className="px-8 py-4 font-heading font-black text-xs text-gray-700">
-                                                    {doc.contact_name}
-                                                </td>
-                                                <td className="px-8 py-4">
-                                                    <span className="text-[10px] font-bold text-gray-400">
-                                                        {new Date(doc.date * 1000).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-4 text-right">
-                                                    <p className={`text-xs font-black ${doc.type === 'invoice' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                        {doc.type === 'invoice' ? '+' : '-'}{Number(doc.total).toLocaleString('es-ES')}€
-                                                    </p>
-                                                </td>
-                                                <td className="px-8 py-4">
-                                                    <div className="flex justify-center">
-                                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${
-                                                            doc.status === '2' ? 'bg-emerald-100 text-emerald-600' : 
-                                                            doc.status === '1' ? 'bg-amber-100 text-amber-600' : 
-                                                            'bg-gray-100 text-gray-500'
-                                                        }`}>
-                                                            {doc.status === '2' ? 'Pagado' : doc.status === '1' ? 'Pendiente' : 'Borrador'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* 5. Detailed Audit Log (Grouping by User) */}
             <div className="mt-12 space-y-6">
@@ -1629,8 +1345,6 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     ))}
                 </div>
             </div>
-                </>
-            )}
         </div>
     );
 };

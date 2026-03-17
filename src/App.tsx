@@ -9,6 +9,7 @@ import { BookView } from './components/BookView';
 import { ScoresView } from './components/ScoresView';
 import { ActivityView } from './components/ActivityView';
 import { TeamView } from './components/TeamView';
+import { FinanceView } from './components/FinanceView';
 import { DocumentExplorer } from './components/DocumentExplorer';
 import { KairosAI } from './components/KairosAI';
 import { supabase } from './lib/supabase';
@@ -411,8 +412,6 @@ const App: React.FC = () => {
           <MetricsView
             metrics={filteredMetrics}
             essays={filteredByDateEssays}
-            holdedSnapshots={filteredHoldedSnapshots}
-            holdedInvoices={filteredHoldedInvoices}
             clockifyData={clockifyData}
             currentUserEmail={loggedInUser}
             onEditEssay={handleEditEssay}
@@ -433,6 +432,14 @@ const App: React.FC = () => {
             onEditEssay={handleEditEssay}
             onDeleteEssay={handleDeleteEssay}
             onDeleteMetric={handleDeleteMetric}
+          />
+        );
+      case 'finances':
+        return (
+          <FinanceView 
+            invoices={filteredHoldedInvoices}
+            holdedSnapshots={filteredHoldedSnapshots}
+            clockifyData={clockifyData}
           />
         );
       case 'team':
@@ -512,9 +519,10 @@ const App: React.FC = () => {
                 {activeTab === 'feed' ? (selectedEssayId ? 'Leyendo Documento' : 'Explorador de Documentos') :
                   activeTab === 'stats' ? 'Visualización de Aprendizaje' :
                     activeTab === 'commercial' ? 'Kairos Métricas' :
-                      activeTab === 'history' ? 'Historial de Actividad' :
-                        activeTab === 'team' ? 'Miembros del Equipo' :
-                          activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
+                      activeTab === 'finances' ? 'Finanzas y Proyectos' :
+                        activeTab === 'history' ? 'Historial de Actividad' :
+                          activeTab === 'team' ? 'Miembros del Equipo' :
+                            activeTab === 'score' ? 'Panel de Puntuación' : 'Biblioteca Digital'}
               </h2>
               <p className="text-gray-500 font-medium">
                 {activeTab === 'feed' ? (selectedEssayId ? 'Profundizando en el conocimiento compartido.' : 'Todo el conocimiento y documentos de Kairos en un solo lugar.') :
