@@ -237,10 +237,13 @@ serve(async (req) => {
                 console.log(`Global document sync for Key ID: ${keyRow.id}`);
                 const syncRes = {
                     invoices: await syncDocuments(apiKey, 'invoice', keyRow.id, supabase),
+                    proforms: await syncDocuments(apiKey, 'proform', keyRow.id, supabase),
                     purchases: await syncDocuments(apiKey, 'purchase', keyRow.id, supabase),
+                    purchaserefunds: await syncDocuments(apiKey, 'purchaserefund', keyRow.id, supabase),
                     creditnotes: await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase),
                     salesreceipts: await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase),
-                    expenses: await syncExpenses(apiKey, keyRow.id, supabase)
+                    expenses: await syncExpenses(apiKey, keyRow.id, supabase),
+                    treasury: await syncTreasuryMovements(apiKey, keyRow.id, supabase)
                 };
                 
                 results[results.length - 1].documents = syncRes;
@@ -437,24 +440,34 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
             break;
         }
 
-        const rows = docs.map(d => ({
-            source_key_id: sourceKeyId,
-            holded_id: String(d.id),
-            doc_number: d.name || d.id,
-            type: 'expense',
-            contact_name: d.contactName || 'Gasto General',
-            contact_id: d.contact || '',
-            notes: d.desc || d.description || '',
-            date: d.date,
-            due_date: d.date,
-            total: d.amount || d.total || 0,
-            subtotal: d.subtotal || d.amount || 0,
-            tax: (d.amount || 0) - (d.subtotal || d.amount || 0),
-            status: 'paid',
-            project_id: d.project || '',
-            raw_data: d,
-            updated_at: new Date().toISOString()
-        }));
+        const rows = docs.map(d => {
+            // project can be a string, an object {id, name}, or an array of those
+            let projectId = null;
+            if (typeof d.project === 'string') {
+                projectId = d.project;
+            } else if (d.project && typeof d.project === 'object') {
+                projectId = d.project.id || d.project[0]?.id || null;
+            }
+
+            return {
+                source_key_id: sourceKeyId,
+                holded_id: String(d.id),
+                doc_number: d.name || d.id,
+                type: 'expense',
+                contact_name: d.contactName || 'Gasto General',
+                contact_id: d.contact || '',
+                notes: d.desc || d.description || '',
+                date: d.date,
+                due_date: d.date,
+                total: parseFloat(d.amount || d.total || 0),
+                subtotal: parseFloat(d.subtotal || d.amount || 0),
+                tax: (parseFloat(d.amount || 0)) - (parseFloat(d.subtotal || d.amount || 0)),
+                status: 'paid',
+                project_id: projectId ? String(projectId) : null,
+                raw_data: d,
+                updated_at: new Date().toISOString()
+            };
+        });
 
         const { error } = await supabase
             .from('holded_invoices')
@@ -471,6 +484,78 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
             hasMore = false;
         } else {
             page++;
+        }
+    }
+
+    return { status: 'ok', count: allProcessed };
+}
+
+async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase: any) {
+    let allProcessed = 0;
+    
+    // 1. Get List of Treasury accounts first
+    const accountsResponse = await fetch(`https://api.holded.com/api/invoicing/v1/treasury`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json', 'key': apiKey }
+    });
+
+    if (!accountsResponse.ok) {
+        console.error(`Error fetching treasury accounts:`, await accountsResponse.text());
+        return { status: 'error', code: accountsResponse.status };
+    }
+
+    const accounts = await accountsResponse.json();
+    if (!Array.isArray(accounts)) return { status: 'ok', count: 0 };
+
+    for (const acc of accounts) {
+        const accId = acc.id;
+        // In Holded, movements are fetched PER account
+        // Limit to 100 per page, dateFrom=0 for history
+        let hasMore = true;
+        let page = 0;
+
+        while (hasMore) {
+            const mvResponse = await fetch(`https://api.holded.com/api/invoicing/v1/treasury/${accId}/movements?page=${page}`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'key': apiKey }
+            });
+
+            if (!mvResponse.ok) break;
+            const movements = await mvResponse.json();
+            
+            if (!Array.isArray(movements) || movements.length === 0) {
+                hasMore = false;
+                break;
+            }
+
+            const rows = movements
+                .filter(m => !m.documentId) // ONLY sync movements NOT linked to invoices to avoid double counting
+                .map(m => ({
+                    source_key_id: sourceKeyId,
+                    holded_id: `treasury_${m.id}`, // Prefix to avoid collisions
+                    doc_number: `TR-${m.id}`,
+                    type: 'treasury',
+                    contact_name: m.contactName || 'Movimiento Bancario',
+                    contact_id: m.contactId || '',
+                    notes: m.concept || m.notes || '',
+                    date: m.date,
+                    due_date: m.date,
+                    total: parseFloat(m.amount || 0), // positive for income, negative for expense
+                    subtotal: parseFloat(m.amount || 0),
+                    tax: 0,
+                    status: 'paid',
+                    project_id: m.projectId || null,
+                    raw_data: m,
+                    updated_at: new Date().toISOString()
+                }));
+
+            if (rows.length > 0) {
+                await supabase.from('holded_invoices').upsert(rows, { onConflict: 'source_key_id, holded_id' });
+            }
+
+            allProcessed += rows.length;
+            if (movements.length < 100) hasMore = false;
+            else page++;
         }
     }
 

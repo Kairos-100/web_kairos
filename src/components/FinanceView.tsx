@@ -53,10 +53,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const income = safeInvoices
             .reduce((acc, inv) => {
                 const amount = Number(inv.total) || 0;
-                if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
+                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform') {
                     return acc + amount;
                 } else if (inv.type === 'creditnote') {
                     return acc - amount;
+                } else if (inv.type === 'treasury' && amount > 0) {
+                    return acc + amount;
                 }
                 return acc;
             }, 0);
@@ -66,6 +68,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 const amount = Number(inv.total) || 0;
                 if (inv.type === 'purchase' || inv.type === 'expense') {
                     return acc + amount;
+                } else if (inv.type === 'purchaserefund') {
+                    return acc - amount;
+                } else if (inv.type === 'treasury' && amount < 0) {
+                    return acc + Math.abs(amount);
                 }
                 return acc;
             }, 0);
@@ -130,14 +136,20 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 invoicesByProject.get(id)?.push(inv);
 
                 const current = projectFinances.get(id);
-                if (current && current.income === 0 && current.expenses === 0) {
+                // We always update the fallback total if snapshots were zero OR if this is a treasury/proform item that snapshots might miss
+                if (current && (current.income === 0 && current.expenses === 0)) {
                     const amount = Number(inv.total) || 0;
-                    if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
+                    if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform') {
                         current.income += amount;
                     } else if (inv.type === 'creditnote') {
                         current.income -= amount;
                     } else if (inv.type === 'purchase' || inv.type === 'expense') {
                         current.expenses += amount;
+                    } else if (inv.type === 'purchaserefund') {
+                        current.expenses -= amount;
+                    } else if (inv.type === 'treasury') {
+                        if (amount > 0) current.income += amount;
+                        else current.expenses += Math.abs(amount);
                     }
                     current.profit = current.income - current.expenses;
                 }
@@ -360,23 +372,33 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                         </h5>
                                                         <span className="text-[10px] font-bold text-gray-400">{(proj.invoices || []).length} documentos</span>
                                                     </div>
-                                                    <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
-                                                        {(proj.invoices || []).length > 0 ? proj.invoices.map((inv, i) => (
-                                                            <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                                                                <div className="flex items-center space-x-3">
-                                                                    <div className={`p-2 rounded-lg ${inv.type === 'invoice' || inv.type === 'salesreceipt' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                                        {inv.type === 'invoice' || inv.type === 'salesreceipt' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                                        <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+                                                            {(proj.invoices || []).length > 0 ? proj.invoices.map((inv, i) => {
+                                                                const isIncome = inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || (inv.type === 'treasury' && Number(inv.total) > 0);
+                                                                const isRefund = inv.type === 'purchaserefund' || inv.type === 'creditnote';
+                                                                
+                                                                return (
+                                                                    <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                                                                        <div className="flex items-center space-x-3">
+                                                                            <div className={`p-2 rounded-lg ${isIncome || isRefund ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                                {isIncome || isRefund ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-xs font-black text-kairos-navy">
+                                                                                    {inv.contact_name || 'Sin contacto'}
+                                                                                    <span className="ml-2 px-1.5 py-0.5 bg-gray-100 text-[8px] text-gray-400 rounded uppercase font-bold tracking-widest">
+                                                                                        {inv.type === 'proform' ? 'Proforma' : inv.type === 'treasury' ? 'Banco' : inv.type === 'purchaserefund' ? 'Abono Compra' : inv.type === 'creditnote' ? 'Abono Venta' : inv.type}
+                                                                                    </span>
+                                                                                </p>
+                                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{inv.doc_number} • {inv.date ? new Date(Number(inv.date) * 1000).toLocaleDateString() : '—'}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p className={`text-xs font-black ${isIncome || isRefund ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(Number(inv.total)))}
+                                                                        </p>
                                                                     </div>
-                                                                    <div>
-                                                                        <p className="text-xs font-black text-kairos-navy">{inv.contact_name || 'Sin contacto'}</p>
-                                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{inv.doc_number} • {inv.date ? new Date(Number(inv.date) * 1000).toLocaleDateString() : '—'}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <p className={`text-xs font-black ${inv.type === 'invoice' || inv.type === 'salesreceipt' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                                                    {inv.type === 'invoice' || inv.type === 'salesreceipt' ? '+' : '-'}{formatCurrency(inv.total)}
-                                                                </p>
-                                                            </div>
-                                                        )) : (
+                                                                );
+                                                            }) : (
                                                             <div className="px-6 py-8 text-center text-[10px] text-gray-400 italic">No hay documentos individuales.</div>
                                                         )}
                                                     </div>
@@ -428,25 +450,33 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         <Receipt className="text-gray-200" size={24} />
                     </div>
                     <div className="space-y-3">
-                        {(invoices || []).slice(0, 8).map((inv) => (
-                            <div key={inv.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors">
-                                <div className="flex items-center space-x-3 truncate">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${inv.type === 'invoice' || inv.type === 'salesreceipt' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                        {inv.type === 'invoice' || inv.type === 'salesreceipt' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        {(invoices || []).slice(0, 8).map((inv) => {
+                            const isIncome = inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || (inv.type === 'treasury' && Number(inv.total) > 0);
+                            const isRefund = inv.type === 'purchaserefund' || inv.type === 'creditnote';
+                            
+                            return (
+                                <div key={inv.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors">
+                                    <div className="flex items-center space-x-3 truncate">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIncome || isRefund ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                            {isIncome || isRefund ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                        </div>
+                                        <div className="truncate">
+                                            <p className="text-xs font-black text-kairos-navy truncate">
+                                                {inv.contact_name}
+                                                <span className="ml-2 text-[7px] text-gray-300 font-black uppercase tracking-tighter">{inv.type === 'proform' ? 'PROF' : inv.type === 'treasury' ? 'BANK' : inv.type === 'purchaserefund' ? 'REFD' : ''}</span>
+                                            </p>
+                                            <p className="text-[9px] text-gray-400 truncate">{inv.doc_number}</p>
+                                        </div>
                                     </div>
-                                    <div className="truncate">
-                                        <p className="text-xs font-black text-kairos-navy truncate">{inv.contact_name}</p>
-                                        <p className="text-[9px] text-gray-400 truncate">{inv.doc_number}</p>
+                                    <div className="text-right shrink-0">
+                                        <p className={`text-xs font-black ${isIncome || isRefund ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(Number(inv.total)))}
+                                        </p>
+                                        <span className="text-[8px] text-gray-300 font-bold">{inv.date ? new Date(Number(inv.date) * 1000).toLocaleDateString() : '—'}</span>
                                     </div>
                                 </div>
-                                <div className="text-right shrink-0">
-                                    <p className={`text-xs font-black ${inv.type === 'invoice' || inv.type === 'salesreceipt' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {inv.type === 'invoice' || inv.type === 'salesreceipt' ? '+' : '-'}{formatCurrency(inv.total)}
-                                    </p>
-                                    <span className="text-[8px] text-gray-300 font-bold">{inv.date ? new Date(Number(inv.date) * 1000).toLocaleDateString() : '—'}</span>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </motion.div>
             </div>
