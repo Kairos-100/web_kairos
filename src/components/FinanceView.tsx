@@ -128,9 +128,37 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
         // C. Fallback: Aggregate metrics from ALL Invoices
         const invoicesByProject = new Map<string, HoldedInvoice[]>();
+        const unmappedInvoices: HoldedInvoice[] = [];
 
         safeAllInvoices.forEach(inv => {
-            const id = inv.project_id || inv.holded_id;
+            const raw = inv.raw_data || {};
+            const tags = Array.isArray(raw.tags) ? raw.tags : [];
+            const concept = (inv.notes || '').toLowerCase() + (inv.contact_name || '').toLowerCase();
+            
+            // 1. Try Official project_id
+            let id = inv.project_id;
+            
+            // 2. Try Tag-based matching if no project_id
+            if (!id && tags.length > 0) {
+                for (const tag of tags) {
+                    const normTag = normalize(String(tag));
+                    // Look for a project whose name matches the tag
+                    const found = safeProjects.find(p => normalize(p.name).includes(normTag) || normTag.includes(normalize(p.name)));
+                    if (found) {
+                        id = found.holded_id || found.id;
+                        break;
+                    }
+                }
+            }
+
+            // 3. Try Name-based matching (Heuristic)
+            if (!id) {
+                const found = safeProjects.find(p => concept.includes(normalize(p.name)) && normalize(p.name).length > 3);
+                if (found) {
+                    id = found.holded_id || found.id;
+                }
+            }
+
             if (id) {
                 if (!invoicesByProject.has(id)) invoicesByProject.set(id, []);
                 invoicesByProject.get(id)?.push(inv);
@@ -153,8 +181,36 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     }
                     current.profit = current.income - current.expenses;
                 }
+            } else {
+                unmappedInvoices.push(inv);
             }
         });
+
+        // D. Create a virtual project for Unmapped items
+        if (unmappedInvoices.length > 0) {
+            let unmappedIncome = 0;
+            let unmappedExpenses = 0;
+            unmappedInvoices.forEach(inv => {
+                const amount = Number(inv.total) || 0;
+                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform') unmappedIncome += amount;
+                else if (inv.type === 'creditnote') unmappedIncome -= amount;
+                else if (inv.type === 'purchase' || inv.type === 'expense') unmappedExpenses += amount;
+                else if (inv.type === 'purchaserefund') unmappedExpenses -= amount;
+                else if (inv.type === 'treasury') {
+                    if (amount > 0) unmappedIncome += amount;
+                    else unmappedExpenses += Math.abs(amount);
+                }
+            });
+
+            projectFinances.set('unmapped_virtual_id', {
+                originalName: 'OTROS / SIN PROYECTO',
+                holdedId: 'unmapped_virtual_id',
+                income: unmappedIncome,
+                expenses: unmappedExpenses,
+                profit: unmappedIncome - unmappedExpenses
+            });
+            invoicesByProject.set('unmapped_virtual_id', unmappedInvoices);
+        }
 
         // Identify users per project from Clockify
         const projectUsers = new Map<string, Set<string>>();
