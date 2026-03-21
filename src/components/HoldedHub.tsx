@@ -8,9 +8,12 @@ import {
     TrendingUp, 
     Receipt,
     Target,
-    Users
+    Users,
+    RefreshCw,
+    Info
 } from 'lucide-react';
 import type { HoldedInvoice } from '../constants';
+import { supabase } from '../lib/supabase';
 
 interface HoldedHubProps {
     invoices: HoldedInvoice[];
@@ -33,26 +36,54 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({
     unmatchedProjects = [],
     projectDistribution = []
 }) => {
+    const [isSyncing, setIsSyncing] = React.useState(false);
+    const [syncResult, setSyncResult] = React.useState<string | null>(null);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        setSyncResult(null);
+        try {
+            const { error } = await supabase.functions.invoke('sync-holded-projects');
+            if (error) throw error;
+            setSyncResult('¡Sincronización completada!');
+            // Refresh the page or data after sync
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } catch (err: any) {
+            console.error('Error syncing Holded:', err);
+            setSyncResult('Error al sincronizar');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     // 1. Calculate Global Metrics
     const globalMetrics = useMemo(() => {
-        // Income = invoices + salesreceipts - creditnotes
+        // Income = invoices + salesreceipts + proform + debitnote - creditnotes + positive treasury
         const income = invoices
             .reduce((acc, inv) => {
-                const amount = inv.total || 0;
-                if (inv.type === 'invoice' || inv.type === 'salesreceipt') {
+                const amount = Number(inv.total) || 0;
+                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
                     return acc + amount;
                 } else if (inv.type === 'creditnote') {
                     return acc - amount;
+                } else if (inv.type === 'treasury' && amount > 0) {
+                    return acc + amount;
                 }
                 return acc;
             }, 0);
             
-        // Expenses = purchases + generic expenses
+        // Expenses = purchases + generic expenses + negative treasury - purchaserefunds
         const expenses = invoices
             .reduce((acc, inv) => {
-                const amount = inv.total || 0;
+                const amount = Number(inv.total) || 0;
                 if (inv.type === 'purchase' || inv.type === 'expense') {
                     return acc + amount;
+                } else if (inv.type === 'purchaserefund') {
+                    return acc - amount;
+                } else if (inv.type === 'treasury' && amount < 0) {
+                    return acc + Math.abs(amount);
                 }
                 return acc;
             }, 0);
@@ -143,6 +174,28 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({
                         </p>
                     </div>
                 </motion.div>
+            </div>
+
+            {/* Sync Action Area */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-2">
+                <div className="flex items-center space-x-2 text-gray-400">
+                    <Info size={14} className="text-blue-400" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+                        Los totales incluyen <span className="text-kairos-navy">Facturas, Proformas, Abonos, Gastos</span> y <span className="text-kairos-navy">Movimientos Bancarios</span> sin vincular.
+                    </p>
+                </div>
+                <button
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                    className={`flex items-center space-x-2 px-6 py-3 rounded-2xl text-xs font-black transition-all shadow-lg active:scale-95 ${
+                        isSyncing 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-kairos-navy text-white hover:bg-blue-900 shadow-blue-100'
+                    }`}
+                >
+                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                    <span>{isSyncing ? 'Sincronizando Holded...' : syncResult || 'Sincronizar Holded Ahora'}</span>
+                </button>
             </div>
 
             {/* Debugging / Unmatched Projects Section */}
@@ -317,7 +370,17 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({
                                         {inv.type === 'invoice' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                                     </div>
                                     <div className="truncate">
-                                        <p className="text-xs font-black text-kairos-navy truncate">{inv.contact_name}</p>
+                                        <p className="text-xs font-black text-kairos-navy truncate">
+                                            {inv.contact_name}
+                                            {inv.status && (
+                                                <span className={`ml-1.5 px-1 py-0.5 text-[7px] rounded uppercase font-black tracking-tighter ${
+                                                    inv.status === 'paid' || inv.status === '1' || inv.status === '2' ? 'bg-emerald-50 text-emerald-600' : 
+                                                    inv.status === '0' ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-400'
+                                                }`}>
+                                                    {inv.status === 'paid' || inv.status === '1' || inv.status === '2' ? 'PAG' : inv.status === '0' ? 'PEND' : inv.status.substring(0,4)}
+                                                </span>
+                                            )}
+                                        </p>
                                         <p className="text-[9px] text-gray-400 truncate">{inv.doc_number}</p>
                                     </div>
                                 </div>

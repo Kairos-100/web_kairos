@@ -241,9 +241,10 @@ serve(async (req) => {
                     purchases: await syncDocuments(apiKey, 'purchase', keyRow.id, supabase),
                     purchaserefunds: await syncDocuments(apiKey, 'purchaserefund', keyRow.id, supabase),
                     creditnotes: await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase),
+                    debitnotes: await syncDocuments(apiKey, 'debitnote', keyRow.id, supabase),
                     salesreceipts: await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase),
                     expenses: await syncExpenses(apiKey, keyRow.id, supabase),
-                    treasury: await syncTreasuryMovements(apiKey, keyRow.id, supabase)
+                    treasury: await syncTreasuryMovements(apiKey, keyRow.id, supabase, projects)
                 };
                 
                 results[results.length - 1].documents = syncRes;
@@ -490,8 +491,14 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
     return { status: 'ok', count: allProcessed };
 }
 
-async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase: any) {
+async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase: any, projects: any[] = []) {
     let allProcessed = 0;
+    
+    // Create a map for name-based project matching
+    const projectMap = new Map();
+    projects.forEach(p => {
+        if (p.name) projectMap.set(p.name.trim().toLowerCase(), p.id || p._id);
+    });
     
     // 1. Get List of Treasury accounts first
     const accountsResponse = await fetch(`https://api.holded.com/api/invoicing/v1/treasury`, {
@@ -530,24 +537,41 @@ async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase:
 
             const rows = movements
                 .filter(m => !m.documentId) // ONLY sync movements NOT linked to invoices to avoid double counting
-                .map(m => ({
-                    source_key_id: sourceKeyId,
-                    holded_id: `treasury_${m.id}`, // Prefix to avoid collisions
-                    doc_number: `TR-${m.id}`,
-                    type: 'treasury',
-                    contact_name: m.contactName || 'Movimiento Bancario',
-                    contact_id: m.contactId || '',
-                    notes: m.concept || m.notes || '',
-                    date: m.date,
-                    due_date: m.date,
-                    total: parseFloat(m.amount || 0), // positive for income, negative for expense
-                    subtotal: parseFloat(m.amount || 0),
-                    tax: 0,
-                    status: 'paid',
-                    project_id: m.projectId || null,
-                    raw_data: m,
-                    updated_at: new Date().toISOString()
-                }));
+                .map(m => {
+                    let projectId = m.projectId || null;
+                    
+                    // HEURISTIC: If no project ID, try matching contact name or concept to projects
+                    if (!projectId) {
+                        const concept = (m.concept || '').toLowerCase();
+                        const contact = (m.contactName || '').toLowerCase();
+                        
+                        for (const [name, id] of projectMap.entries()) {
+                            if (concept.includes(name) || contact.includes(name) || name.includes(contact) || name.includes(concept)) {
+                                projectId = id;
+                                break;
+                            }
+                        }
+                    }
+
+                    return {
+                        source_key_id: sourceKeyId,
+                        holded_id: `treasury_${m.id}`, // Prefix to avoid collisions
+                        doc_number: `TR-${m.id}`,
+                        type: 'treasury',
+                        contact_name: m.contactName || 'Movimiento Bancario',
+                        contact_id: m.contactId || '',
+                        notes: m.concept || m.notes || '',
+                        date: m.date,
+                        due_date: m.date,
+                        total: parseFloat(m.amount || 0), // positive for income, negative for expense
+                        subtotal: parseFloat(m.amount || 0),
+                        tax: 0,
+                        status: 'paid',
+                        project_id: projectId ? String(projectId) : null,
+                        raw_data: m,
+                        updated_at: new Date().toISOString()
+                    };
+                });
 
             if (rows.length > 0) {
                 await supabase.from('holded_invoices').upsert(rows, { onConflict: 'source_key_id, holded_id' });

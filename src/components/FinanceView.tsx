@@ -10,8 +10,10 @@ import {
     Building2,
     TrendingUp,
     Receipt,
-    Target
+    Target,
+    RefreshCw
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import type { HoldedInvoice, HoldedSnapshot, HoldedProject } from '../constants';
 import type { ClockifyUserTime, ClockifyProjectSummary } from '../lib/clockify';
 
@@ -37,6 +39,24 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const [searchTerm, setSearchTerm] = React.useState('');
     const [showEmptyProjects, setShowEmptyProjects] = React.useState(true);
     const [expandedProject, setExpandedProject] = React.useState<string | null>(null);
+    const [isSyncing, setIsSyncing] = React.useState(false);
+    const [syncResult, setSyncResult] = React.useState<string | null>(null);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        setSyncResult(null);
+        try {
+            const { error } = await supabase.functions.invoke('sync-holded-projects');
+            if (error) throw error;
+            setSyncResult('¡Listo!');
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (err: any) {
+            console.error('Error syncing Holded:', err);
+            setSyncResult('Error');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const formatCurrency = (val: any) => {
         const num = Number(val) || 0;
@@ -53,7 +73,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const income = safeInvoices
             .reduce((acc, inv) => {
                 const amount = Number(inv.total) || 0;
-                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform') {
+                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
                     return acc + amount;
                 } else if (inv.type === 'creditnote') {
                     return acc - amount;
@@ -167,7 +187,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 // We always update the fallback total if snapshots were zero OR if this is a treasury/proform item that snapshots might miss
                 if (current && (current.income === 0 && current.expenses === 0)) {
                     const amount = Number(inv.total) || 0;
-                    if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform') {
+                    if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
                         current.income += amount;
                     } else if (inv.type === 'creditnote') {
                         current.income -= amount;
@@ -192,7 +212,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             let unmappedExpenses = 0;
             unmappedInvoices.forEach(inv => {
                 const amount = Number(inv.total) || 0;
-                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform') unmappedIncome += amount;
+                if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') unmappedIncome += amount;
                 else if (inv.type === 'creditnote') unmappedIncome -= amount;
                 else if (inv.type === 'purchase' || inv.type === 'expense') unmappedExpenses += amount;
                 else if (inv.type === 'purchaserefund') unmappedExpenses -= amount;
@@ -372,6 +392,18 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         >
                             <Filter size={16} />
                         </button>
+                        <button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm ${
+                                isSyncing 
+                                ? 'bg-gray-100 text-gray-400' 
+                                : 'bg-kairos-navy text-white hover:bg-blue-900 shadow-blue-50'
+                            }`}
+                        >
+                            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                            <span>{isSyncing ? 'Sincronizando...' : syncResult || 'Sincronizar'}</span>
+                        </button>
                         <Target className="text-gray-300 ml-2" size={24} />
                     </div>
                 </div>
@@ -430,7 +462,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                     </div>
                                                         <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
                                                             {(proj.invoices || []).length > 0 ? proj.invoices.map((inv, i) => {
-                                                                const isIncome = inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || (inv.type === 'treasury' && Number(inv.total) > 0);
+                                                                const isIncome = inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote' || (inv.type === 'treasury' && Number(inv.total) > 0);
                                                                 const isRefund = inv.type === 'purchaserefund' || inv.type === 'creditnote';
                                                                 
                                                                 return (
@@ -443,8 +475,16 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                                                 <p className="text-xs font-black text-kairos-navy">
                                                                                     {inv.contact_name || 'Sin contacto'}
                                                                                     <span className="ml-2 px-1.5 py-0.5 bg-gray-100 text-[8px] text-gray-400 rounded uppercase font-bold tracking-widest">
-                                                                                        {inv.type === 'proform' ? 'Proforma' : inv.type === 'treasury' ? 'Banco' : inv.type === 'purchaserefund' ? 'Abono Compra' : inv.type === 'creditnote' ? 'Abono Venta' : inv.type}
+                                                                                        {inv.type === 'proform' ? 'Proforma' : inv.type === 'debitnote' ? 'D. Note' : inv.type === 'treasury' ? 'Banco' : inv.type === 'purchaserefund' ? 'Abono Compra' : inv.type === 'creditnote' ? 'Abono Venta' : inv.type}
                                                                                     </span>
+                                                                                    {inv.status && (
+                                                                                        <span className={`ml-1.5 px-1.5 py-0.5 text-[8px] rounded uppercase font-black tracking-tighter ${
+                                                                                            inv.status === 'paid' || inv.status === '1' || inv.status === '2' ? 'bg-emerald-100 text-emerald-700' : 
+                                                                                            inv.status === '0' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                                                                                        }`}>
+                                                                                            {inv.status === 'paid' || inv.status === '1' || inv.status === '2' ? 'Pagado' : inv.status === '0' ? 'Pendiente' : inv.status}
+                                                                                        </span>
+                                                                                    )}
                                                                                 </p>
                                                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{inv.doc_number} • {inv.date ? new Date(Number(inv.date) * 1000).toLocaleDateString() : '—'}</p>
                                                                             </div>
@@ -507,7 +547,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     </div>
                     <div className="space-y-3">
                         {(invoices || []).slice(0, 8).map((inv) => {
-                            const isIncome = inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || (inv.type === 'treasury' && Number(inv.total) > 0);
+                            const isIncome = inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote' || (inv.type === 'treasury' && Number(inv.total) > 0);
                             const isRefund = inv.type === 'purchaserefund' || inv.type === 'creditnote';
                             
                             return (
@@ -519,7 +559,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                         <div className="truncate">
                                             <p className="text-xs font-black text-kairos-navy truncate">
                                                 {inv.contact_name}
-                                                <span className="ml-2 text-[7px] text-gray-300 font-black uppercase tracking-tighter">{inv.type === 'proform' ? 'PROF' : inv.type === 'treasury' ? 'BANK' : inv.type === 'purchaserefund' ? 'REFD' : ''}</span>
+                                                <span className="ml-2 text-[7px] text-gray-300 font-black uppercase tracking-tighter">{inv.type === 'proform' ? 'PROF' : inv.type === 'debitnote' ? 'DEBT' : inv.type === 'treasury' ? 'BANK' : inv.type === 'purchaserefund' ? 'REFD' : ''}</span>
                                             </p>
                                             <p className="text-[9px] text-gray-400 truncate">{inv.doc_number}</p>
                                         </div>
