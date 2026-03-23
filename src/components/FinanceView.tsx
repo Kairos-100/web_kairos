@@ -72,7 +72,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const safeInvoices = Array.isArray(invoices) ? invoices : [];
         const income = safeInvoices
             .reduce((acc, inv) => {
-                const amount = Number(inv.total) || 0;
+                // Priority: Use subtotal for net invoicing, fallback to total
+                const amount = Number(inv.subtotal ?? inv.total) || 0;
+                
                 if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
                     return acc + amount;
                 } else if (inv.type === 'creditnote') {
@@ -85,7 +87,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             
         const expenses = safeInvoices
             .reduce((acc, inv) => {
-                const amount = Number(inv.total) || 0;
+                const amount = Number(inv.subtotal ?? inv.total) || 0;
                 if (inv.type === 'purchase' || inv.type === 'expense') {
                     return acc + amount;
                 } else if (inv.type === 'purchaserefund') {
@@ -110,40 +112,56 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const safeSnapshots = Array.isArray(holdedSnapshots) ? holdedSnapshots : [];
         const safeAllInvoices = Array.isArray(allInvoices) ? allInvoices : [];
 
-        // A. Start with all projects from holded_projects
-        const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string; holdedId: string }>();
+        // A. Handle projects and Snapshots grouped by Normalized Name
+        const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string; holdedIds: Set<string> }>();
         
         safeProjects.forEach(p => {
-            const id = p.holded_id || (p as any).project_id || p.id;
-            if (id) {
-                projectFinances.set(id, {
-                    originalName: p.name || 'Sin Nombre',
-                    holdedId: id,
+            const name = p.name || 'Sin Nombre';
+            const normName = normalize(name);
+            const hid = p.holded_id || (p as any).project_id || p.id;
+            
+            if (!projectFinances.has(normName)) {
+                projectFinances.set(normName, {
+                    originalName: name,
+                    holdedIds: new Set(),
                     income: 0,
                     expenses: 0,
                     profit: 0
                 });
             }
+            if (hid) projectFinances.get(normName)?.holdedIds.add(hid);
         });
 
-        // B. Update with Snapshot metrics
-        safeSnapshots.forEach(s => {
-            const id = s.holded_id || (s as any).project_id || s.id;
-            if (id) {
-                const current = projectFinances.get(id);
-                const income = Number(s.metrics?.total_income) || 0;
-                const expenses = Number(s.metrics?.total_expenses) || 0;
-                
-                if (!current || (income > 0 || expenses > 0)) {
-                    projectFinances.set(id, { 
-                        originalName: s.name || current?.originalName || 'Sin Nombre',
-                        holdedId: id,
-                        income: income || current?.income || 0, 
-                        expenses: expenses || current?.expenses || 0,
-                        profit: (income || current?.income || 0) - (expenses || current?.expenses || 0)
-                    });
-                }
+        // B. Update/Accumulate with Snapshot metrics (Only most recent per Holded ID)
+        const sortedSnapshots = [...safeSnapshots].sort((a, b) => 
+            new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime()
+        );
+        const processedSnapshotIds = new Set<string>();
+
+        sortedSnapshots.forEach(s => {
+            const name = s.name || 'Sin Nombre';
+            const normName = normalize(name);
+            const hid = s.holded_id || (s as any).project_id || s.id;
+            
+            if (!hid || processedSnapshotIds.has(hid)) return;
+            processedSnapshotIds.add(hid);
+            
+            if (!projectFinances.has(normName)) {
+                projectFinances.set(normName, {
+                    originalName: name,
+                    holdedIds: new Set(),
+                    income: 0,
+                    expenses: 0,
+                    profit: 0
+                });
             }
+            
+            const current = projectFinances.get(normName)!;
+            current.holdedIds.add(hid);
+            
+            current.income += Number(s.metrics?.total_income) || 0;
+            current.expenses += Number(s.metrics?.total_expenses) || 0;
+            current.profit = current.income - current.expenses;
         });
 
         // C. Fallback: Aggregate metrics from ALL Invoices
@@ -156,50 +174,65 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             const concept = (inv.notes || '').toLowerCase() + (inv.contact_name || '').toLowerCase();
             
             // 1. Try Official project_id
-            let id = inv.project_id;
+            let projectGroupKey: string | undefined = undefined;
+            if (inv.project_id) {
+                const found = Array.from(projectFinances.entries()).find(([_, f]) => f.holdedIds.has(inv.project_id!));
+                if (found) projectGroupKey = found[0];
+            }
             
-            // 2. Try Tag-based matching if no project_id
-            if (!id && tags.length > 0) {
+            // 2. Try Tag-based matching if no project_id or group key found
+            if (!projectGroupKey && tags.length > 0) {
                 for (const tag of tags) {
                     const normTag = normalize(String(tag));
-                    // Look for a project whose name matches the tag
-                    const found = safeProjects.find(p => normalize(p.name).includes(normTag) || normTag.includes(normalize(p.name)));
+                    const found = Array.from(projectFinances.entries()).find(([normName, _]) => normName.includes(normTag) || normTag.includes(normName));
                     if (found) {
-                        id = found.holded_id || found.id;
+                        projectGroupKey = found[0];
                         break;
                     }
                 }
             }
 
             // 3. Try Name-based matching (Heuristic)
-            if (!id) {
-                const found = safeProjects.find(p => concept.includes(normalize(p.name)) && normalize(p.name).length > 3);
+            if (!projectGroupKey) {
+                const found = Array.from(projectFinances.entries()).find(([normName, _]) => normName.length > 3 && concept.includes(normName));
                 if (found) {
-                    id = found.holded_id || found.id;
+                    projectGroupKey = found[0];
                 }
             }
 
-            if (id) {
-                if (!invoicesByProject.has(id)) invoicesByProject.set(id, []);
-                invoicesByProject.get(id)?.push(inv);
+            if (projectGroupKey) {
+                if (!invoicesByProject.has(projectGroupKey)) invoicesByProject.set(projectGroupKey, []);
+                invoicesByProject.get(projectGroupKey)?.push(inv);
 
-                const current = projectFinances.get(id);
-                // We always update the fallback total if snapshots were zero OR if this is a treasury/proform item that snapshots might miss
-                if (current && (current.income === 0 && current.expenses === 0)) {
-                    const amount = Number(inv.total) || 0;
-                    if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
-                        current.income += amount;
-                    } else if (inv.type === 'creditnote') {
-                        current.income -= amount;
-                    } else if (inv.type === 'purchase' || inv.type === 'expense') {
-                        current.expenses += amount;
-                    } else if (inv.type === 'purchaserefund') {
-                        current.expenses -= amount;
-                    } else if (inv.type === 'treasury') {
-                        if (amount > 0) current.income += amount;
-                        else current.expenses += Math.abs(amount);
+                const current = projectFinances.get(projectGroupKey);
+                if (current) {
+                    const amount = Number(inv.subtotal ?? inv.total) || 0;
+                    
+                    // CRITICAL LOGIC: 
+                    // If the invoice was found via heuristics (inv.project_id is null or didn't match), 
+                    // it means it's NOT in the official Holded project statistics (snapshot).
+                    // We must add it to the total.
+                    // If it was ALREADY linked to this project in Holded, it's likely already in the snapshot metrics,
+                    // so we only add it if the snapshot metrics were empty (fallback).
+                    
+                    const isLinkedOfficial = inv.project_id && current.holdedIds.has(inv.project_id);
+                    const shouldAddToTotal = !isLinkedOfficial || (current.income === 0 && current.expenses === 0);
+
+                    if (shouldAddToTotal) {
+                        if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
+                            current.income += amount;
+                        } else if (inv.type === 'creditnote') {
+                            current.income -= amount;
+                        } else if (inv.type === 'purchase' || inv.type === 'expense') {
+                            current.expenses += amount;
+                        } else if (inv.type === 'purchaserefund') {
+                            current.expenses -= amount;
+                        } else if (inv.type === 'treasury') {
+                            if (amount > 0) current.income += amount;
+                            else current.expenses += Math.abs(amount);
+                        }
+                        current.profit = current.income - current.expenses;
                     }
-                    current.profit = current.income - current.expenses;
                 }
             } else {
                 unmappedInvoices.push(inv);
@@ -224,7 +257,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
             projectFinances.set('unmapped_virtual_id', {
                 originalName: 'OTROS / SIN PROYECTO',
-                holdedId: 'unmapped_virtual_id',
+                holdedIds: new Set(['unmapped_virtual_id']),
                 income: unmappedIncome,
                 expenses: unmappedExpenses,
                 profit: unmappedIncome - unmappedExpenses
@@ -253,6 +286,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
         const perUserHolded: Record<string, { billing: number; profit: number }> = {};
         const perProjectHolded: Array<{
+            id: string;
             name: string;
             totalIncome: number;
             totalExpenses: number;
@@ -264,8 +298,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             invoices: HoldedInvoice[];
         }> = [];
 
-        projectFinances.forEach((f) => {
-            const normName = normalize(f.originalName);
+        projectFinances.forEach((f, normName) => {
             const users = projectUsers.get(normName) || new Set<string>();
             const userList = Array.from(users);
             
@@ -273,9 +306,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             const incomePerUser = userList.length > 0 ? f.income / userList.length : 0;
             const profitPerUser = userList.length > 0 ? sharedProfit / userList.length : 0;
 
-            const projectInvoices = invoicesByProject.get(f.holdedId) || [];
+            const projectInvoices = invoicesByProject.get(normName) || [];
             
             perProjectHolded.push({
+                id: normName,
                 name: f.originalName,
                 totalIncome: f.income,
                 totalExpenses: f.expenses,
@@ -320,7 +354,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     <div className="relative z-10">
                         <div className="flex items-center space-x-2 text-emerald-600 mb-4">
                             <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center"><TrendingUp size={16} /></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Facturación Total</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Facturación (Base Imp.)</span>
                         </div>
                         <h2 className="text-4xl font-black text-kairos-navy mb-1">{formatCurrency(globalMetrics.income)}</h2>
                         <p className="text-xs text-emerald-600 font-bold flex items-center space-x-1"><ArrowUpRight size={14} /><span>Sincronizado con Holded</span></p>
@@ -422,9 +456,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {finances.perProject.map((proj) => (
-                                <React.Fragment key={proj.name}>
+                                <React.Fragment key={proj.id || proj.name}>
                                     <tr 
-                                        onClick={() => setExpandedProject(expandedProject === proj.name ? null : proj.name)}
+                                        onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}
                                         className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
                                     >
                                         <td className="px-8 py-6">
@@ -450,7 +484,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                             {(proj.users || []).length > 0 ? <p className="text-sm font-black text-emerald-600">+{formatCurrency(proj.profitPerUser)}</p> : <span className="text-gray-300">—</span>}
                                         </td>
                                     </tr>
-                                    {expandedProject === proj.name && (
+                                    {expandedProject === proj.id && (
                                         <tr className="bg-gray-50/50">
                                             <td colSpan={7} className="px-12 py-6">
                                                 <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -490,7 +524,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                                             </div>
                                                                         </div>
                                                                         <p className={`text-xs font-black ${isIncome || isRefund ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                                                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(Number(inv.total)))}
+                                                                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(Number(inv.subtotal ?? inv.total)))}
                                                                         </p>
                                                                     </div>
                                                                 );
@@ -566,7 +600,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                     </div>
                                     <div className="text-right shrink-0">
                                         <p className={`text-xs font-black ${isIncome || isRefund ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(Number(inv.total)))}
+                                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(Number(inv.subtotal ?? inv.total)))}
                                         </p>
                                         <span className="text-[8px] text-gray-300 font-bold">{inv.date ? new Date(Number(inv.date) * 1000).toLocaleDateString() : '—'}</span>
                                     </div>

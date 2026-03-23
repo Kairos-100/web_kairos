@@ -39,13 +39,12 @@ serve(async (req) => {
                 query = query.eq('active', true)
             }
         }
-
         const { data: keys, error: keysError } = await query
 
         if (keysError || !keys || keys.length === 0) {
-            return new Response(JSON.stringify({ 
-                error: 'No active keys or requested key not found' 
-            }), { 
+            return new Response(JSON.stringify({
+                error: 'No active keys or requested key not found'
+            }), {
                 status: 422,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             })
@@ -74,36 +73,28 @@ serve(async (req) => {
 
             while (hasMoreProjects) {
                 console.log(`Fetching project page ${projectPage}...`);
-                const response = await fetch(`${baseUri}/projects?page=${projectPage}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'key': apiKey,
-                    }
-                });
+                const { data: pageData, ok: fetchOk, error: fetchError, body: fetchBody } = await safeFetchJSON(`${baseUri}/projects?page=${projectPage}`, apiKey);
 
-                if (!response.ok) {
-                    console.error(`Error fetching projects (page ${projectPage}):`, await response.text());
+                if (!fetchOk) {
+                    console.error(`Error fetching projects (page ${projectPage}): ${fetchError}`, fetchBody);
                     if (projectPage === 0) {
-                        results.push({ 
-                            key_id: keyRow.id, 
-                            status: 'error', 
-                            http_status: response.status, 
-                            body: 'Failed to fetch first page of projects' 
+                        results.push({
+                            key_id: keyRow.id,
+                            status: 'error',
+                            error: fetchError,
+                            body: fetchBody
                         });
                         hasMoreProjects = false;
                     }
                     break;
                 }
-
-                const pageData = await response.json();
                 if (!Array.isArray(pageData) || pageData.length === 0) {
                     hasMoreProjects = false;
                     break;
                 }
 
                 projects = [...projects, ...pageData];
-                
+
                 // If we get fewer than 100 (standard limit), it's the last page
                 if (pageData.length < 100) {
                     hasMoreProjects = false;
@@ -118,7 +109,7 @@ serve(async (req) => {
             }
 
             const rowsToInsert = [];
-            
+
             for (const p of projects) {
                 const holdedId = p.id || p._id;
                 if (!holdedId) continue;
@@ -129,21 +120,16 @@ serve(async (req) => {
                     name: p.name ? String(p.name) : null,
                     status: p.status ? String(p.status) : null,
                     raw: p, // JSON
-                    updated_at: new Date().toISOString(),
+                    updated_at: safeToISOString(new Date()),
                 })
 
                 // --- NEW: Project-Centric Deep Sync ---
                 // For each project, we fetch its full details to get the official sales/expenses list
                 try {
                     console.log(`Deep syncing project: ${p.name} (${holdedId})`);
-                    const projectDetailResponse = await fetch(`${baseUri}/projects/${holdedId}`, {
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json', 'key': apiKey }
-                    });
-                    
-                    if (projectDetailResponse.ok) {
-                        const projectDetail = await projectDetailResponse.json();
-                        
+                    const { data: projectDetail, ok: fetchOk, error: fetchError, body: fetchBody } = await safeFetchJSON(`${baseUri}/projects/${holdedId}`, apiKey);
+
+                    if (fetchOk && projectDetail) {
                         // Process linked sales
                         if (projectDetail.sales && Array.isArray(projectDetail.sales)) {
                             const salesRows = projectDetail.sales.map((s: any) => ({
@@ -152,16 +138,19 @@ serve(async (req) => {
                                 doc_number: s.docNumber || s.customId || s.id,
                                 type: 'invoice', // We treat these as invoices for aggregation
                                 contact_name: s.contactName || '',
-                                total: parseFloat(s.total || 0),
+                                total: parseFloat(s.subtotal || s.total || 0),
                                 date: s.date,
                                 project_id: String(holdedId),
-                                updated_at: new Date().toISOString()
+                                updated_at: safeToISOString(new Date())
                             }));
                             if (salesRows.length > 0) {
-                                await supabase.from('holded_invoices').upsert(salesRows, { onConflict: 'source_key_id, holded_id' });
+                                // Deduplicate by holded_id to prevent 21000 error
+                                const uniqueSales = Array.from(new Map(salesRows.map((s: any) => [s.holded_id, s])).values());
+                                const { error: salesError } = await supabase.from('holded_invoices').upsert(uniqueSales, { onConflict: 'source_key_id, holded_id' });
+                                if (salesError) console.error(`Error upserting sales for project ${holdedId}:`, salesError);
                             }
                         }
-                        
+
                         // Process linked expenses
                         if (projectDetail.expenses && Array.isArray(projectDetail.expenses)) {
                             const expenseRows = projectDetail.expenses.map((e: any) => ({
@@ -170,18 +159,23 @@ serve(async (req) => {
                                 doc_number: e.name || e.id,
                                 type: 'purchase',
                                 contact_name: e.contactName || '',
-                                total: parseFloat(e.total || 0),
+                                total: parseFloat(e.subtotal || e.total || 0),
                                 date: e.date,
                                 project_id: String(holdedId),
-                                updated_at: new Date().toISOString()
+                                updated_at: safeToISOString(new Date())
                             }));
                             if (expenseRows.length > 0) {
-                                await supabase.from('holded_invoices').upsert(expenseRows, { onConflict: 'source_key_id, holded_id' });
+                                // Deduplicate by holded_id to prevent 21000 error
+                                const uniqueExpenses = Array.from(new Map(expenseRows.map((e: any) => [e.holded_id, e])).values());
+                                const { error: expenseError } = await supabase.from('holded_invoices').upsert(uniqueExpenses, { onConflict: 'source_key_id, holded_id' });
+                                if (expenseError) console.error(`Error upserting expenses for project ${holdedId}:`, expenseError);
                             }
                         }
+                    } else if (!fetchOk) {
+                        console.error(`Error deep syncing project ${holdedId}: ${fetchError}`, fetchBody);
                     }
                 } catch (err) {
-                    console.error(`Error deep syncing project ${holdedId}:`, err);
+                    console.error(`Unexpected error deep syncing project ${holdedId}:`, err);
                 }
             }
 
@@ -189,13 +183,13 @@ serve(async (req) => {
                 // Upsert Projects
                 const { error: upsertError } = await supabase
                     .from('holded_projects')
-                    .upsert(rowsToInsert, { 
+                    .upsert(rowsToInsert, {
                         onConflict: 'holded_id',
-                        ignoreDuplicates: false 
+                        ignoreDuplicates: false
                     })
 
                 if (upsertError) {
-                   console.error("Error upserting projects:", upsertError);
+                    console.error("Error upserting projects:", upsertError);
                 }
 
                 // Prepare and Insert/Update daily snapshots
@@ -216,11 +210,11 @@ serve(async (req) => {
                             status: p.status ? String(p.status) : null,
                             metrics: metrics,
                             raw: p,
-                            updated_at: new Date().toISOString()
+                            updated_at: safeToISOString(new Date())
                         }, {
                             onConflict: 'source_key_id, holded_id, snapshot_date'
                         })
-                    
+
                     if (snapshotError) {
                         console.error("Error upserting snapshot:", snapshotError);
                     }
@@ -241,15 +235,14 @@ serve(async (req) => {
                     purchases: await syncDocuments(apiKey, 'purchase', keyRow.id, supabase),
                     purchaserefunds: await syncDocuments(apiKey, 'purchaserefund', keyRow.id, supabase),
                     creditnotes: await syncDocuments(apiKey, 'creditnote', keyRow.id, supabase),
-                    debitnotes: await syncDocuments(apiKey, 'debitnote', keyRow.id, supabase),
                     salesreceipts: await syncDocuments(apiKey, 'salesreceipt', keyRow.id, supabase),
                     expenses: await syncExpenses(apiKey, keyRow.id, supabase),
                     treasury: await syncTreasuryMovements(apiKey, keyRow.id, supabase, projects)
                 };
-                
+
                 results[results.length - 1].documents = syncRes;
             } else {
-                 results.push({
+                results.push({
                     key_id: keyRow.id,
                     status: 'ok',
                     count: 0
@@ -257,65 +250,108 @@ serve(async (req) => {
             }
         }
 
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
             message: 'Sincronización completada',
             total: totalRows,
             results: results
-        }), { 
-            status: 200, 
+        }), {
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
     } catch (error: any) {
         console.error("General Sync Error:", error)
-        return new Response(JSON.stringify({ error: error.message }), { 
+        // If the error has a stack, include it for debugging
+        return new Response(JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            details: "Check Edge Function logs in Supabase Dashboard"
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
     }
 })
 
+function safeToISOString(date: Date): string {
+    try {
+        if (isNaN(date.getTime())) return new Date().toISOString();
+        return date.toISOString();
+    } catch (e) {
+        return new Date().toISOString();
+    }
+}
+
+async function safeFetchJSON(url: string, apiKey: string) {
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'key': apiKey }
+        });
+
+        const text = await response.text();
+
+        if (!response.ok) {
+            console.error(`Error fetching URL (${url}):`, text.substring(0, 500));
+            return { error: `HTTP ${response.status}`, body: text.substring(0, 500), ok: false };
+        }
+
+        try {
+            const data = JSON.parse(text);
+            return { data, ok: true };
+        } catch (parseErr) {
+            const contentType = response.headers.get('content-type') || '';
+            console.error(`Error: Failed to parse JSON from ${url} (Type: ${contentType}):`, text.substring(0, 500));
+            return { error: 'Invalid JSON', contentType, body: text.substring(0, 500), ok: false };
+        }
+    } catch (err: any) {
+        console.error(`Network Error for ${url}:`, err.message);
+        return { error: err.message, ok: false };
+    }
+}
+
+
 // Helper function equivalent to PHP calculateProjectMetrics
 function calculateProjectMetrics(project: any) {
     let totalIncome = 0;
     let lastMovementDate = 0;
     let incomeDocumentCount = 0;
-    
+
     if (project.sales && Array.isArray(project.sales)) {
         for (const sale of project.sales) {
-            totalIncome += parseFloat(sale.total || 0);
+            totalIncome += parseFloat(sale.subtotal || sale.total || 0);
             incomeDocumentCount++;
-            
+
             const saleDate = parseInt(sale.date || 0);
             if (saleDate > lastMovementDate) {
                 lastMovementDate = saleDate;
             }
         }
     }
-    
+
     let totalExpenses = 0;
     let expenseDocumentCount = 0;
-    
+
     if (project.expenses && Array.isArray(project.expenses)) {
         for (const expense of project.expenses) {
-            totalExpenses += parseFloat(expense.total || 0);
+            totalExpenses += parseFloat(expense.subtotal || expense.total || 0);
             expenseDocumentCount++;
-            
+
             const expenseDate = parseInt(expense.date || 0);
             if (expenseDate > lastMovementDate) {
                 lastMovementDate = expenseDate;
             }
         }
     }
-    
+
     let lastMovementFormatted = null;
     if (lastMovementDate > 0) {
         // Holded dates are likely unix timestamps (seconds). Convert to ms for JS Date.
-        const dateObj = new Date(lastMovementDate * 1000); 
+        const dateObj = new Date(lastMovementDate * 1000);
         // Simple YYYY-MM-DD HH:mm:ss format for consistency
-        lastMovementFormatted = dateObj.toISOString().replace('T', ' ').substring(0, 19);
+        lastMovementFormatted = safeToISOString(dateObj).replace('T', ' ').substring(0, 19);
     }
-    
+
     return {
         total_income: Number(totalIncome.toFixed(2)),
         total_expenses: Number(totalExpenses.toFixed(2)),
@@ -334,20 +370,13 @@ async function syncDocuments(apiKey: string, docType: string, sourceKeyId: any, 
     while (hasMore) {
         console.log(`Fetching ${docType} page ${page}...`);
         // dateFrom=0 ensures we get all historical documents
-        const response = await fetch(`https://api.holded.com/api/invoicing/v1/documents/${docType}?page=${page}&dateFrom=0`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'key': apiKey,
-            }
-        });
+        const { data: docs, ok: fetchOk, error: fetchError, body: fetchBody } = await safeFetchJSON(`https://api.holded.com/api/invoicing/v1/documents/${docType}?page=${page}&dateFrom=0`, apiKey);
 
-        if (!response.ok) {
-            console.error(`Error fetching ${docType} (page ${page}):`, await response.text());
-            return { status: 'error', code: response.status, processed: allProcessed };
+        if (!fetchOk) {
+            console.error(`Failed to sync ${docType} page ${page}: ${fetchError}`, fetchBody);
+            return { status: 'error', code: fetchError, processed: allProcessed };
         }
 
-        const docs = await response.json();
         if (!Array.isArray(docs)) {
             hasMore = false;
             break;
@@ -383,21 +412,21 @@ async function syncDocuments(apiKey: string, docType: string, sourceKeyId: any, 
                 status: String(d.status || ''),
                 project_id: projectId ? String(projectId) : null,
                 raw_data: d,
-                updated_at: new Date().toISOString()
+                updated_at: safeToISOString(new Date())
             };
         });
 
         const { error } = await supabase
             .from('holded_invoices')
             .upsert(rows, { onConflict: 'source_key_id, holded_id' });
-        
+
         if (error) {
             console.error(`Error upserting ${docType} (page ${page}):`, error);
             return { status: 'error', message: error.message, processed: allProcessed };
         }
 
         allProcessed += rows.length;
-        
+
         // If we got fewer than the limit, it's the last page
         if (docs.length < limit) {
             hasMore = false;
@@ -417,20 +446,16 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
 
     while (hasMore) {
         console.log(`Fetching expenses page ${page}...`);
-        const response = await fetch(`https://api.holded.com/api/expenses/v1/expenses?page=${page}&dateFrom=0`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'key': apiKey,
+        const { data: docs, ok: fetchOk, error: fetchError, body: fetchBody } = await safeFetchJSON(`https://api.holded.com/api/expenses/v1/expenses?page=${page}&dateFrom=0`, apiKey);
+
+        if (!fetchOk) {
+            if (fetchBody?.includes('root-widget')) {
+                console.log(`Note: Expenses endpoint returned a web widget (Next-Gen) instead of API data. Skipping.`);
+            } else {
+                console.error(`Failed to sync expenses page ${page}: ${fetchError}`, fetchBody);
             }
-        });
-
-        if (!response.ok) {
-            console.error(`Error fetching expenses (page ${page}):`, await response.text());
-            return { status: 'error', code: response.status, processed: allProcessed };
+            return { status: 'error', code: fetchError, processed: allProcessed };
         }
-
-        const docs = await response.json();
         if (!Array.isArray(docs)) {
             hasMore = false;
             break;
@@ -466,21 +491,21 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
                 status: 'paid',
                 project_id: projectId ? String(projectId) : null,
                 raw_data: d,
-                updated_at: new Date().toISOString()
+                updated_at: safeToISOString(new Date())
             };
         });
 
         const { error } = await supabase
             .from('holded_invoices')
             .upsert(rows, { onConflict: 'source_key_id, holded_id' });
-        
+
         if (error) {
             console.error(`Error upserting expenses (page ${page}):`, error);
             return { status: 'error', message: error.message, processed: allProcessed };
         }
 
         allProcessed += rows.length;
-        
+
         if (docs.length < limit) {
             hasMore = false;
         } else {
@@ -493,13 +518,13 @@ async function syncExpenses(apiKey: string, sourceKeyId: any, supabase: any) {
 
 async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase: any, projects: any[] = []) {
     let allProcessed = 0;
-    
+
     // Create a map for name-based project matching
     const projectMap = new Map();
     projects.forEach(p => {
         if (p.name) projectMap.set(p.name.trim().toLowerCase(), p.id || p._id);
     });
-    
+
     // 1. Get List of Treasury accounts first
     const accountsResponse = await fetch(`https://api.holded.com/api/invoicing/v1/treasury`, {
         method: 'GET',
@@ -522,14 +547,18 @@ async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase:
         let page = 0;
 
         while (hasMore) {
-            const mvResponse = await fetch(`https://api.holded.com/api/invoicing/v1/treasury/${accId}/movements?page=${page}`, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json', 'key': apiKey }
-            });
+            const { data: movements, ok: fetchOk, error: fetchError, body: fetchBody } = await safeFetchJSON(`https://api.holded.com/api/invoicing/v1/treasury/${accId}/movements?page=${page}`, apiKey);
 
-            if (!mvResponse.ok) break;
-            const movements = await mvResponse.json();
-            
+            if (!fetchOk) {
+                // If it's the known "root-widget" HTML from Holded, log a warning instead of an error to clean up Supabase logs
+                if (fetchBody?.includes('root-widget')) {
+                    console.log(`Note: Treasury account ${accId} returned a web widget (Next-Gen) instead of API data. Skipping.`);
+                } else {
+                    console.error(`Error syncing treasury movements for account ${accId} page ${page}: ${fetchError}`, fetchBody);
+                }
+                break;
+            }
+
             if (!Array.isArray(movements) || movements.length === 0) {
                 hasMore = false;
                 break;
@@ -539,12 +568,12 @@ async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase:
                 .filter(m => !m.documentId) // ONLY sync movements NOT linked to invoices to avoid double counting
                 .map(m => {
                     let projectId = m.projectId || null;
-                    
+
                     // HEURISTIC: If no project ID, try matching contact name or concept to projects
                     if (!projectId) {
                         const concept = (m.concept || '').toLowerCase();
                         const contact = (m.contactName || '').toLowerCase();
-                        
+
                         for (const [name, id] of projectMap.entries()) {
                             if (concept.includes(name) || contact.includes(name) || name.includes(contact) || name.includes(concept)) {
                                 projectId = id;
@@ -569,12 +598,13 @@ async function syncTreasuryMovements(apiKey: string, sourceKeyId: any, supabase:
                         status: 'paid',
                         project_id: projectId ? String(projectId) : null,
                         raw_data: m,
-                        updated_at: new Date().toISOString()
+                        updated_at: safeToISOString(new Date())
                     };
                 });
 
             if (rows.length > 0) {
-                await supabase.from('holded_invoices').upsert(rows, { onConflict: 'source_key_id, holded_id' });
+                const { error: treasuryError } = await supabase.from('holded_invoices').upsert(rows, { onConflict: 'source_key_id, holded_id' });
+                if (treasuryError) console.error(`Error upserting treasury movements for account ${accId}:`, treasuryError);
             }
 
             allProcessed += rows.length;

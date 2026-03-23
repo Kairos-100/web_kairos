@@ -63,11 +63,11 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({
         // Income = invoices + salesreceipts + proform + debitnote - creditnotes + positive treasury
         const income = invoices
             .reduce((acc, inv) => {
-                const amount = Number(inv.total) || 0;
+                const amount = Number(inv.subtotal ?? inv.total) || 0;
                 if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
                     return acc + amount;
                 } else if (inv.type === 'creditnote') {
-                    return acc - amount;
+                    return acc - amount; // Correctly subtract credit notes
                 } else if (inv.type === 'treasury' && amount > 0) {
                     return acc + amount;
                 }
@@ -77,11 +77,11 @@ export const HoldedHub: React.FC<HoldedHubProps> = ({
         // Expenses = purchases + generic expenses + negative treasury - purchaserefunds
         const expenses = invoices
             .reduce((acc, inv) => {
-                const amount = Number(inv.total) || 0;
+                const amount = Number(inv.subtotal ?? inv.total) || 0;
                 if (inv.type === 'purchase' || inv.type === 'expense') {
                     return acc + amount;
                 } else if (inv.type === 'purchaserefund') {
-                    return acc - amount;
+                    return acc - amount; // Correctly subtract purchase refunds
                 } else if (inv.type === 'treasury' && amount < 0) {
                     return acc + Math.abs(amount);
                 }
