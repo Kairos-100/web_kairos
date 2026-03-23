@@ -107,7 +107,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
     // 2. Project-Centric Distribution Logic
     const finances = useMemo(() => {
-        const normalize = (s: string) => (s || '').trim().toLowerCase();
+        const normalize = (s: string) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const safeProjects = Array.isArray(holdedProjects) ? holdedProjects : [];
         const safeSnapshots = Array.isArray(holdedSnapshots) ? holdedSnapshots : [];
         const safeAllInvoices = Array.isArray(allInvoices) ? allInvoices : [];
@@ -265,24 +265,31 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             invoicesByProject.set('unmapped_virtual_id', unmappedInvoices);
         }
 
-        // Identify users per project from Clockify
-        const projectUsers = new Map<string, Set<string>>();
-        clockifyData?.users?.forEach((u: any) => {
-            u.projects?.forEach((p: any) => {
-                if (p.projectName) {
-                    const normName = normalize(p.projectName);
-                    if (!projectUsers.get(normName)) projectUsers.set(normName, new Set());
-                    projectUsers.get(normName)?.add(u.email);
-                }
-                p.detailedEntries?.forEach((e: any) => {
-                    e.tags?.forEach((tag: any) => {
-                        const normTag = normalize(tag.name);
-                        if (!projectUsers.get(normTag)) projectUsers.set(normTag, new Set());
-                        projectUsers.get(normTag)?.add(u.email);
+        // Identify users per project from Clockify - INCLUDING HOURS
+        const projectMemberData = new Map<string, Map<string, number>>(); // normProjectName -> { userEmail -> durationSeconds }
+        
+        if (clockifyData?.users) {
+            console.log("FinanceView: Processing Clockify users:", clockifyData.users.length);
+            clockifyData.users.forEach((u: any) => {
+                u.projects?.forEach((p: any) => {
+                    if (p.projectName) {
+                        const normName = normalize(p.projectName);
+                        if (!projectMemberData.has(normName)) projectMemberData.set(normName, new Map());
+                        const currentHours = projectMemberData.get(normName)?.get(u.email) || 0;
+                        projectMemberData.get(normName)?.set(u.email, currentHours + (p.time || 0));
+                    }
+                    p.detailedEntries?.forEach((e: any) => {
+                        e.tags?.forEach((tagName: string) => {
+                            const normTag = normalize(tagName);
+                            if (!projectMemberData.has(normTag)) projectMemberData.set(normTag, new Map());
+                            const currentHours = projectMemberData.get(normTag)?.get(u.email) || 0;
+                            projectMemberData.get(normTag)?.set(u.email, currentHours + (e.time || 0));
+                        });
                     });
                 });
             });
-        });
+            console.log("FinanceView: projectMemberData keys:", Array.from(projectMemberData.keys()));
+        }
 
         const perUserHolded: Record<string, { billing: number; profit: number }> = {};
         const perProjectHolded: Array<{
@@ -299,14 +306,21 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         }> = [];
 
         projectFinances.forEach((f, normName) => {
-            const users = projectUsers.get(normName) || new Set<string>();
-            const userList = Array.from(users);
+            const memberMap = projectMemberData.get(normName) || new Map<string, number>();
+            const userList = Array.from(memberMap.keys());
+            const totalProjectSeconds = Array.from(memberMap.values()).reduce((a, b) => a + b, 0);
+            const totalProjectHours = totalProjectSeconds / 3600;
             
             const sharedProfit = f.profit * 0.5;
             const incomePerUser = userList.length > 0 ? f.income / userList.length : 0;
             const profitPerUser = userList.length > 0 ? sharedProfit / userList.length : 0;
+            const rentabilityPerHour = totalProjectHours > 0 ? f.income / totalProjectHours : 0;
 
             const projectInvoices = invoicesByProject.get(normName) || [];
+            const memberBreakdown = Array.from(memberMap.entries()).map(([email, seconds]) => ({
+                email,
+                hours: seconds / 3600
+            })).sort((a, b) => b.hours - a.hours);
             
             perProjectHolded.push({
                 id: normName,
@@ -317,14 +331,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 sharedIncome: f.income, 
                 sharedProfit,
                 users: userList,
+                memberBreakdown,
+                totalHours: totalProjectHours,
+                rentabilityPerHour,
                 profitPerUser,
                 invoices: projectInvoices.sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))
             });
 
             userList.forEach(email => {
-                if (!perUserHolded[email]) perUserHolded[email] = { billing: 0, profit: 0 };
+                const userSeconds = memberMap.get(email) || 0;
+                if (!perUserHolded[email]) perUserHolded[email] = { billing: 0, profit: 0, hours: 0 };
                 perUserHolded[email].billing += incomePerUser;
                 perUserHolded[email].profit += profitPerUser;
+                perUserHolded[email].hours += userSeconds / 3600;
             });
         });
 
@@ -473,12 +492,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                         <td className="px-8 py-6 text-right"><p className="text-sm font-black text-emerald-600">{formatCurrency(proj.sharedProfit)}</p></td>
                                         <td className="px-8 py-6">
                                             <div className="flex flex-wrap gap-1">
-                                                {(proj.users || []).length > 0 ? (
-                                                    proj.users.map(email => (
-                                                        <span key={email} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg border border-blue-100 uppercase">{email.split('@')[0]}</span>
+                                                {(proj.memberBreakdown || []).length > 0 ? (
+                                                    proj.memberBreakdown.map(member => (
+                                                        <span key={member.email} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg border border-blue-100 uppercase">
+                                                            {member.email.split('@')[0]} ({Math.round(member.hours)}h)
+                                                        </span>
                                                     ))
                                                 ) : <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Sin vincular</span>}
                                             </div>
+                                            {proj.totalHours > 0 && (
+                                                <p className="text-[8px] font-black text-gray-400 mt-1 uppercase tracking-tighter">
+                                                    Total: {Math.round(proj.totalHours)}h • {formatCurrency(proj.rentabilityPerHour)}/h
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             {(proj.users || []).length > 0 ? <p className="text-sm font-black text-emerald-600">+{formatCurrency(proj.profitPerUser)}</p> : <span className="text-gray-300">—</span>}
@@ -559,7 +585,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                     <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-kairos-navy">{email[0].toUpperCase()}</div>
                                     <div>
                                         <p className="text-sm font-black text-kairos-navy lowercase">{email.split('@')[0]}</p>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Facturación: {formatCurrency(data.billing)}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                            Facturación: {formatCurrency(data.billing)} • {Math.round(data.hours || 0)}h
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="text-right">

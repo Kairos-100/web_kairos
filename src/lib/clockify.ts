@@ -146,7 +146,12 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
     if (!CLOCKIFY_API_KEY) return null;
 
     try {
-        const formatClockifyDate = (date: Date) => date.toISOString().replace('Z', '');
+        // Clockify Reports API is very sensitive to date format. 
+        // Best format is YYYY-MM-DDTHH:mm:ss
+        const formatClockifyDate = (date: Date) => {
+            const iso = date.toISOString();
+            return iso.split('.')[0] + ".000"; // Ensures .000 format
+        };
 
         // 1. Get Summary Data (Users and Projects)
         const summaryResponse = await fetch(`${CLOCKIFY_REPORTS_URL}/workspaces/${workspaceId}/reports/summary`, {
@@ -161,6 +166,7 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                 summaryFilter: {
                     groups: ['USER', 'PROJECT']
                 },
+                exportType: 'JSON',
                 amountShown: 'HIDE_AMOUNT'
             })
         });
@@ -193,7 +199,8 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                 detailedFilter: {
                     page: 1,
                     pageSize: 1000 // Adjust if needed
-                }
+                },
+                exportType: 'JSON'
             })
         });
 
@@ -235,12 +242,14 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                     userGroup.children.forEach((projGroup: any) => {
                         const projName = projGroup.name || 'Sin Proyecto';
 
-                        // Find detailed entries for this user and project
-                        const projectEntries = detailedData.timeentries
-                            .filter((entry: any) =>
-                                (entry.userName === userName || entry.userEmail === userEmail) &&
-                                (entry.projectName === projName)
-                            )
+                        // Calculate entries for this group
+                        const projectEntries = (detailedData.timeentries || [])
+                            .filter((entry: any) => {
+                                const norm = (s: string) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                const isUser = (entry.userName === userName || entry.userEmail === userEmail);
+                                const isProj = norm(entry.projectName) === norm(projName);
+                                return isUser && isProj;
+                            })
                             .map((entry: any) => {
                                 let duration = 0;
                                 if (entry.timeInterval?.duration !== undefined) {
