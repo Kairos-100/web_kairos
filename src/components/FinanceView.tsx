@@ -303,7 +303,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             });
         }
 
-        const perUserHolded: Record<string, { billing: number; profit: number }> = {};
+        const perUserHolded: Record<string, { billing: number; profit: number; hours: number; billableHours: number }> = {};
         const perProjectHolded: Array<{
             id: string;
             name: string;
@@ -315,6 +315,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             users: string[];
             profitPerUser: number;
             invoices: HoldedInvoice[];
+            totalHours: number;
+            billableHours: number;
+            rentabilityPerHour: number;
+            memberBreakdown: Array<{
+                email: string;
+                hours: number;
+                billableHours: number;
+            }>;
         }> = [];
 
         projectFinances.forEach((f, normName) => {
@@ -511,7 +519,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                         <td className="px-8 py-6">
                                             <div className="flex flex-wrap gap-1">
                                                 {(proj.memberBreakdown || []).length > 0 ? (
-                                                    proj.memberBreakdown.map(member => (
+                                                    (proj.memberBreakdown || []).map(member => (
                                                         <span key={member.email} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg border border-blue-100 uppercase">
                                                             {member.email.split('@')[0]} ({Math.round(member.hours)}h)
                                                         </span>
