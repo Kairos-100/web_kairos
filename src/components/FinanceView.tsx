@@ -110,7 +110,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         const normalize = (s: string) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const safeProjects = Array.isArray(holdedProjects) ? holdedProjects : [];
         const safeSnapshots = Array.isArray(holdedSnapshots) ? holdedSnapshots : [];
-        const safeAllInvoices = Array.isArray(allInvoices) ? allInvoices : [];
+        const safeInvoices = Array.isArray(invoices) ? invoices : [];
 
         // A. Handle projects and Snapshots grouped by Normalized Name
         const projectFinances = new Map<string, { income: number; expenses: number; profit: number; originalName: string; holdedIds: Set<string> }>();
@@ -159,16 +159,17 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             const current = projectFinances.get(normName)!;
             current.holdedIds.add(hid);
             
-            current.income += Number(s.metrics?.total_income) || 0;
-            current.expenses += Number(s.metrics?.total_expenses) || 0;
-            current.profit = current.income - current.expenses;
+            // NOTE: We used to sum metrics.total_income here. 
+            // We NO LONGER do that because it contains lifetime totals, 
+            // which breaks range-based views (Este mes, etc.).
+            // Document-based aggregation below handles the actual values.
         });
 
-        // C. Fallback: Aggregate metrics from ALL Invoices
+        // C. Fallback: Aggregate metrics from FILTERED Invoices
         const invoicesByProject = new Map<string, HoldedInvoice[]>();
         const unmappedInvoices: HoldedInvoice[] = [];
 
-        safeAllInvoices.forEach(inv => {
+        safeInvoices.forEach(inv => {
             const raw = inv.raw_data || {};
             const tags = Array.isArray(raw.tags) ? raw.tags : [];
             const concept = (inv.notes || '').toLowerCase() + (inv.contact_name || '').toLowerCase();
@@ -208,15 +209,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 if (current) {
                     const amount = Number(inv.subtotal ?? inv.total) || 0;
                     
-                    // CRITICAL LOGIC: 
-                    // If the invoice was found via heuristics (inv.project_id is null or didn't match), 
-                    // it means it's NOT in the official Holded project statistics (snapshot).
-                    // We must add it to the total.
-                    // If it was ALREADY linked to this project in Holded, it's likely already in the snapshot metrics,
-                    // so we only add it if the snapshot metrics were empty (fallback).
-                    
-                    const isLinkedOfficial = inv.project_id && current.holdedIds.has(inv.project_id);
-                    const shouldAddToTotal = !isLinkedOfficial || (current.income === 0 && current.expenses === 0);
+                    // CRITICAL LOGIC: Aggregate docs in the selected range.
+                    const shouldAddToTotal = true;
 
                     if (shouldAddToTotal) {
                         if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') {
@@ -244,7 +238,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             let unmappedIncome = 0;
             let unmappedExpenses = 0;
             unmappedInvoices.forEach(inv => {
-                const amount = Number(inv.total) || 0;
+                const amount = Number(inv.subtotal ?? inv.total) || 0;
                 if (inv.type === 'invoice' || inv.type === 'salesreceipt' || inv.type === 'proform' || inv.type === 'debitnote') unmappedIncome += amount;
                 else if (inv.type === 'creditnote') unmappedIncome -= amount;
                 else if (inv.type === 'purchase' || inv.type === 'expense') unmappedExpenses += amount;
