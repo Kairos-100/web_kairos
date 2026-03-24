@@ -266,29 +266,47 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         }
 
         // Identify users per project from Clockify - INCLUDING HOURS
-        const projectMemberData = new Map<string, Map<string, number>>(); // normProjectName -> { userEmail -> durationSeconds }
+        const projectMemberData = new Map<string, Map<string, { total: number; billable: number }>>(); // normName -> { email -> { total, billable } }
         
         if (clockifyData?.users) {
-            console.log("FinanceView: Processing Clockify users:", clockifyData.users.length);
             clockifyData.users.forEach((u: any) => {
                 u.projects?.forEach((p: any) => {
+                    const updateField = (normKey: string, duration: number, field: 'total' | 'billable') => {
+                        if (!projectMemberData.has(normKey)) projectMemberData.set(normKey, new Map());
+                        const userMap = projectMemberData.get(normKey)!;
+                        const current = userMap.get(u.email) || { total: 0, billable: 0 };
+                        userMap.set(u.email, {
+                            ...current,
+                            [field]: current[field] + duration
+                        });
+                    };
+
+                    // 1. Initial total from Project Summary (High precision)
                     if (p.projectName) {
-                        const normName = normalize(p.projectName);
-                        if (!projectMemberData.has(normName)) projectMemberData.set(normName, new Map());
-                        const currentHours = projectMemberData.get(normName)?.get(u.email) || 0;
-                        projectMemberData.get(normName)?.set(u.email, currentHours + (p.time || 0));
+                        updateField(normalize(p.projectName), p.time || 0, 'total');
                     }
+
+                    // 2. Billable and Tag Attribution from Detailed Entries
                     p.detailedEntries?.forEach((e: any) => {
+                        const duration = e.time || 0;
+                        if (e.billable) {
+                            if (p.projectName) updateField(normalize(p.projectName), duration, 'billable');
+                        }
+                        
                         e.tags?.forEach((tagName: string) => {
                             const normTag = normalize(tagName);
+                            // For tags, we assign both total and billable because tags aren't in the project summary
                             if (!projectMemberData.has(normTag)) projectMemberData.set(normTag, new Map());
-                            const currentHours = projectMemberData.get(normTag)?.get(u.email) || 0;
-                            projectMemberData.get(normTag)?.set(u.email, currentHours + (e.time || 0));
+                            const userMap = projectMemberData.get(normTag)!;
+                            const current = userMap.get(u.email) || { total: 0, billable: 0 };
+                            userMap.set(u.email, {
+                                total: current.total + duration,
+                                billable: current.billable + (e.billable ? duration : 0)
+                            });
                         });
                     });
                 });
             });
-            console.log("FinanceView: projectMemberData keys:", Array.from(projectMemberData.keys()));
         }
 
         const perUserHolded: Record<string, { billing: number; profit: number }> = {};
@@ -306,10 +324,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         }> = [];
 
         projectFinances.forEach((f, normName) => {
-            const memberMap = projectMemberData.get(normName) || new Map<string, number>();
+            const memberMap = projectMemberData.get(normName) || new Map<string, { total: number; billable: number }>();
             const userList = Array.from(memberMap.keys());
-            const totalProjectSeconds = Array.from(memberMap.values()).reduce((a, b) => a + b, 0);
+            const totalProjectSeconds = Array.from(memberMap.values()).reduce((a, b) => a + b.total, 0);
             const totalProjectHours = totalProjectSeconds / 3600;
+
+            const totalBillableSeconds = Array.from(memberMap.values()).reduce((a, b) => a + b.billable, 0);
+            const totalBillableHours = totalBillableSeconds / 3600;
             
             const sharedProfit = f.profit * 0.5;
             const incomePerUser = userList.length > 0 ? f.income / userList.length : 0;
@@ -317,9 +338,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             const rentabilityPerHour = totalProjectHours > 0 ? f.income / totalProjectHours : 0;
 
             const projectInvoices = invoicesByProject.get(normName) || [];
-            const memberBreakdown = Array.from(memberMap.entries()).map(([email, seconds]) => ({
+            const memberBreakdown = Array.from(memberMap.entries()).map(([email, data]) => ({
                 email,
-                hours: seconds / 3600
+                hours: data.total / 3600,
+                billableHours: data.billable / 3600
             })).sort((a, b) => b.hours - a.hours);
             
             perProjectHolded.push({
@@ -333,17 +355,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 users: userList,
                 memberBreakdown,
                 totalHours: totalProjectHours,
+                billableHours: totalBillableHours,
                 rentabilityPerHour,
                 profitPerUser,
                 invoices: projectInvoices.sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))
             });
 
             userList.forEach(email => {
-                const userSeconds = memberMap.get(email) || 0;
-                if (!perUserHolded[email]) perUserHolded[email] = { billing: 0, profit: 0, hours: 0 };
+                const userData = memberMap.get(email) || { total: 0, billable: 0 };
+                if (!perUserHolded[email]) perUserHolded[email] = { billing: 0, profit: 0, hours: 0, billableHours: 0 };
                 perUserHolded[email].billing += incomePerUser;
                 perUserHolded[email].profit += profitPerUser;
-                perUserHolded[email].hours += userSeconds / 3600;
+                perUserHolded[email].hours += userData.total / 3600;
+                perUserHolded[email].billableHours += userData.billable / 3600;
             });
         });
 
@@ -502,7 +526,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                             </div>
                                             {proj.totalHours > 0 && (
                                                 <p className="text-[8px] font-black text-gray-400 mt-1 uppercase tracking-tighter">
-                                                    Total: {Math.round(proj.totalHours)}h • {formatCurrency(proj.rentabilityPerHour)}/h
+                                                    Total: {Math.round(proj.totalHours)}h {proj.billableHours > 0 && <span className="text-emerald-500 text-[7px]">({Math.round(proj.billableHours)}h Fact.)</span>} • {formatCurrency(proj.rentabilityPerHour)}/h
                                                 </p>
                                             )}
                                         </td>
@@ -586,7 +610,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                     <div>
                                         <p className="text-sm font-black text-kairos-navy lowercase">{email.split('@')[0]}</p>
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                                            Facturación: {formatCurrency(data.billing)} • {Math.round(data.hours || 0)}h
+                                            Facturación: {formatCurrency(data.billing)} • {Math.round(data.hours || 0)}h {data.billableHours > 0 && <span className="text-emerald-500">({Math.round(data.billableHours)}h Fact.)</span>}
                                         </p>
                                     </div>
                                 </div>

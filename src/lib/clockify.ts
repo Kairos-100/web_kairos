@@ -269,7 +269,8 @@ export async function getWeeklyTimeSummary(workspaceId: string, start: Date, end
                                     description: entry.description || '(Sin descripción)',
                                     time: duration,
                                     date: entry.timeInterval?.start || '',
-                                    tags: entry.tags ? entry.tags.map((t: any) => t.name) : []
+                                    tags: entry.tags ? entry.tags.map((t: any) => t.name) : [],
+                                    billable: !!entry.billable
                                 };
                             });
 
