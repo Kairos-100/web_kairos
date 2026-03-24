@@ -106,6 +106,12 @@ async function main() {
                             updated_at: safeToISOString(new Date())
                         }));
                         if (sales.length > 0) {
+                            const march26Sales = sales.filter((s: any) => {
+                                const d = new Date(s.date * 1000);
+                                return d.getFullYear() === 2026 && d.getMonth() === 2;
+                            });
+                            if (march26Sales.length > 0) console.log(`[DEBUG] Found ${march26Sales.length} sales in March 2026 for project ${holdedId}`);
+
                             const unique = Array.from(new Map(sales.map((s: any) => [s.holded_id, s])).values());
                             await supabase.from('holded_invoices').upsert(unique, { onConflict: 'source_key_id, holded_id' });
                         }
@@ -125,6 +131,15 @@ async function main() {
                             updated_at: safeToISOString(new Date())
                         }));
                         if (expenses.length > 0) {
+                            const march26Expenses = expenses.filter((e: any) => {
+                                const d = new Date(e.date * 1000);
+                                return d.getFullYear() === 2026 && d.getMonth() === 2;
+                            });
+                            if (march26Expenses.length > 0) {
+                                console.log(`[DEBUG] Found ${march26Expenses.length} expenses in March 2026 for project ${holdedId}`);
+                                march26Expenses.forEach((e: any) => console.log(` - ${e.doc_number}: ${e.subtotal}€`));
+                            }
+
                             const unique = Array.from(new Map(expenses.map((e: any) => [e.holded_id, e])).values());
                             await supabase.from('holded_invoices').upsert(unique, { onConflict: 'source_key_id, holded_id' });
                         }
